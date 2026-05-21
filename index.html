@@ -517,11 +517,23 @@ function startScan(){
   s.textContent='import QrScanner from "https://unpkg.com/qr-scanner/qr-scanner.min.js"; window.QrScanner=QrScanner; window._startQrScanner(document.getElementById("qr-video"));';
   document.head.appendChild(s);
 }
+function beep() {
+  try {
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value=1200; o.type='sine';
+    g.gain.setValueAtTime(0.3,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.15);
+  } catch(e){}
+}
+
 window._startQrScanner=function(video){
   try {
     qrScanner=new window.QrScanner(video,function(r){
       var url=r.data||r;
-      if(url){stopScan();window.location.href=url;}
+      if(url){ beep(); stopScan(); setTimeout(function(){ window.location.href=url; },150); }
     },{preferredCamera:'environment',highlightScanRegion:true});
     qrScanner.start().then(function(){
       document.getElementById('scan-status').innerText='Point at QR code...';
