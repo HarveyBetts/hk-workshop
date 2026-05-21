@@ -10,109 +10,87 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>HK Inventory</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
   <style>
-    * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-    html,body { height:100%; background:#000; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; color:#fff; overflow:hidden; }
-    .app { display:flex; flex-direction:column; overflow:hidden; }
-    .header { display:flex; flex-direction:column; align-items:center; padding:8px 0 12px; flex-shrink:0; }
-    .logo-circle { width:56px; height:56px; border-radius:50%; border:3px solid transparent; background:linear-gradient(#000,#000) padding-box,linear-gradient(135deg,#00e5ff,#7b2fff,#e040fb) border-box; display:flex; align-items:center; justify-content:center; margin-bottom:5px; }
-    .logo-text { font-size:18px; font-weight:900; letter-spacing:2px; background:linear-gradient(135deg,#00e5ff,#e040fb); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-    .brand { font-size:10px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:3px; }
-    .user-bar { font-size:12px; color:#555; margin-top:3px; cursor:pointer; }
-    .user-bar span { color:#ff5252; }
-
-    .page { display:none; flex:1; flex-direction:column; overflow-y:auto; padding:0 20px 20px; min-height:0; }
-    .page.active { display:flex; }
-
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;background:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#fff;overflow:hidden}
+    .app{display:flex;flex-direction:column;overflow:hidden}
+    .header{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;flex-shrink:0}
+    .logo-circle{width:54px;height:54px;border-radius:50%;border:3px solid transparent;background:linear-gradient(#000,#000) padding-box,linear-gradient(135deg,#00e5ff,#7b2fff,#e040fb) border-box;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+    .logo-text{font-size:18px;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#00e5ff,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .brand{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:3px}
+    .user-bar{font-size:12px;color:#555;margin-top:3px;cursor:pointer}
+    .user-bar span{color:#ff5252}
+    .page{display:none;flex:1;flex-direction:column;overflow-y:auto;padding:0 20px 20px;min-height:0}
+    .page.active{display:flex}
     /* PIN */
-    .pin-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
-    .pin-title { font-size:22px; font-weight:700; }
-    .pin-sub { font-size:14px; color:#666; }
-    .pin-dots { display:flex; gap:16px; }
-    .pin-dot { width:18px; height:18px; border-radius:50%; border:2px solid #444; transition:background 0.15s,border-color 0.15s; }
-    .pin-dot.filled { background:#00e5ff; border-color:#00e5ff; }
-    .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:280px; }
-    .pin-key { background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.1); border-radius:14px; padding:20px; font-size:26px; font-weight:700; cursor:pointer; text-align:center; }
-    .pin-key:active { opacity:0.5; }
-    .pin-key.del { background:rgba(255,23,68,0.1); border-color:rgba(255,23,68,0.2); color:#ff6e6e; font-size:20px; }
-    .pin-error { color:#ff6e6e; font-size:14px; font-weight:600; min-height:20px; }
-
+    .pin-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+    .pin-dots{display:flex;gap:16px}
+    .pin-dot{width:18px;height:18px;border-radius:50%;border:2px solid #444;transition:background .15s,border-color .15s}
+    .pin-dot.filled{background:#00e5ff;border-color:#00e5ff}
+    .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px}
+    .pin-key{background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.12);border-radius:14px;padding:20px;font-size:26px;font-weight:700;cursor:pointer;text-align:center;user-select:none;-webkit-user-select:none}
+    .pin-key:active{opacity:0.5;transform:scale(0.95)}
+    .pin-key.del{background:rgba(255,23,68,0.1);border-color:rgba(255,23,68,0.2);color:#ff6e6e;font-size:20px}
+    .pin-error{color:#ff6e6e;font-size:14px;font-weight:600;min-height:20px;text-align:center}
     /* Welcome */
-    .welcome-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
-    .welcome-emoji { font-size:64px; }
-    .welcome-name { font-size:30px; font-weight:800; }
-    .welcome-role { font-size:13px; color:#00e5ff; font-weight:700; text-transform:uppercase; letter-spacing:2px; }
-
+    .welcome-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
     /* Tiles */
-    .tiles { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding-top:4px; }
-    .tile.racefacer { grid-column: 1 / -1; flex-direction:row; gap:16px; padding:16px 20px; min-height:auto; }
-    .tile { background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.1); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:24px 12px; cursor:pointer; min-height:120px; }
-    .tile:active { opacity:0.7; }
-    .tile-icon { font-size:38px; }
-    .tile-label { font-size:15px; font-weight:700; color:#fff; text-align:center; }
-    .tile-sub { font-size:11px; color:#666; text-align:center; }
-    .tile.scan   { border-color:rgba(0,229,255,0.3);  background:rgba(0,229,255,0.06); }
-    .tile.search { border-color:rgba(123,47,255,0.3); background:rgba(123,47,255,0.06); }
-    .tile.low    { border-color:rgba(255,87,34,0.3);  background:rgba(255,87,34,0.06); }
-    .tile.order  { border-color:rgba(0,200,83,0.3);   background:rgba(0,200,83,0.06); }
-    .tile.manager { border-color:rgba(255,214,0,0.4); background:rgba(255,214,0,0.06); flex-direction:row; gap:16px; padding:18px 20px; min-height:auto; margin-top:14px; }
-
+    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:4px}
+    .tile{background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px 12px;cursor:pointer;min-height:115px}
+    .tile:active{opacity:0.7}
+    .tile-icon{font-size:36px}
+    .tile-label{font-size:14px;font-weight:700;color:#fff;text-align:center}
+    .tile-sub{font-size:11px;color:#666;text-align:center}
+    .tile.scan{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06)}
+    .tile.search{border-color:rgba(123,47,255,0.3);background:rgba(123,47,255,0.06)}
+    .tile.low{border-color:rgba(255,87,34,0.3);background:rgba(255,87,34,0.06)}
+    .tile.order{border-color:rgba(0,200,83,0.3);background:rgba(0,200,83,0.06)}
+    .tile.race{border-color:rgba(255,87,34,0.3);background:rgba(255,87,34,0.06);grid-column:1/-1;flex-direction:row;gap:16px;padding:16px 20px;min-height:auto}
+    .tile.manager{border-color:rgba(255,214,0,0.4);background:rgba(255,214,0,0.06);grid-column:1/-1;flex-direction:row;gap:16px;padding:16px 20px;min-height:auto}
     /* Scan */
-    .scan-frame { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
-    .scan-hint { font-size:14px; color:#888; text-align:center; line-height:1.6; }
-    .scan-btn { width:100%; padding:20px; font-size:20px; font-weight:800; border:none; border-radius:14px; cursor:pointer; background:linear-gradient(135deg,#00e5ff,#7b2fff); color:#000; }
-    .stop-btn { width:100%; padding:14px; font-size:16px; font-weight:700; border:none; border-radius:12px; cursor:pointer; background:rgba(255,255,255,0.1); color:#fff; display:none; }
-    #qr-video-container { width:100%; max-width:300px; aspect-ratio:1; border-radius:16px; overflow:hidden; border:3px solid #00e5ff; background:#111; }
-    #qr-video-container video { width:100%; height:100%; object-fit:cover; }
-
-    /* Search / parts */
-    .search-input { width:100%; padding:16px; font-size:18px; border:1.5px solid rgba(255,255,255,0.15); border-radius:12px; background:rgba(255,255,255,0.07); color:#fff; margin-bottom:14px; -webkit-appearance:none; }
-    .search-input:focus { outline:none; border-color:#00e5ff; }
-    .part-card { background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px 16px; margin-bottom:10px; cursor:pointer; }
-    .part-card:active { opacity:0.7; }
-    .part-sku { font-size:11px; color:#666; margin-bottom:4px; }
-    .part-desc { font-size:16px; font-weight:700; color:#fff; margin-bottom:4px; }
-    .part-meta { display:flex; gap:12px; font-size:12px; flex-wrap:wrap; }
-    .low-item { border-radius:12px; padding:14px 16px; margin-bottom:10px; }
-    .low-item.zero { border:1.5px solid rgba(255,82,82,0.5); background:rgba(255,82,82,0.08); }
-    .low-item.low  { border:1.5px solid rgba(255,214,0,0.5); background:rgba(255,214,0,0.06); }
-
-    /* Fields */
-    .back-btn { background:none; border:none; color:#00e5ff; font-size:15px; font-weight:600; cursor:pointer; padding:4px 0 14px; text-align:left; flex-shrink:0; }
-    .field-label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; background:linear-gradient(90deg,#00e5ff,#e040fb); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
-    select, input[type="text"] { width:100%; padding:16px; font-size:18px; font-weight:600; border:1.5px solid rgba(255,255,255,0.15); border-radius:12px; background:rgba(255,255,255,0.07); color:#fff; -webkit-appearance:none; margin-bottom:14px; }
-    select option { background:#111; color:#fff; }
-    .submit-btn { width:100%; padding:20px; font-size:20px; font-weight:800; border:none; border-radius:14px; cursor:pointer; background:#2e7d32; color:#fff; }
-
-    #msg { display:none; padding:14px; border-radius:12px; font-size:16px; font-weight:700; text-align:center; margin-top:12px; }
-    #msg.success { background:rgba(0,200,83,0.15); border:2px solid #00c853; color:#00e676; display:block; }
-    #msg.error   { background:rgba(255,23,68,0.15); border:2px solid #ff1744; color:#ff6e6e; display:block; }
-    #msg.loading { background:rgba(0,229,255,0.10); border:2px solid #00e5ff; color:#00e5ff; display:block; }
-    .empty { text-align:center; color:#555; font-size:15px; padding:40px 0; }
-    .mgr-section { background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
-    .mgr-section-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#00e5ff; margin-bottom:10px; }
-    .mgr-row { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; gap:8px; }
-    .mgr-row:last-child { border-bottom:none; }
-    .mgr-row-left { color:#fff; flex:1; }
-    .mgr-row-right { color:#aaa; text-align:right; flex-shrink:0; font-size:12px; }
-    .badge-taken    { color:#ff6e6e; font-weight:700; }
-    .badge-restock  { color:#00e676; font-weight:700; }
-    .mgr-card { background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px 16px; margin-bottom:10px; cursor:pointer; }
-    .mgr-card:active { opacity:0.7; }
-    .staff-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #1a1a1a; font-size:14px; }
-    .staff-row:last-child { border-bottom:none; }
-
+    .scan-frame{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+    .scan-hint{font-size:14px;color:#888;text-align:center;line-height:1.6}
+    .scan-btn{width:100%;padding:20px;font-size:20px;font-weight:800;border:none;border-radius:14px;cursor:pointer;background:linear-gradient(135deg,#00e5ff,#7b2fff);color:#000}
+    .stop-btn{width:100%;padding:14px;font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;background:rgba(255,255,255,0.1);color:#fff;display:none}
+    #qr-video-container{width:100%;max-width:300px;aspect-ratio:1;border-radius:16px;overflow:hidden;border:3px solid #00e5ff;background:#111}
+    #qr-video-container video{width:100%;height:100%;object-fit:cover}
+    /* Parts */
+    .back-btn{background:none;border:none;color:#00e5ff;font-size:15px;font-weight:600;cursor:pointer;padding:4px 0 14px;text-align:left;flex-shrink:0}
+    .search-input{width:100%;padding:16px;font-size:18px;border:1.5px solid rgba(255,255,255,0.15);border-radius:12px;background:rgba(255,255,255,0.07);color:#fff;-webkit-appearance:none}
+    .search-input:focus{outline:none;border-color:#00e5ff}
+    .part-card{background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer}
+    .part-card:active{opacity:0.7}
+    .part-sku{font-size:11px;color:#666;margin-bottom:4px}
+    .part-desc{font-size:16px;font-weight:700;color:#fff;margin-bottom:4px}
+    .part-meta{display:flex;gap:12px;font-size:12px;flex-wrap:wrap}
+    .low-item{border-radius:12px;padding:14px 16px;margin-bottom:10px}
+    .low-item.zero{border:1.5px solid rgba(255,82,82,0.5);background:rgba(255,82,82,0.08)}
+    .low-item.low{border:1.5px solid rgba(255,214,0,0.5);background:rgba(255,214,0,0.06)}
+    /* Order */
+    .field-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;background:linear-gradient(90deg,#00e5ff,#e040fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+    select,input[type="text"]{width:100%;padding:16px;font-size:18px;font-weight:600;border:1.5px solid rgba(255,255,255,0.15);border-radius:12px;background:rgba(255,255,255,0.07);color:#fff;-webkit-appearance:none;margin-bottom:14px}
+    select option{background:#111;color:#fff}
+    .submit-btn{width:100%;padding:20px;font-size:20px;font-weight:800;border:none;border-radius:14px;cursor:pointer;background:#2e7d32;color:#fff}
+    #msg{display:none;padding:14px;border-radius:12px;font-size:16px;font-weight:700;text-align:center;margin-top:12px}
+    #msg.success{background:rgba(0,200,83,0.15);border:2px solid #00c853;color:#00e676;display:block}
+    #msg.error{background:rgba(255,23,68,0.15);border:2px solid #ff1744;color:#ff6e6e;display:block}
+    #msg.loading{background:rgba(0,229,255,0.10);border:2px solid #00e5ff;color:#00e5ff;display:block}
+    .empty{text-align:center;color:#555;font-size:15px;padding:40px 0}
     /* Manager */
-    .mgr-card { background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px 16px; margin-bottom:10px; cursor:pointer; }
-    .mgr-card:active { opacity:0.7; }
-    .staff-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #1a1a1a; font-size:14px; }
-    .staff-row:last-child { border-bottom:none; }
+    .mgr-section{background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+    .mgr-section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#00e5ff;margin-bottom:10px}
+    .mgr-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;gap:8px}
+    .mgr-row:last-child{border-bottom:none}
+    .mgr-row-left{color:#fff;flex:1}
+    .mgr-row-right{color:#aaa;text-align:right;flex-shrink:0;font-size:12px}
+    .badge-taken{color:#ff6e6e;font-weight:700}
+    .badge-restock{color:#00e676;font-weight:700}
+    .staff-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:14px}
+    .staff-row:last-child{border-bottom:none}
   </style>
 </head>
 <body>
 <div class="app" id="app">
-
   <div class="header">
     <div class="logo-circle"><span class="logo-text">HK</span></div>
     <div class="brand">Hyper Karting</div>
@@ -125,7 +103,7 @@
   <div class="page active" id="page-pin">
     <div class="pin-screen">
       <div style="font-size:48px">🔐</div>
-      <div class="pin-title">Enter your PIN</div>
+      <div style="font-size:22px;font-weight:700">Enter your PIN</div>
       <div class="pin-dots">
         <div class="pin-dot" id="d0"></div>
         <div class="pin-dot" id="d1"></div>
@@ -134,18 +112,18 @@
       </div>
       <div class="pin-error" id="pin-error">&nbsp;</div>
       <div class="pin-pad">
-        <div class="pin-key" onclick="pp('1')">1</div>
-        <div class="pin-key" onclick="pp('2')">2</div>
-        <div class="pin-key" onclick="pp('3')">3</div>
-        <div class="pin-key" onclick="pp('4')">4</div>
-        <div class="pin-key" onclick="pp('5')">5</div>
-        <div class="pin-key" onclick="pp('6')">6</div>
-        <div class="pin-key" onclick="pp('7')">7</div>
-        <div class="pin-key" onclick="pp('8')">8</div>
-        <div class="pin-key" onclick="pp('9')">9</div>
+        <div class="pin-key" ontouchstart="pp('1')">1</div>
+        <div class="pin-key" ontouchstart="pp('2')">2</div>
+        <div class="pin-key" ontouchstart="pp('3')">3</div>
+        <div class="pin-key" ontouchstart="pp('4')">4</div>
+        <div class="pin-key" ontouchstart="pp('5')">5</div>
+        <div class="pin-key" ontouchstart="pp('6')">6</div>
+        <div class="pin-key" ontouchstart="pp('7')">7</div>
+        <div class="pin-key" ontouchstart="pp('8')">8</div>
+        <div class="pin-key" ontouchstart="pp('9')">9</div>
         <div class="pin-key" style="visibility:hidden"></div>
-        <div class="pin-key" onclick="pp('0')">0</div>
-        <div class="pin-key del" onclick="pd()">⌫</div>
+        <div class="pin-key" ontouchstart="pp('0')">0</div>
+        <div class="pin-key del" ontouchstart="pd()">⌫</div>
       </div>
     </div>
   </div>
@@ -153,9 +131,9 @@
   <!-- WELCOME -->
   <div class="page" id="page-welcome">
     <div class="welcome-screen">
-      <div class="welcome-emoji" id="w-emoji">👋</div>
-      <div class="welcome-name" id="w-name">Hey!</div>
-      <div class="welcome-role" id="w-role">Mechanic</div>
+      <div style="font-size:64px" id="w-emoji">👋</div>
+      <div style="font-size:30px;font-weight:800" id="w-name">Hey!</div>
+      <div style="font-size:13px;color:#00e5ff;font-weight:700;text-transform:uppercase;letter-spacing:2px" id="w-role">Mechanic</div>
     </div>
   </div>
 
@@ -177,24 +155,24 @@
         <div class="tile-label">Low Stock</div>
         <div class="tile-sub">Needs attention</div>
       </div>
-      <div class="tile order" onclick="showPage('order')">
+      <div class="tile order" onclick="showPage('order');initOrder()">
         <div class="tile-icon">📋</div>
         <div class="tile-label">Request Order</div>
         <div class="tile-sub">Flag for ordering</div>
       </div>
-      <div class="tile racefacer" style="border-color:rgba(255,87,34,0.3);background:rgba(255,87,34,0.06);" onclick="showPage('racefacer')">
+      <div class="tile race" onclick="showPage('racefacer')">
         <div class="tile-icon">🏎️</div>
         <div>
-          <div class="tile-label" style="text-align:left;">Racefacer</div>
-          <div class="tile-sub" style="text-align:left;">Track layout, session data & predictions</div>
+          <div class="tile-label" style="text-align:left">Racefacer</div>
+          <div class="tile-sub" style="text-align:left">Track & session data</div>
         </div>
       </div>
-    </div>
-    <div class="tile manager" id="manager-tile" style="display:none" onclick="showPage('manager');loadStaff()">
-      <div style="font-size:28px">👑</div>
-      <div>
-        <div style="font-size:15px;font-weight:700;color:#ffd600">Manager Dashboard</div>
-        <div style="font-size:11px;color:#888">Staff, reports & settings</div>
+      <div class="tile manager" id="manager-tile" style="display:none" onclick="showPage('manager');loadManager()">
+        <div style="font-size:26px">👑</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#ffd600">Manager Dashboard</div>
+          <div style="font-size:11px;color:#888">Staff, reports & settings</div>
+        </div>
       </div>
     </div>
   </div>
@@ -203,9 +181,7 @@
   <div class="page" id="page-scan">
     <button class="back-btn" onclick="stopScan();showPage('home')">← Back</button>
     <div class="scan-frame">
-      <div id="qr-video-container">
-        <video id="qr-video" playsinline muted></video>
-      </div>
+      <div id="qr-video-container"><video id="qr-video" playsinline muted></video></div>
       <p class="scan-hint" id="scan-status">Tap Start — point at QR code</p>
       <button class="scan-btn" id="scan-btn" onclick="startScan()">📷 Start Scanner</button>
       <button class="stop-btn" id="stop-btn" onclick="stopScan()">✕ Stop</button>
@@ -215,7 +191,7 @@
   <!-- SEARCH -->
   <div class="page" id="page-search">
     <button class="back-btn" onclick="showPage('home')">← Back</button>
-    <input class="search-input" type="text" id="searchInput" placeholder="Search by name or SKU..." oninput="filterParts()" autocomplete="off">
+    <input class="search-input" type="text" id="searchInput" placeholder="Search by name or SKU..." oninput="filterParts()" autocomplete="off" style="margin-bottom:14px">
     <div id="searchResults"><div class="empty">Loading parts...</div></div>
   </div>
 
@@ -228,7 +204,6 @@
   <!-- REQUEST ORDER -->
   <div class="page" id="page-order">
     <button class="back-btn" onclick="showPage('home')">← Back</button>
-
     <label class="field-label">Your Name</label>
     <select id="orderName">
       <option value="">— Select your name —</option>
@@ -237,21 +212,17 @@
       <option>Sam Lally</option><option>Jayden Aginsky</option>
       <option>Will Webster</option><option>Christian Oom</option>
     </select>
-
     <label class="field-label">Search Part</label>
-    <input class="search-input" type="text" id="orderSearch" placeholder="Type to search parts..." oninput="filterOrderParts()" autocomplete="off" style="margin-bottom:8px;">
-    <div id="orderPartsList" style="max-height:200px;overflow-y:auto;margin-bottom:14px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.1);display:none;"></div>
-
-    <div id="selectedPartBox" style="display:none;background:rgba(0,229,255,0.08);border:1.5px solid rgba(0,229,255,0.3);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
-      <div style="font-size:11px;color:#00e5ff;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Selected Part</div>
-      <div id="selectedPartDesc" style="font-size:16px;font-weight:700;color:#fff;"></div>
-      <div id="selectedPartMeta" style="font-size:12px;color:#888;margin-top:4px;"></div>
-      <div style="margin-top:8px;"><button onclick="clearSelectedPart()" style="background:none;border:none;color:#ff6e6e;font-size:12px;cursor:pointer;">✕ Clear</button></div>
+    <input class="search-input" type="text" id="orderSearch" placeholder="Type to search parts..." oninput="filterOrderParts()" autocomplete="off" style="margin-bottom:8px">
+    <div id="orderPartsList" style="max-height:180px;overflow-y:auto;margin-bottom:14px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.1);display:none"></div>
+    <div id="selectedPartBox" style="display:none;background:rgba(0,229,255,0.08);border:1.5px solid rgba(0,229,255,0.3);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:11px;color:#00e5ff;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Selected Part</div>
+      <div id="selectedPartDesc" style="font-size:16px;font-weight:700;color:#fff"></div>
+      <div id="selectedPartMeta" style="font-size:12px;color:#888;margin-top:4px"></div>
+      <button onclick="clearSelectedPart()" style="background:none;border:none;color:#ff6e6e;font-size:12px;cursor:pointer;margin-top:8px">✕ Clear</button>
     </div>
-
     <label class="field-label">Notes (optional)</label>
     <input type="text" id="orderNotes" placeholder="e.g. urgent, qty needed...">
-
     <button class="submit-btn" onclick="submitOrder()">📋 Send Order Request</button>
     <div id="msg"></div>
   </div>
@@ -260,10 +231,10 @@
   <div class="page" id="page-racefacer">
     <button class="back-btn" onclick="showPage('home')">← Back</button>
     <h2 style="color:#ff5722;font-size:18px;margin-bottom:14px;flex-shrink:0">🏎️ Racefacer</h2>
-    <div style="background:rgba(255,87,34,0.06);border:1.5px solid rgba(255,87,34,0.2);border-radius:14px;padding:24px 20px;margin-bottom:12px;text-align:center;">
-      <div style="font-size:56px;margin-bottom:14px;">🔗</div>
-      <div style="font-size:18px;font-weight:700;color:#ff5722;margin-bottom:12px;">Integration Coming Soon</div>
-      <div style="font-size:14px;color:#777;line-height:2;">
+    <div style="background:rgba(255,87,34,0.06);border:1.5px solid rgba(255,87,34,0.2);border-radius:14px;padding:24px 20px;margin-bottom:12px;text-align:center">
+      <div style="font-size:56px;margin-bottom:14px">🔗</div>
+      <div style="font-size:18px;font-weight:700;color:#ff5722;margin-bottom:12px">Integration Coming Soon</div>
+      <div style="font-size:14px;color:#777;line-height:2">
         📊 Track layout of the day<br>
         👥 Customer numbers & session types<br>
         🔧 Parts commonly broken on this layout<br>
@@ -272,8 +243,8 @@
         📈 Usage vs booking correlation
       </div>
     </div>
-    <div style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;text-align:center;">
-      <div style="font-size:13px;color:#444;line-height:1.6;">API integration will unlock this section.<br>Contact Ross to set up Racefacer access.</div>
+    <div style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;text-align:center">
+      <div style="font-size:13px;color:#444;line-height:1.6">API integration will unlock this section.<br>Contact Ross to set up Racefacer access.</div>
     </div>
   </div>
 
@@ -281,196 +252,134 @@
   <div class="page" id="page-manager">
     <button class="back-btn" onclick="showPage('home')">← Back</button>
     <h2 style="color:#ffd600;font-size:18px;margin-bottom:14px;flex-shrink:0">👑 Manager Dashboard</h2>
-
-    <!-- Today's Activity -->
     <div class="mgr-section">
       <div class="mgr-section-title">📋 Today's Activity</div>
       <div id="mgr-today"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
-
-    <!-- Staff This Week -->
     <div class="mgr-section">
       <div class="mgr-section-title">👥 Staff Activity — This Week</div>
       <div id="mgr-staff"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
-
-    <!-- Top Parts This Week -->
     <div class="mgr-section">
       <div class="mgr-section-title">🔝 Most Taken — This Week</div>
       <div id="mgr-top"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
-
-    <!-- Low Stock -->
     <div class="mgr-section">
       <div class="mgr-section-title">⚠️ Low Stock</div>
       <div id="mgr-low"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
-
-    <!-- Predicted Stockouts -->
     <div class="mgr-section">
       <div class="mgr-section-title">🔮 Predicted Stockouts — Next 90 Days</div>
       <div id="mgr-stockout"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
-
-    <!-- Staff PINs -->
     <div class="mgr-section">
       <div class="mgr-section-title">🔐 Staff PINs</div>
       <div id="staff-list"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
-
-
-
   </div>
 
 </div>
-
 <script>
-var APP = 'https://script.google.com/macros/s/AKfycbyC_Jj3rkosw79ICRDWme7YHJ8IvMTjD2KMqBkHF7WxfQhJvFqwFZpDydVZxQvSQYPD/exec';
-var parts = [];
-var currentUser = null;
-var pinEntry = '';
-var orderSent = false;
-var qrScanner = null;
+var APP='https://script.google.com/macros/s/AKfycbyC_Jj3rkosw79ICRDWme7YHJ8IvMTjD2KMqBkHF7WxfQhJvFqwFZpDydVZxQvSQYPD/exec';
+var parts=[], currentUser=null, pinEntry='', orderSent=false, selectedPart=null, qrScanner=null;
 
-// ── Height ──
-function setHeight() {
-  document.getElementById('app').style.height = window.innerHeight + 'px';
-}
-setHeight();
-window.addEventListener('resize', setHeight);
-window.addEventListener('orientationchange', function(){ setTimeout(setHeight, 300); });
-
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/hk-inventory/sw.js').catch(function(){});
-
-// ── Staff data cached locally ──
-var STAFF = [
-  { name:'Ross McArthur',   role:'Manager',           pin:'1234', emoji:'👑' },
-  { name:'Harvey Betts',    role:'Assistant Manager', pin:'2345', emoji:'⭐' },
-  { name:'Rafael Hewitt',   role:'Mechanic',          pin:'3456', emoji:'🔧' },
-  { name:'Alex Harper',     role:'Mechanic',          pin:'4567', emoji:'🔧' },
-  { name:'Sam Lally',       role:'Mechanic',          pin:'5678', emoji:'🔧' },
-  { name:'Jayden Aginsky',  role:'Mechanic',          pin:'6789', emoji:'🔧' },
-  { name:'Will Webster',    role:'Mechanic',          pin:'7890', emoji:'🔧' },
-  { name:'Christian Oom',   role:'Mechanic',          pin:'8901', emoji:'🔧' }
+var STAFF=[
+  {name:'Ross McArthur',  role:'Manager',          pin:'1234',emoji:'👑'},
+  {name:'Harvey Betts',   role:'Assistant Manager', pin:'2345',emoji:'⭐'},
+  {name:'Rafael Hewitt',  role:'Mechanic',          pin:'3456',emoji:'🔧'},
+  {name:'Alex Harper',    role:'Mechanic',          pin:'4567',emoji:'🔧'},
+  {name:'Sam Lally',      role:'Mechanic',          pin:'5678',emoji:'🔧'},
+  {name:'Jayden Aginsky', role:'Mechanic',          pin:'6789',emoji:'🔧'},
+  {name:'Will Webster',   role:'Mechanic',          pin:'7890',emoji:'🔧'},
+  {name:'Christian Oom',  role:'Mechanic',          pin:'8901',emoji:'🔧'}
 ];
 
-// ── PIN Logic (instant — no server call) ──
-function pp(digit) {
-  if (pinEntry.length >= 4) return;
-  pinEntry += digit;
-  updateDots();
-  document.getElementById('pin-error').innerText = '\u00a0';
-  if (pinEntry.length === 4) setTimeout(checkPin, 100);
-}
-function pd() {
-  pinEntry = pinEntry.slice(0,-1);
-  updateDots();
-}
-function updateDots() {
-  for (var i=0; i<4; i++) {
-    var d = document.getElementById('d'+i);
-    if (i < pinEntry.length) d.classList.add('filled');
-    else d.classList.remove('filled');
-  }
-}
-function checkPin() {
-  var match = null;
-  for (var i=0; i<STAFF.length; i++) {
-    if (STAFF[i].pin === pinEntry) { match = STAFF[i]; break; }
-  }
-  if (match) {
-    currentUser = match;
-    sessionStorage.setItem('hk_user', JSON.stringify(match));
-    showWelcome(match);
-  } else {
-    pinEntry = '';
-    updateDots();
-    document.getElementById('pin-error').innerText = '❌ Incorrect PIN — try again';
-    var dots = document.querySelector('.pin-dots');
-    dots.style.transition = 'none';
-    dots.style.transform = 'translateX(8px)';
-    setTimeout(function(){ dots.style.transform = 'translateX(-8px)'; }, 80);
-    setTimeout(function(){ dots.style.transform = ''; }, 160);
-  }
-}
-function showWelcome(user) {
-  document.getElementById('w-emoji').innerText = user.emoji;
-  document.getElementById('w-name').innerText = 'Hey, ' + user.name.split(' ')[0] + '!';
-  document.getElementById('w-role').innerText = user.role;
-  showPage('welcome');
-  setTimeout(function(){ showPage('home'); }, 3000);
-}
-function logout() {
-  currentUser = null; pinEntry = '';
-  sessionStorage.removeItem('hk_user');
-  updateDots();
-  document.getElementById('pin-error').innerText = '\u00a0';
-  showPage('pin');
-}
+function setH(){document.getElementById('app').style.height=window.innerHeight+'px';}
+setH();
+window.addEventListener('resize',setH);
+window.addEventListener('orientationchange',function(){setTimeout(setH,300);});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/hk-inventory/sw.js').catch(function(){});
 
-// ── Page routing ──
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
-  var pg = document.getElementById('page-'+id);
-  pg.classList.add('active');
-  pg.scrollTop = 0;
-  setHeight();
-
-  var isManager = currentUser && (currentUser.role==='Manager'||currentUser.role==='Assistant Manager');
-
-  // User bar
-  var bar = document.getElementById('user-bar');
-  if (currentUser && id!=='pin' && id!=='welcome') {
-    bar.style.display='block';
-    document.getElementById('user-bar-name').innerText = currentUser.emoji+' '+currentUser.name;
-  } else { bar.style.display='none'; }
-
-  // Manager tile
-  document.getElementById('manager-tile').style.display = (isManager && id==='home') ? 'flex' : 'none';
-
-  // Load parts for order search
-  if (id==='order') { if(parts.length===0) loadParts('order'); }
-  // Pre-fill name on order page
-  if (id==='order' && currentUser) {
-    var sel = document.getElementById('orderName');
-    if (sel) sel.value = currentUser.name;
-  }
-}
-
-// Check session on load
+// Check session
 (function(){
-  var saved = sessionStorage.getItem('hk_user');
-  if (saved) {
-    try { currentUser = JSON.parse(saved); showPage('home'); return; } catch(e){}
-  }
+  var s=sessionStorage.getItem('hk_user');
+  if(s){try{currentUser=JSON.parse(s);showPage('home');return;}catch(e){}}
   showPage('pin');
 })();
 
-// ── JSONP ──
-function jsonp(url, cb) {
-  var fn = '_j'+Date.now();
-  var done = false;
-  var t = setTimeout(function(){ if(!done){done=true;cb(null);} }, 15000);
-  window[fn] = function(d){ if(!done){done=true;clearTimeout(t);cb(d);} delete window[fn]; var s=document.getElementById(fn);if(s)s.remove(); };
-  var s = document.createElement('script');
-  s.id=fn; s.src=url+'&callback='+fn;
-  s.onerror=function(){ if(!done){done=true;clearTimeout(t);cb(null);} };
+// PIN
+function pp(digit){
+  if(pinEntry.length>=4) return;
+  pinEntry+=digit;
+  updateDots();
+  document.getElementById('pin-error').innerHTML='&nbsp;';
+  if(pinEntry.length===4) setTimeout(checkPin,100);
+}
+function pd(){pinEntry=pinEntry.slice(0,-1);updateDots();}
+function updateDots(){
+  for(var i=0;i<4;i++){
+    var d=document.getElementById('d'+i);
+    if(i<pinEntry.length) d.classList.add('filled');
+    else d.classList.remove('filled');
+  }
+}
+function checkPin(){
+  var match=null;
+  for(var i=0;i<STAFF.length;i++){if(STAFF[i].pin===pinEntry){match=STAFF[i];break;}}
+  if(match){
+    currentUser=match;
+    sessionStorage.setItem('hk_user',JSON.stringify(match));
+    document.getElementById('w-emoji').innerText=match.emoji;
+    document.getElementById('w-name').innerText='Hey, '+match.name.split(' ')[0]+'!';
+    document.getElementById('w-role').innerText=match.role;
+    showPage('welcome');
+    setTimeout(function(){showPage('home');},3000);
+  } else {
+    pinEntry=''; updateDots();
+    document.getElementById('pin-error').innerText='❌ Incorrect PIN — try again';
+  }
+}
+function logout(){currentUser=null;pinEntry='';sessionStorage.removeItem('hk_user');updateDots();document.getElementById('pin-error').innerHTML='&nbsp;';showPage('pin');}
+
+// Pages
+function showPage(id){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var pg=document.getElementById('page-'+id);
+  pg.classList.add('active');
+  pg.scrollTop=0;
+  setH();
+  var isM=currentUser&&(currentUser.role==='Manager'||currentUser.role==='Assistant Manager');
+  var bar=document.getElementById('user-bar');
+  if(currentUser&&id!=='pin'&&id!=='welcome'){bar.style.display='block';document.getElementById('user-bar-name').innerText=currentUser.emoji+' '+currentUser.name;}
+  else{bar.style.display='none';}
+  var mt=document.getElementById('manager-tile');
+  mt.style.display=(isM&&id==='home')?'flex':'none';
+}
+
+// JSONP
+function jsonp(url,cb){
+  var fn='_j'+Date.now(),done=false;
+  var t=setTimeout(function(){if(!done){done=true;cb(null);}},15000);
+  window[fn]=function(d){if(!done){done=true;clearTimeout(t);cb(d);}delete window[fn];var s=document.getElementById(fn);if(s)s.remove();};
+  var s=document.createElement('script');s.id=fn;s.src=url+'&callback='+fn;
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(null);}};
   document.head.appendChild(s);
 }
 
-// ── Parts ──
-function loadParts(target) {
-  if (parts.length>0){ render(target); return; }
-  var cached = sessionStorage.getItem('hk_parts');
-  if (cached){ try{ parts=JSON.parse(cached); render(target); return; }catch(e){} }
-  jsonp(APP+'?action=getparts', function(d){
-    if(!d){ setEl(target,'<div class="empty">Could not load. Check connection.</div>'); return; }
-    parts=d; try{ sessionStorage.setItem('hk_parts',JSON.stringify(d)); }catch(e){} render(target);
+// Parts
+function loadParts(target){
+  if(parts.length>0){render(target);return;}
+  var c=sessionStorage.getItem('hk_parts');
+  if(c){try{parts=JSON.parse(c);render(target);return;}catch(e){}}
+  jsonp(APP+'?action=getparts',function(d){
+    if(!d){setEl(target,'<div class="empty">Could not load. Check connection.</div>');return;}
+    parts=d;try{sessionStorage.setItem('hk_parts',JSON.stringify(d));}catch(e){}
+    render(target);
   });
 }
-function setEl(t,h){ document.getElementById(t==='search'?'searchResults':'lowStockResults').innerHTML=h; }
-function render(t){ t==='search'?renderSearch(''):renderLow(); }
-function filterParts(){ renderSearch(document.getElementById('searchInput').value.toLowerCase()); }
+function setEl(t,h){document.getElementById(t==='search'?'searchResults':'lowStockResults').innerHTML=h;}
+function render(t){t==='search'?renderSearch(''):renderLow();}
+function filterParts(){renderSearch(document.getElementById('searchInput').value.toLowerCase());}
 function renderSearch(q){
   var list=parts.filter(function(p){return !q||p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q);});
   if(!list.length){setEl('search','<div class="empty">No parts found</div>');return;}
@@ -479,10 +388,8 @@ function renderSearch(q){
     var sc=p.qty==0?'#ff5252':p.qty<=p.reorder?'#ffd600':'#00e5ff';
     var st=p.qty==0?'🔴 Out of Stock':p.qty<=p.reorder?'🟡 Low: '+p.qty:'🟢 '+p.qty;
     h+='<div class="part-card" onclick="window.location.href=\''+APP+'?sku='+p.sku+'\'">'
-      +'<div class="part-sku">SKU: '+p.sku+'</div>'
-      +'<div class="part-desc">'+p.desc+'</div>'
-      +'<div class="part-meta"><span style="color:'+sc+'">'+st+'</span>'
-      +(p.loc?'<span style="color:#666">📍 '+p.loc+'</span>':'')+'</div></div>';
+      +'<div class="part-sku">SKU: '+p.sku+'</div><div class="part-desc">'+p.desc+'</div>'
+      +'<div class="part-meta"><span style="color:'+sc+'">'+st+'</span>'+(p.loc?'<span style="color:#666">📍 '+p.loc+'</span>':'')+'</div></div>';
   });
   setEl('search',h);
 }
@@ -493,56 +400,48 @@ function renderLow(){
   list.forEach(function(p){
     var cls=p.qty==0?'zero':'low';
     var st=p.qty==0?'🔴 Out of Stock':'🟡 Low — '+p.qty+' remaining';
-    h+='<div class="low-item '+cls+'">'
-      +'<div class="part-sku">SKU: '+p.sku+'</div>'
-      +'<div class="part-desc">'+p.desc+'</div>'
-      +'<div class="part-meta"><span>'+st+'</span>'
-      +(p.loc?'<span style="color:#666;margin-left:12px">📍 '+p.loc+'</span>':'')+'</div></div>';
+    h+='<div class="low-item '+cls+'"><div class="part-sku">SKU: '+p.sku+'</div><div class="part-desc">'+p.desc+'</div>'
+      +'<div class="part-meta"><span>'+st+'</span>'+(p.loc?'<span style="color:#666;margin-left:12px">📍 '+p.loc+'</span>':'')+'</div></div>';
   });
   setEl('lowstock',h);
 }
 
-// ── QR Scanner ──
+// QR Scanner
+function beep(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.frequency.value=1200;o.type='sine';
+    g.gain.setValueAtTime(0.3,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);
+    o.start(ctx.currentTime);o.stop(ctx.currentTime+0.15);
+  }catch(e){}
+}
 function startScan(){
   document.getElementById('scan-btn').style.display='none';
   document.getElementById('stop-btn').style.display='block';
   document.getElementById('scan-status').innerText='Starting camera...';
   var video=document.getElementById('qr-video');
-
-  if(window.QrScanner){
-    _startQrScanner(video); return;
-  }
+  if(window.QrScanner){_doScan(video);return;}
   var s=document.createElement('script');
   s.type='module';
-  s.textContent='import QrScanner from "https://unpkg.com/qr-scanner/qr-scanner.min.js"; window.QrScanner=QrScanner; window._startQrScanner(document.getElementById("qr-video"));';
+  s.textContent='import QrScanner from "https://unpkg.com/qr-scanner/qr-scanner.min.js";window.QrScanner=QrScanner;window._doScan(document.getElementById("qr-video"));';
   document.head.appendChild(s);
 }
-function beep() {
-  try {
-    var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    var o=ctx.createOscillator(), g=ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value=1200; o.type='sine';
-    g.gain.setValueAtTime(0.3,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);
-    o.start(ctx.currentTime); o.stop(ctx.currentTime+0.15);
-  } catch(e){}
-}
-
-window._startQrScanner=function(video){
-  try {
+window._doScan=function(video){
+  try{
     qrScanner=new window.QrScanner(video,function(r){
       var url=r.data||r;
-      if(url){ beep(); stopScan(); setTimeout(function(){ window.location.href=url; },150); }
+      if(url){beep();stopScan();setTimeout(function(){window.location.href=url;},150);}
     },{preferredCamera:'environment',highlightScanRegion:true});
-    qrScanner.start().then(function(){
-      document.getElementById('scan-status').innerText='Point at QR code...';
-    }).catch(function(){
+    qrScanner.start().then(function(){document.getElementById('scan-status').innerText='Point at QR code...';})
+    .catch(function(){
       document.getElementById('scan-status').innerText='Camera denied. Go to Settings > Safari > Camera > Allow';
       document.getElementById('scan-btn').style.display='block';
       document.getElementById('stop-btn').style.display='none';
     });
-  } catch(e){
+  }catch(e){
     document.getElementById('scan-status').innerText='Error: '+e.message;
     document.getElementById('scan-btn').style.display='block';
     document.getElementById('stop-btn').style.display='none';
@@ -555,153 +454,49 @@ function stopScan(){
   document.getElementById('scan-status').innerText='Tap Start — point at QR code';
 }
 
-// ── Manager data ──
-function loadStaff(){
-  loadManager();
+// Order
+function initOrder(){
+  if(parts.length===0) loadParts('_none');
+  if(currentUser){var sel=document.getElementById('orderName');if(sel)sel.value=currentUser.name;}
 }
-function loadManager(){
-  jsonp(APP+'?action=getmanagerdata', function(d){
-    if(!d){ return; }
-
-    // Today's activity — summarised per staff
-    var todaySummary = {};
-    d.todayLog.forEach(function(r){
-      if(!todaySummary[r.name]) todaySummary[r.name]={taken:0,restocked:0};
-      if(r.action==="TAKEN")   todaySummary[r.name].taken    += r.qty;
-      if(r.action==="RESTOCK") todaySummary[r.name].restocked += r.qty;
-    });
-    var names = Object.keys(todaySummary);
-    var th = names.length===0
-      ? '<div style="color:#555;font-size:13px;padding:6px 0">No activity today yet</div>'
-      : '';
-    names.forEach(function(n){
-      var s = todaySummary[n];
-      th += '<div class="mgr-row">'
-        +'<div class="mgr-row-left"><strong>'+n+'</strong></div>'
-        +'<div class="mgr-row-right">'
-        +(s.taken    ? '<span class="badge-taken">➖ '+s.taken+' taken</span><br>'   : '')
-        +(s.restocked? '<span class="badge-restock">➕ '+s.restocked+' restocked</span>' : '')
-        +'</div></div>';
-    });
-    document.getElementById('mgr-today').innerHTML = th;
-
-    // Staff this week
-    var sh = d.staffList.length===0
-      ? '<div style="color:#555;font-size:13px;padding:6px 0">No activity this week</div>'
-      : '';
-    d.staffList.forEach(function(s,i){
-      sh += '<div class="mgr-row">'
-        +(i===0?'<div class="mgr-row-left">🏆 <strong>'+s.name+'</strong></div>':'<div class="mgr-row-left">'+s.name+'</div>')
-        +'<div class="mgr-row-right"><span class="badge-taken">➖'+s.taken+'</span> <span class="badge-restock">➕'+s.restocked+'</span></div>'
-        +'</div>';
-    });
-    document.getElementById('mgr-staff').innerHTML = sh;
-
-    // Top parts
-    var tp = d.topWeek.length===0
-      ? '<div style="color:#555;font-size:13px;padding:6px 0">No data this week</div>'
-      : '';
-    d.topWeek.forEach(function(p,i){
-      tp += '<div class="mgr-row">'
-        +'<div class="mgr-row-left">'+(i+1)+'. '+p.desc+'</div>'
-        +'<div class="mgr-row-right badge-taken">'+p.qty+' taken</div>'
-        +'</div>';
-    });
-    document.getElementById('mgr-top').innerHTML = tp;
-
-    // Low stock
-    var lh = d.lowStock.length===0
-      ? '<div style="color:#00e676;font-size:13px;padding:6px 0">✅ All stock healthy!</div>'
-      : '';
-    d.lowStock.forEach(function(p){
-      var cl = p.qty===0?'#ff5252':'#ffd600';
-      lh += '<div class="mgr-row">'
-        +'<div class="mgr-row-left">'+p.desc+(p.loc?'<br><span style="color:#555;font-size:11px">📍 '+p.loc+'</span>':'')+'</div>'
-        +'<div class="mgr-row-right" style="color:'+cl+';font-weight:700">'+p.qty+' left<br><span style="color:#555;font-size:11px">Reorder: '+p.reorder+'</span></div>'
-        +'</div>';
-    });
-    document.getElementById('mgr-low').innerHTML = lh;
-
-    // Stockouts
-    var so = d.stockouts.length===0
-      ? '<div style="color:#00e676;font-size:13px;padding:6px 0">✅ No stockouts predicted in 90 days</div>'
-      : '';
-    d.stockouts.forEach(function(p){
-      var cl = p.daysLeft<=7?'#ff5252':p.daysLeft<=14?'#ffd600':'#aaa';
-      so += '<div class="mgr-row">'
-        +'<div class="mgr-row-left">'+p.desc+'</div>'
-        +'<div class="mgr-row-right" style="color:'+cl+';font-weight:700">'+p.daysLeft+'d left<br><span style="color:#555;font-size:11px">~'+p.date+'</span></div>'
-        +'</div>';
-    });
-    document.getElementById('mgr-stockout').innerHTML = so;
-
-    // Staff PINs
-    var ph = '';
-    STAFF.forEach(function(s){
-      ph += '<div class="staff-row">'
-        +'<span>'+s.emoji+' '+s.name+'<br><span style="color:#555;font-size:11px">'+s.role+'</span></span>'
-        +'<span style="color:#00e5ff;font-weight:700">'+s.pin+'</span>'
-        +'</div>';
-    });
-    document.getElementById('staff-list').innerHTML = ph;
-  });
-}
-
-// ── Request Order ──
-var selectedPart = null;
-
-function filterOrderParts() {
-  var q = document.getElementById('orderSearch').value.toLowerCase().trim();
-  var list = document.getElementById('orderPartsList');
-  if (!q || parts.length === 0) { list.style.display='none'; return; }
-  var filtered = parts.filter(function(p){
-    return p.desc.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
-  }).slice(0,15);
-  if (!filtered.length) { list.style.display='none'; return; }
-  var html = '';
+function filterOrderParts(){
+  var q=document.getElementById('orderSearch').value.toLowerCase().trim();
+  var list=document.getElementById('orderPartsList');
+  if(!q||!parts.length){list.style.display='none';return;}
+  var filtered=parts.filter(function(p){return p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q);}).slice(0,12);
+  if(!filtered.length){list.style.display='none';return;}
+  var h='';
   filtered.forEach(function(p){
-    var sc = p.qty==0?'#ff5252':p.qty<=p.reorder?'#ffd600':'#00e5ff';
-    var st = p.qty==0?'🔴 Out':p.qty<=p.reorder?'🟡 Low: '+p.qty:'🟢 '+p.qty;
-    html += '<div onclick="selectOrderPart(''+p.sku+'')" style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='none'">'
+    var sc=p.qty==0?'#ff5252':p.qty<=p.reorder?'#ffd600':'#00e5ff';
+    var st=p.qty==0?'🔴':p.qty<=p.reorder?'🟡 '+p.qty:'🟢 '+p.qty;
+    h+='<div onclick="selectOrderPart(\''+p.sku+'\')" style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;">'
       +'<div style="font-size:14px;font-weight:600;color:#fff;">'+p.desc+'</div>'
-      +'<div style="font-size:11px;color:#666;margin-top:2px;">SKU: '+p.sku+(p.loc?' · 📍 '+p.loc:'')+'  <span style="color:'+sc+'">'+st+'</span></div>'
-      +'</div>';
+      +'<div style="font-size:11px;color:#666;margin-top:2px;">'+p.sku+(p.loc?' · 📍 '+p.loc:'')+'  <span style="color:'+sc+'">'+st+'</span></div></div>';
   });
-  list.innerHTML = html;
-  list.style.display = 'block';
+  list.innerHTML=h;list.style.display='block';
 }
-
-function selectOrderPart(sku) {
-  selectedPart = parts.find(function(p){ return p.sku===sku; });
-  if (!selectedPart) return;
-  document.getElementById('orderSearch').value = '';
-  document.getElementById('orderPartsList').style.display = 'none';
-  document.getElementById('selectedPartBox').style.display = 'block';
-  document.getElementById('selectedPartDesc').innerText = selectedPart.desc;
-  var meta = 'SKU: '+selectedPart.sku;
-  if (selectedPart.loc) meta += '  📍 '+selectedPart.loc;
-  var st = selectedPart.qty==0?'🔴 Out of Stock':selectedPart.qty<=selectedPart.reorder?'🟡 Low — '+selectedPart.qty+' remaining':'🟢 '+selectedPart.qty+' in stock';
-  meta += '  '+st;
-  document.getElementById('selectedPartMeta').innerText = meta;
+function selectOrderPart(sku){
+  selectedPart=parts.find(function(p){return p.sku===sku;});
+  if(!selectedPart) return;
+  document.getElementById('orderSearch').value='';
+  document.getElementById('orderPartsList').style.display='none';
+  document.getElementById('selectedPartBox').style.display='block';
+  document.getElementById('selectedPartDesc').innerText=selectedPart.desc;
+  var sc=selectedPart.qty==0?'🔴 Out of Stock':selectedPart.qty<=selectedPart.reorder?'🟡 Low — '+selectedPart.qty:' 🟢 '+selectedPart.qty+' in stock';
+  document.getElementById('selectedPartMeta').innerText='SKU: '+selectedPart.sku+(selectedPart.loc?' · 📍 '+selectedPart.loc:'')+' · '+sc;
 }
-
-function clearSelectedPart() {
-  selectedPart = null;
-  document.getElementById('selectedPartBox').style.display = 'none';
-  document.getElementById('orderSearch').value = '';
-}
-
+function clearSelectedPart(){selectedPart=null;document.getElementById('selectedPartBox').style.display='none';document.getElementById('orderSearch').value='';}
 function submitOrder(){
   if(orderSent) return;
-  var btn  = document.querySelector('.submit-btn');
-  var name = document.getElementById('orderName').value;
-  var notes= document.getElementById('orderNotes').value;
-  var msg  = document.getElementById('msg');
-  if(!name){ msg.className='error'; msg.innerText='Please select your name'; return; }
-  if(!selectedPart){ msg.className='error'; msg.innerText='Please search and select a part'; return; }
-  orderSent=true; btn.disabled=true; btn.innerText='Sending...'; btn.style.opacity='0.5';
-  msg.className='loading'; msg.innerText='Sending request...';
-  var params = '?action=requestorder'
+  var btn=document.querySelector('.submit-btn');
+  var name=document.getElementById('orderName').value;
+  var notes=document.getElementById('orderNotes').value;
+  var msg=document.getElementById('msg');
+  if(!name){msg.className='error';msg.innerText='Please select your name';return;}
+  if(!selectedPart){msg.className='error';msg.innerText='Please search and select a part';return;}
+  orderSent=true;btn.disabled=true;btn.innerText='Sending...';btn.style.opacity='0.5';
+  msg.className='loading';msg.innerText='Sending request...';
+  var url=APP+'?action=requestorder'
     +'&name='+encodeURIComponent(name)
     +'&sku='+encodeURIComponent(selectedPart.sku)
     +'&part='+encodeURIComponent(selectedPart.desc)
@@ -709,17 +504,69 @@ function submitOrder(){
     +'&qty='+encodeURIComponent(selectedPart.qty)
     +'&reorder='+encodeURIComponent(selectedPart.reorder)
     +'&notes='+encodeURIComponent(notes);
-  jsonp(APP+params, function(r){
+  jsonp(url,function(r){
     if(r!==null){
-      msg.className='success'; msg.innerText='✅ Order request sent to Ross & Harvey!';
-      clearSelectedPart();
-      document.getElementById('orderNotes').value='';
+      msg.className='success';msg.innerText='✅ Order request sent!';
+      clearSelectedPart();document.getElementById('orderNotes').value='';
       btn.innerText='✅ Sent!';
-      setTimeout(function(){ orderSent=false; btn.disabled=false; btn.innerText='📋 Send Order Request'; btn.style.opacity='1'; }, 15000);
+      setTimeout(function(){orderSent=false;btn.disabled=false;btn.innerText='📋 Send Order Request';btn.style.opacity='1';},15000);
     } else {
-      msg.className='error'; msg.innerText='❌ Failed. Try again.';
-      orderSent=false; btn.disabled=false; btn.innerText='📋 Send Order Request'; btn.style.opacity='1';
+      msg.className='error';msg.innerText='❌ Failed. Try again.';
+      orderSent=false;btn.disabled=false;btn.innerText='📋 Send Order Request';btn.style.opacity='1';
     }
+  });
+}
+
+// Manager
+function loadManager(){
+  jsonp(APP+'?action=getmanagerdata',function(d){
+    if(!d) return;
+    // Today summary per staff
+    var ts={};
+    d.todayLog.forEach(function(r){
+      if(!ts[r.name]) ts[r.name]={taken:0,restocked:0};
+      if(r.action==='TAKEN') ts[r.name].taken+=r.qty;
+      if(r.action==='RESTOCK') ts[r.name].restocked+=r.qty;
+    });
+    var names=Object.keys(ts);
+    var th=names.length===0?'<div style="color:#555;font-size:13px;padding:6px 0">No activity today yet</div>':'';
+    names.forEach(function(n){
+      th+='<div class="mgr-row"><div class="mgr-row-left"><strong>'+n+'</strong></div>'
+        +'<div class="mgr-row-right">'+(ts[n].taken?'<span class="badge-taken">➖ '+ts[n].taken+' taken</span><br>':'')
+        +(ts[n].restocked?'<span class="badge-restock">➕ '+ts[n].restocked+' restocked</span>':'')+'</div></div>';
+    });
+    document.getElementById('mgr-today').innerHTML=th;
+    // Staff week
+    var sh=d.staffList.length===0?'<div style="color:#555;font-size:13px;padding:6px 0">No activity this week</div>':'';
+    d.staffList.forEach(function(s,i){
+      sh+='<div class="mgr-row"><div class="mgr-row-left">'+(i===0?'🏆 ':'')+s.name+'</div>'
+        +'<div class="mgr-row-right"><span class="badge-taken">➖'+s.taken+'</span> <span class="badge-restock">➕'+s.restocked+'</span></div></div>';
+    });
+    document.getElementById('mgr-staff').innerHTML=sh;
+    // Top parts
+    var tp=d.topWeek.length===0?'<div style="color:#555;font-size:13px;padding:6px 0">No data this week</div>':'';
+    d.topWeek.forEach(function(p,i){tp+='<div class="mgr-row"><div class="mgr-row-left">'+(i+1)+'. '+p.desc+'</div><div class="mgr-row-right badge-taken">'+p.qty+' taken</div></div>';});
+    document.getElementById('mgr-top').innerHTML=tp;
+    // Low stock
+    var lh=d.lowStock.length===0?'<div style="color:#00e676;font-size:13px;padding:6px 0">✅ All stock healthy!</div>':'';
+    d.lowStock.forEach(function(p){
+      var cl=p.qty===0?'#ff5252':'#ffd600';
+      lh+='<div class="mgr-row"><div class="mgr-row-left">'+p.desc+(p.loc?'<br><span style="color:#555;font-size:11px">📍 '+p.loc+'</span>':'')+'</div>'
+        +'<div class="mgr-row-right" style="color:'+cl+';font-weight:700">'+p.qty+' left<br><span style="color:#555;font-size:11px">Min: '+p.reorder+'</span></div></div>';
+    });
+    document.getElementById('mgr-low').innerHTML=lh;
+    // Stockouts
+    var so=d.stockouts.length===0?'<div style="color:#00e676;font-size:13px;padding:6px 0">✅ No stockouts predicted in 90 days</div>':'';
+    d.stockouts.forEach(function(p){
+      var cl=p.daysLeft<=7?'#ff5252':p.daysLeft<=14?'#ffd600':'#aaa';
+      so+='<div class="mgr-row"><div class="mgr-row-left">'+p.desc+'</div>'
+        +'<div class="mgr-row-right" style="color:'+cl+';font-weight:700">'+p.daysLeft+'d<br><span style="color:#555;font-size:11px">~'+p.date+'</span></div></div>';
+    });
+    document.getElementById('mgr-stockout').innerHTML=so;
+    // Staff PINs
+    var ph='';
+    STAFF.forEach(function(s){ph+='<div class="staff-row"><span>'+s.emoji+' '+s.name+'<br><span style="color:#555;font-size:11px">'+s.role+'</span></span><span style="color:#00e5ff;font-weight:700">'+s.pin+'</span></div>';});
+    document.getElementById('staff-list').innerHTML=ph;
   });
 }
 </script>
