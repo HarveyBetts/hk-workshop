@@ -12,6 +12,9 @@
   <title>HK Inventory</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    .page{transition:opacity 0.25s ease;}
+    .page.active{animation:fadeIn 0.25s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
     html,body{height:100%;background:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#fff;overflow:hidden}
     .app{display:flex;flex-direction:column;overflow:hidden}
     .header{display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;flex-shrink:0}
@@ -253,6 +256,10 @@
     <button class="back-btn" onclick="showPage('home')">← Back</button>
     <h2 style="color:#ffd600;font-size:18px;margin-bottom:14px;flex-shrink:0">👑 Manager Dashboard</h2>
     <div class="mgr-section">
+      <div class="mgr-section-title">🟢 Logged In Today</div>
+      <div id="mgr-loggedin"><div class="empty" style="padding:10px 0">Loading...</div></div>
+    </div>
+    <div class="mgr-section">
       <div class="mgr-section-title">📋 Today's Activity</div>
       <div id="mgr-today"><div class="empty" style="padding:10px 0">Loading...</div></div>
     </div>
@@ -284,14 +291,15 @@ var APP='https://script.google.com/macros/s/AKfycbyC_Jj3rkosw79ICRDWme7YHJ8IvMTj
 var parts=[], currentUser=null, pinEntry='', orderSent=false, selectedPart=null, qrScanner=null;
 
 var STAFF=[
-  {name:'Ross McArthur',  role:'Manager',          pin:'1234',emoji:'👑'},
+  {name:'Ross McArthur',  role:'Manager',          pin:'1234',emoji:'⭐'},
   {name:'Harvey Betts',   role:'Assistant Manager', pin:'2345',emoji:'⭐'},
   {name:'Rafael Hewitt',  role:'Mechanic',          pin:'3456',emoji:'🔧'},
   {name:'Alex Harper',    role:'Mechanic',          pin:'4567',emoji:'🔧'},
   {name:'Sam Lally',      role:'Mechanic',          pin:'5678',emoji:'🔧'},
   {name:'Jayden Aginsky', role:'Mechanic',          pin:'6789',emoji:'🔧'},
   {name:'Will Webster',   role:'Mechanic',          pin:'7890',emoji:'🔧'},
-  {name:'Christian Oom',  role:'Mechanic',          pin:'8901',emoji:'🔧'}
+  {name:'Christian Oom',  role:'Mechanic',          pin:'8901',emoji:'🔧'},
+  {name:'Office View',     role:'Read Only',          pin:'0000',emoji:'🏢'}
 ];
 
 function setH(){document.getElementById('app').style.height=window.innerHeight+'px';}
@@ -349,11 +357,12 @@ function showPage(id){
   pg.scrollTop=0;
   setH();
   var isM=currentUser&&(currentUser.role==='Manager'||currentUser.role==='Assistant Manager');
+  var isRO=currentUser&&currentUser.role==='Read Only';
   var bar=document.getElementById('user-bar');
   if(currentUser&&id!=='pin'&&id!=='welcome'){bar.style.display='block';document.getElementById('user-bar-name').innerText=currentUser.emoji+' '+currentUser.name;}
   else{bar.style.display='none';}
   var mt=document.getElementById('manager-tile');
-  mt.style.display=(isM&&id==='home')?'flex':'none';
+  mt.style.display=((isM||isRO)&&id==='home')?'flex':'none';
 }
 
 // JSONP
@@ -400,6 +409,7 @@ function renderLow(){
   list.forEach(function(p){
     var cls=p.qty==0?'zero':'low';
     var st=p.qty==0?'🔴 Out of Stock':'🟡 Low — '+p.qty+' remaining';
+    var priceStr=p.price?'$'+p.price.toFixed(2)+' AUD':'';
     h+='<div class="low-item '+cls+'"><div class="part-sku">SKU: '+p.sku+'</div><div class="part-desc">'+p.desc+'</div>'
       +'<div class="part-meta"><span>'+st+'</span>'+(p.loc?'<span style="color:#666;margin-left:12px">📍 '+p.loc+'</span>':'')+'</div></div>';
   });
@@ -521,6 +531,18 @@ function submitOrder(){
 function loadManager(){
   jsonp(APP+'?action=getmanagerdata',function(d){
     if(!d) return;
+    // Who's logged in today (from session - we track via today's log)
+    var loggedInToday = {};
+    d.todayLog.forEach(function(r){ loggedInToday[r.name]=true; });
+    var liNames = Object.keys(loggedInToday);
+    var li = liNames.length===0
+      ? '<div style="color:#555;font-size:13px;padding:6px 0">No one active yet today</div>'
+      : liNames.map(function(n){
+          var sf = STAFF.find(function(s){return s.name===n;})||{emoji:'🔧'};
+          return '<div style="display:inline-block;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);border-radius:20px;padding:6px 12px;margin:4px 4px 4px 0;font-size:13px;font-weight:600;">'+sf.emoji+' '+n+'</div>';
+        }).join('');
+    document.getElementById('mgr-loggedin').innerHTML = li;
+
     // Today summary per staff
     var ts={};
     d.todayLog.forEach(function(r){
@@ -538,8 +560,9 @@ function loadManager(){
     document.getElementById('mgr-today').innerHTML=th;
     // Staff week
     var sh=d.staffList.length===0?'<div style="color:#555;font-size:13px;padding:6px 0">No activity this week</div>':'';
+    d.staffList.sort(function(a,b){return b.taken-a.taken;});
     d.staffList.forEach(function(s,i){
-      sh+='<div class="mgr-row"><div class="mgr-row-left">'+(i===0?'🏆 ':'')+s.name+'</div>'
+      sh+='<div class="mgr-row"><div class="mgr-row-left">'+(i===0?'🏆 ':i===1?'🥈 ':i===2?'🥉 ':'')+s.name+'</div>'
         +'<div class="mgr-row-right"><span class="badge-taken">➖'+s.taken+'</span> <span class="badge-restock">➕'+s.restocked+'</span></div></div>';
     });
     document.getElementById('mgr-staff').innerHTML=sh;
