@@ -720,6 +720,21 @@ function startScan(){
 
 function _initScanner(){
   var v=document.getElementById('qrv');
+  // Check existing permission to skip prompt if granted
+  if(navigator.permissions&&navigator.permissions.query){
+    try{
+      navigator.permissions.query({name:'camera'}).then(function(res){
+        if(res.state==='granted'){
+          document.getElementById('sst').innerText='Opening camera...';
+        } else if(res.state==='denied'){
+          document.getElementById('sst').innerText='Camera blocked — Settings → Safari → Camera → Allow';
+          document.getElementById('sbn').style.display='block';
+          document.getElementById('ssp').style.display='none';
+          return;
+        }
+      }).catch(function(){});
+    }catch(e){}
+  }
   try {
     qrs=new window.QrScanner(v,function(r){
       var url=r.data||r;
