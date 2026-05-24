@@ -77,9 +77,9 @@
     .welcome-bar{width:36px;height:3px;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;margin-top:10px;}
 
     /* ── Home ── */
-    .home-wrap{display:flex;flex-direction:column;gap:11px;padding-top:6px;}
-    .tiles-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
-    .tile{background:var(--surface);border:1px solid var(--border);border-radius:22px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:18px;cursor:pointer;min-height:118px;position:relative;overflow:hidden;transition:transform 0.15s,box-shadow 0.15s;}
+    .home-wrap{display:flex;flex-direction:column;gap:11px;padding-top:6px;flex:1;}
+    .tiles-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;flex:1;}
+    .tile{background:var(--surface);border:1px solid var(--border);border-radius:22px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:18px;cursor:pointer;min-height:0;position:relative;overflow:hidden;transition:transform 0.15s,box-shadow 0.15s;}
     .tile::after{content:'';position:absolute;top:-40px;right:-24px;width:90px;height:90px;border-radius:50%;opacity:0.12;}
     .tile:active{transform:scale(0.95);box-shadow:none;}
     .tile-icon{font-size:28px;margin-bottom:12px;position:relative;z-index:1;}
@@ -238,7 +238,7 @@
     </div>
 
     <!-- HOME -->
-    <div class="page" id="page-home">
+    <div class="page" id="page-home" style="padding-bottom:0;">
       <div class="home-wrap">
         <div class="tiles-grid">
           <div class="tile t-scan" id="tile-scan" onclick="showPage('scan')">
@@ -386,74 +386,24 @@ window.addEventListener('resize',setH);
 window.addEventListener('orientationchange',function(){setTimeout(setH,300);});
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/hk-inventory/sw.js').catch(function(){});
 
-// ── Interactive swipe back ──
+// ── Simple swipe back (no preview) ──
 var pageHistory=[];
-var swipeStartX=0,swipeStartY=0,swipeActive=false;
-var currentPageEl=null,prevPageEl=null;
-
+var swipeStartX=0,swipeStartY=0,swipeMoved=false;
 document.getElementById('page-container').addEventListener('touchstart',function(e){
-  if(pageHistory.length===0) return;
   swipeStartX=e.touches[0].clientX;
   swipeStartY=e.touches[0].clientY;
-  swipeActive=swipeStartX<60;
-  if(swipeActive){
-    currentPageEl=document.querySelector('.page.active');
-    var prevId=pageHistory[pageHistory.length-1];
-    prevPageEl=document.getElementById('page-'+prevId);
-    if(prevPageEl){
-      prevPageEl.style.display='flex';
-      prevPageEl.style.transform='translateX(-30%)';
-      prevPageEl.style.opacity='0.5';
-      prevPageEl.style.transition='none';
-      currentPageEl.style.transition='none';
-    }
-  }
+  swipeMoved=false;
 },{passive:true});
-
 document.getElementById('page-container').addEventListener('touchmove',function(e){
-  if(!swipeActive||!currentPageEl||!prevPageEl) return;
-  var dx=e.touches[0].clientX-swipeStartX;
-  var dy=Math.abs(e.touches[0].clientY-swipeStartY);
-  if(dx<0||dy>dx) return;
-  var pct=Math.min(dx/window.innerWidth,1);
-  currentPageEl.style.transform='translateX('+dx+'px)';
-  prevPageEl.style.transform='translateX(calc(-30% + '+(pct*30)+'%))';
-  prevPageEl.style.opacity=0.5+(pct*0.5);
+  swipeMoved=true;
 },{passive:true});
-
 document.getElementById('page-container').addEventListener('touchend',function(e){
-  if(!swipeActive||!currentPageEl||!prevPageEl){swipeActive=false;return;}
+  if(!swipeMoved) return;
   var dx=e.changedTouches[0].clientX-swipeStartX;
-  var w=window.innerWidth;
-  swipeActive=false;
-  if(dx>w*0.35){
-    // Complete swipe back
-    currentPageEl.style.transition='transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94),opacity 0.32s';
-    prevPageEl.style.transition='transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94),opacity 0.32s';
-    currentPageEl.style.transform='translateX('+w+'px)';
-    currentPageEl.style.opacity='0';
-    prevPageEl.style.transform='translateX(0)';
-    prevPageEl.style.opacity='1';
-    setTimeout(function(){
-      currentPageEl.classList.remove('active');
-      currentPageEl.style.cssText='';
-      prevPageEl.style.cssText='';
-      prevPageEl.classList.add('active');
-      var prevId=pageHistory.pop();
-      updateUI(prevId);
-    },320);
-  } else {
-    // Snap back
-    currentPageEl.style.transition='transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)';
-    prevPageEl.style.transition='transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94),opacity 0.28s';
-    currentPageEl.style.transform='translateX(0)';
-    prevPageEl.style.transform='translateX(-30%)';
-    prevPageEl.style.opacity='0.5';
-    setTimeout(function(){
-      prevPageEl.classList.remove('active');
-      prevPageEl.style.cssText='';
-      currentPageEl.style.cssText='';
-    },280);
+  var dy=Math.abs(e.changedTouches[0].clientY-swipeStartY);
+  if(dx>80&&dy<60&&swipeStartX<50&&pageHistory.length>0){
+    var prev=pageHistory[pageHistory.length-1];
+    showPage(prev,true);
   }
 },{passive:true});
 
@@ -552,12 +502,34 @@ function updateUI(id){
     document.getElementById('chip-emoji').innerText=currentUser.emoji;
     document.getElementById('chip-name').innerText=currentUser.name.split(' ')[0];
   } else chip.style.display='none';
+
   var mt=document.getElementById('manager-tile');
   if(mt) mt.style.display=((isM||isRO)&&id==='home')?'flex':'none';
   var ts=document.getElementById('tile-scan'),to=document.getElementById('tile-order');
   if(ts) ts.style.display=isRO?'none':'flex';
   if(to) to.style.display=isRO?'none':'flex';
   if(id==='order'&&currentUser){var sel=document.getElementById('orderName');if(sel)sel.value=currentUser.name;}
+
+  // Adjust tile sizes based on role so everything fills the screen
+  if(id==='home'){
+    var hw=document.querySelector('.home-wrap');
+    var grid=document.querySelector('.tiles-grid');
+    var tileWides=document.querySelectorAll('.tile-wide');
+    var pc=document.getElementById('page-container');
+    var availH=pc.offsetHeight - 16; // padding
+    var wideCount=(isM||isRO)?2:1; // manager + race, or just race
+    var wideH=58; // approx height of wide tile
+    var gap=11;
+    var tilesH=availH - (wideCount*(wideH+gap)) - (gap*3);
+    grid.style.flex='none';
+    grid.style.height=tilesH+'px';
+    // Tile font sizing
+    var tileIconSize=tilesH/2>130?'30px':'26px';
+    document.querySelectorAll('.tile-icon').forEach(function(el){el.style.fontSize=tileIconSize;});
+    var tileLabelSize=tilesH/2>130?'14px':'12px';
+    document.querySelectorAll('.tile-label').forEach(function(el){el.style.fontSize=tileLabelSize;});
+  }
+
   setH();
 }
 
