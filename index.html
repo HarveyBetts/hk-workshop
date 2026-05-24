@@ -29,8 +29,7 @@
     /* ── Header ── */
     #hdr{display:flex;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top),18px) 20px 12px;flex-shrink:0;border-bottom:1px solid var(--b1);position:relative;z-index:100}
     .hlogo{display:flex;align-items:center;gap:11px}
-    .hk-ring{width:38px;height:38px;border-radius:50%;border:2px solid transparent;background:linear-gradient(#000,#000) padding-box,var(--grad) border-box;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .hk-lbl{font-size:12px;font-weight:900;letter-spacing:1.5px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hk-icon{width:38px;height:38px;border-radius:8px;flex-shrink:0;object-fit:contain}
     .hname{font-size:16px;font-weight:700;letter-spacing:-0.3px}
     .hsub{font-size:10px;color:var(--t2);margin-top:1px;text-transform:uppercase;letter-spacing:0.5px}
     .uchip{display:none;align-items:center;gap:7px;background:var(--card);border:1px solid var(--b2);border-radius:999px;padding:6px 13px 6px 8px;cursor:pointer;transition:background .12s}
@@ -50,37 +49,19 @@
     /* Animated gradient background */
     #s-pin{background:#000;overflow:hidden}
 
-    /* Moving aurora blobs */
-    .aur{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;z-index:0;mix-blend-mode:screen;will-change:transform,opacity}
-    .aur-1{width:280px;height:280px;background:radial-gradient(circle,#00CFFF 0%,transparent 70%);top:-80px;left:-60px;animation:aurMove1 14s ease-in-out infinite alternate}
-    .aur-2{width:320px;height:320px;background:radial-gradient(circle,#6E42FF 0%,transparent 70%);bottom:-100px;right:-80px;animation:aurMove2 18s ease-in-out infinite alternate}
-    .aur-3{width:240px;height:240px;background:radial-gradient(circle,#E040FB 0%,transparent 70%);top:30%;right:-100px;animation:aurMove3 16s ease-in-out infinite alternate}
-    .aur-4{width:200px;height:200px;background:radial-gradient(circle,#00C853 0%,transparent 70%);bottom:25%;left:-80px;animation:aurMove4 20s ease-in-out infinite alternate}
+    /* Subtle ambient color motion — refined, not disco */
+    .aur{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;mix-blend-mode:screen;will-change:transform,opacity}
+    .aur-1{width:380px;height:380px;background:radial-gradient(circle,rgba(0,207,255,0.35) 0%,transparent 70%);top:-150px;left:-120px;animation:aur1 22s ease-in-out infinite alternate}
+    .aur-2{width:380px;height:380px;background:radial-gradient(circle,rgba(110,66,255,0.30) 0%,transparent 70%);bottom:-150px;right:-120px;animation:aur2 26s ease-in-out infinite alternate}
 
-    @keyframes aurMove1{
-      0%{transform:translate(0,0) scale(1);opacity:0.55}
-      50%{transform:translate(60px,80px) scale(1.2);opacity:0.75}
-      100%{transform:translate(120px,40px) scale(0.95);opacity:0.6}
-    }
-    @keyframes aurMove2{
+    @keyframes aur1{
       0%{transform:translate(0,0) scale(1);opacity:0.5}
-      50%{transform:translate(-70px,-50px) scale(1.15);opacity:0.7}
-      100%{transform:translate(-100px,-80px) scale(0.9);opacity:0.55}
+      100%{transform:translate(80px,60px) scale(1.15);opacity:0.7}
     }
-    @keyframes aurMove3{
-      0%{transform:translate(0,0) scale(1);opacity:0.4}
-      50%{transform:translate(-100px,60px) scale(1.25);opacity:0.6}
-      100%{transform:translate(-160px,120px) scale(0.85);opacity:0.45}
+    @keyframes aur2{
+      0%{transform:translate(0,0) scale(1);opacity:0.45}
+      100%{transform:translate(-80px,-60px) scale(1.15);opacity:0.6}
     }
-    @keyframes aurMove4{
-      0%{transform:translate(0,0) scale(1);opacity:0.35}
-      50%{transform:translate(80px,-60px) scale(1.18);opacity:0.55}
-      100%{transform:translate(140px,-100px) scale(0.9);opacity:0.4}
-    }
-
-    /* Subtle floating dust particles */
-    @keyframes dust{0%{transform:translateY(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100vh);opacity:0}}
-    .dust{position:absolute;width:2px;height:2px;border-radius:50%;background:rgba(255,255,255,0.6);pointer-events:none;z-index:0;animation:dust linear infinite}
 
     .pin-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:16px 22px;position:relative;z-index:1}
     @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -282,7 +263,7 @@
 <div id="app">
   <div id="hdr">
     <div class="hlogo">
-      <div class="hk-ring"><span class="hk-lbl">HK</span></div>
+      <img class="hk-icon" src="icon-192.png" alt="HK">
       <div><div class="hname">Inventory</div><div class="hsub">Hyper Karting</div></div>
     </div>
     <div class="uchip" id="uchip" onclick="logout()">
@@ -296,14 +277,6 @@
     <div class="scr active" id="s-pin">
       <div class="aur aur-1"></div>
       <div class="aur aur-2"></div>
-      <div class="aur aur-3"></div>
-      <div class="aur aur-4"></div>
-      <div class="dust" style="left:12%;animation-duration:18s;animation-delay:0s"></div>
-      <div class="dust" style="left:28%;animation-duration:22s;animation-delay:3s"></div>
-      <div class="dust" style="left:45%;animation-duration:16s;animation-delay:6s"></div>
-      <div class="dust" style="left:62%;animation-duration:20s;animation-delay:2s"></div>
-      <div class="dust" style="left:78%;animation-duration:24s;animation-delay:8s"></div>
-      <div class="dust" style="left:88%;animation-duration:19s;animation-delay:5s"></div>
       <div class="pin-wrap">
         <div><div class="pin-h2">Welcome back</div><div class="pin-p">Enter your PIN to continue</div></div>
         <div class="dots" id="pd"><div class="dot" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div></div>
@@ -843,25 +816,70 @@ function beep(){
 }
 function startScan(){
   if(cu&&cu.role==='Read Only'){document.getElementById('sst').innerText='Not available for office access.';return;}
-  document.getElementById('sbn').style.display='none';document.getElementById('ssp').style.display='block';
-  document.getElementById('sst').innerText='Starting camera...';
+  document.getElementById('sbn').style.display='none';
+  document.getElementById('ssp').style.display='block';
+  document.getElementById('sst').innerText='Loading scanner...';
   var v=document.getElementById('qrv');
   if(window.QrScanner){_sc(v);return;}
-  var el=document.createElement('script');el.type='module';
-  el.textContent='import QrScanner from "https://unpkg.com/qr-scanner/qr-scanner.min.js";window.QrScanner=QrScanner;window._sc(document.getElementById("qrv"));';
+  // Use jsdelivr ESM CDN — much more reliable than unpkg
+  var el=document.createElement('script');
+  el.type='module';
+  el.innerHTML='import QrScanner from "https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/+esm";window.QrScanner=QrScanner;if(window._scReady)window._scReady();';
+  el.onerror=function(){
+    document.getElementById('sst').innerText='Could not load scanner. Check internet & try again.';
+    document.getElementById('sbn').style.display='block';
+    document.getElementById('ssp').style.display='none';
+  };
   document.head.appendChild(el);
+  // Fallback if module fails silently
+  setTimeout(function(){
+    if(!window.QrScanner){
+      document.getElementById('sst').innerText='Scanner loading slowly... still trying';
+    }
+  },5000);
+  // Set up ready callback
+  window._scReady=function(){_sc(document.getElementById('qrv'));};
 }
+
 window._sc=function(v){
+  if(!window.QrScanner){
+    document.getElementById('sst').innerText='Scanner not loaded yet — try again';
+    document.getElementById('sbn').style.display='block';
+    document.getElementById('ssp').style.display='none';
+    return;
+  }
   try{
     qrs=new window.QrScanner(v,function(r){
       var url=r.data||r;
-      if(url){beep();stopScan();var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');setTimeout(function(){window.location.href=dest;},200);}
-    },{preferredCamera:'environment',highlightScanRegion:true});
-    qrs.start().then(function(){document.getElementById('sst').innerText='Point camera at QR code';})
-    .catch(function(){document.getElementById('sst').innerText='Camera denied — Settings → Safari → Camera → Allow';document.getElementById('sbn').style.display='block';document.getElementById('ssp').style.display='none';});
-  }catch(e){document.getElementById('sst').innerText='Error: '+e.message;document.getElementById('sbn').style.display='block';document.getElementById('ssp').style.display='none';}
+      if(url){
+        beep();stopScan();
+        var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
+        setTimeout(function(){window.location.href=dest;},200);
+      }
+    },{preferredCamera:'environment',highlightScanRegion:true,maxScansPerSecond:5});
+    qrs.start().then(function(){
+      document.getElementById('sst').innerText='Point camera at QR code';
+    }).catch(function(err){
+      document.getElementById('sst').innerText='Camera denied — Settings → Safari → Camera → Allow';
+      document.getElementById('sbn').style.display='block';
+      document.getElementById('ssp').style.display='none';
+    });
+  }catch(e){
+    document.getElementById('sst').innerText='Error: '+e.message;
+    document.getElementById('sbn').style.display='block';
+    document.getElementById('ssp').style.display='none';
+  }
 };
-function stopScan(){if(qrs){qrs.stop();qrs.destroy();qrs=null;}document.getElementById('sbn').style.display='block';document.getElementById('ssp').style.display='none';document.getElementById('sst').innerText='Tap Start and align QR code in frame';}
+
+function stopScan(){
+  if(qrs){
+    try{qrs.stop();qrs.destroy();}catch(e){}
+    qrs=null;
+  }
+  document.getElementById('sbn').style.display='block';
+  document.getElementById('ssp').style.display='none';
+  document.getElementById('sst').innerText='Tap Start and align QR code in frame';
+}
 
 // ── Order ──
 function iord(){if(parts.length===0)lp('_');if(cu){var sel=document.getElementById('on');if(sel)sel.value=cu.name;}}
