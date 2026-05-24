@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <title>HK Inventory</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
   <style>
     :root {
       --bg:#000; --card:#111; --card2:#1a1a1a;
@@ -49,20 +50,6 @@
     /* Animated gradient background */
     #s-pin{background:#000;overflow:hidden}
 
-    /* Subtle ambient color motion — refined, not disco */
-    .aur{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;mix-blend-mode:screen;will-change:transform,opacity}
-    .aur-1{width:380px;height:380px;background:radial-gradient(circle,rgba(0,207,255,0.35) 0%,transparent 70%);top:-150px;left:-120px;animation:aur1 22s ease-in-out infinite alternate}
-    .aur-2{width:380px;height:380px;background:radial-gradient(circle,rgba(110,66,255,0.30) 0%,transparent 70%);bottom:-150px;right:-120px;animation:aur2 26s ease-in-out infinite alternate}
-
-    @keyframes aur1{
-      0%{transform:translate(0,0) scale(1);opacity:0.5}
-      100%{transform:translate(80px,60px) scale(1.15);opacity:0.7}
-    }
-    @keyframes aur2{
-      0%{transform:translate(0,0) scale(1);opacity:0.45}
-      100%{transform:translate(-80px,-60px) scale(1.15);opacity:0.6}
-    }
-
     .pin-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:16px 22px;position:relative;z-index:1}
     @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
     .pin-wrap{animation:fadeUp .5s ease both}
@@ -80,13 +67,8 @@
     @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-11px)}40%,80%{transform:translateX(11px)}}
     .dots.sh{animation:shake .42s ease}
 
-    /* ── Welcome - dark background ── */
-    #s-welcome{background:#000;overflow:hidden}
-    /* Subtle ambient glow */
-    #s-welcome::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
-      background:
-        radial-gradient(ellipse 80% 50% at 50% 30%,rgba(0,207,255,0.08) 0%,transparent 65%),
-        radial-gradient(ellipse 60% 40% at 50% 110%,rgba(0,207,255,0.06) 0%,transparent 60%)}
+    /* ── Welcome ── */
+    #s-welcome{background:#000}
 
     .wel-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;z-index:2}
     @keyframes welIn{0%{opacity:0;transform:scale(0.8) translateY(30px)}60%{transform:scale(1.04) translateY(-4px)}100%{opacity:1;transform:scale(1) translateY(0)}}
@@ -97,23 +79,7 @@
     .wrole{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:rgba(0,207,255,0.85);margin-top:4px}
     .wbar{width:32px;height:2px;background:linear-gradient(90deg,#00CFFF,#6E42FF);border-radius:2px;margin-top:12px}
 
-    /* ── Kart stage ── */
-    .kart-stage{height:120px;position:relative;z-index:2;overflow:hidden;flex-shrink:0;margin:0 -20px}
-    /* Ground reflection */
-    .kart-stage::before{content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,rgba(0,207,255,0.08))}
 
-    @keyframes kartIn{0%{transform:translateX(110vw)}65%{transform:translateX(calc(50vw - 150px))}78%{transform:translateX(calc(50vw - 135px))}88%{transform:translateX(calc(50vw - 142px))}100%{transform:translateX(calc(50vw - 138px))}}
-    @keyframes kartIdle{0%,100%{transform:translateX(calc(50vw - 138px)) translateY(0)}50%{transform:translateX(calc(50vw - 138px)) translateY(-3px)}}
-    @keyframes kartOut{0%{transform:translateX(calc(50vw - 138px))}100%{transform:translateX(-130vw)}}
-    .kart-svg{position:absolute;bottom:14px;left:0;will-change:transform;animation:kartIn .9s cubic-bezier(0.05,0,0.1,1) .2s both}
-    .kart-idle{animation:kartIdle .65s ease-in-out infinite!important}
-    .kart-out{animation:kartOut .5s cubic-bezier(0.7,0,1,1) forwards!important}
-    /* Shadow under kart */
-    .kart-shadow{position:absolute;bottom:12px;left:0;width:280px;height:8px;background:radial-gradient(ellipse,rgba(0,0,0,0.5) 0%,transparent 70%);will-change:transform;animation:kartIn .9s cubic-bezier(0.05,0,0.1,1) .2s both}
-
-    @keyframes wspin{to{transform:rotate(360deg)}}
-    #rw{animation:wspin .18s linear infinite;transform-origin:40px 40px}
-    #fw{animation:wspin .18s linear infinite;transform-origin:218px 40px}
 
     /* Loading bar */
     #lbar{position:absolute;bottom:0;left:0;right:0;height:3px;z-index:10;display:none;background:rgba(255,255,255,0.06)}
@@ -122,14 +88,7 @@
     #lbar.run #lbp{animation:lbf 2.5s cubic-bezier(0.4,0,0.2,1) forwards}
 
     /* ── HOME ── */
-    /* Animated ambient glow */
-    #s-home::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
-      background:
-        radial-gradient(ellipse 70% 40% at 15% 15%,rgba(0,207,255,0.1) 0%,transparent 60%),
-        radial-gradient(ellipse 60% 45% at 85% 85%,rgba(110,66,255,0.1) 0%,transparent 60%),
-        radial-gradient(ellipse 50% 35% at 50% 100%,rgba(0,200,83,0.06) 0%,transparent 65%);
-      animation:homeglow 9s ease-in-out infinite alternate}
-    @keyframes homeglow{0%{opacity:.6;transform:scale(1)}100%{opacity:1;transform:scale(1.06)}}
+    /* Animated ambient glow */100%{opacity:1;transform:scale(1.06)}}
     #s-home .sf{position:relative;z-index:1}
 
     .home-inner{display:flex;flex-direction:column;height:100%;gap:10px;padding-top:14px}
@@ -275,8 +234,6 @@
 
     <!-- PIN -->
     <div class="scr active" id="s-pin">
-      <div class="aur aur-1"></div>
-      <div class="aur aur-2"></div>
       <div class="pin-wrap">
         <div><div class="pin-h2">Welcome back</div><div class="pin-p">Enter your PIN to continue</div></div>
         <div class="dots" id="pd"><div class="dot" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div></div>
@@ -298,88 +255,7 @@
         <div class="wrole" id="wr">Mechanic</div>
         <div class="wbar"></div>
       </div>
-      <div class="kart-stage">
-        <svg class="kart-svg" id="kart" width="280" height="95" viewBox="0 0 280 95" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="bd" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1a1a1a"/><stop offset="50%" stop-color="#0a0a0a"/><stop offset="100%" stop-color="#000"/></linearGradient>
-            <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00CFFF"/><stop offset="100%" stop-color="#0099CC"/></linearGradient>
-            <linearGradient id="dk" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#1a1a3e"/><stop offset="100%" stop-color="#0a0a1a"/></linearGradient>
-            <filter id="gw"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="sg"><feGaussianBlur stdDeviation="4"/></filter>
-          </defs>
-          <!-- Speed streaks -->
-          <g opacity="0.55">
-            <line x1="-5" y1="42" x2="-90" y2="42" stroke="#00CFFF" stroke-width="2.5"/>
-            <line x1="-5" y1="52" x2="-70" y2="52" stroke="#00CFFF" stroke-width="1.5"/>
-            <line x1="-5" y1="32" x2="-55" y2="32" stroke="#00CFFF" stroke-width="1.2"/>
-            <line x1="-5" y1="60" x2="-40" y2="60" stroke="#00CFFF" stroke-width="1"/>
-          </g>
-          <!-- Rear wing -->
-          <rect x="8" y="12" width="48" height="5" rx="2.5" fill="url(#wg)" filter="url(#gw)"/>
-          <rect x="10" y="19" width="44" height="3.5" rx="1.5" fill="#007AAA"/>
-          <line x1="16" y1="17" x2="16" y2="46" stroke="#0099CC" stroke-width="3"/>
-          <line x1="48" y1="17" x2="48" y2="46" stroke="#0099CC" stroke-width="3"/>
-          <!-- Rear wheel -->
-          <g id="rw" style="transform-origin:42px 70px">
-            <circle cx="42" cy="70" r="22" fill="#111" stroke="#1a1a1a" stroke-width="3"/>
-            <circle cx="42" cy="70" r="15" fill="#0a0a0a" stroke="#2a2a2a" stroke-width="2"/>
-            <circle cx="42" cy="70" r="6" fill="#222"/>
-            <line x1="42" y1="48" x2="42" y2="92" stroke="#222" stroke-width="3.5"/>
-            <line x1="20" y1="70" x2="64" y2="70" stroke="#222" stroke-width="3.5"/>
-            <line x1="26" y1="54" x2="58" y2="86" stroke="#1e1e1e" stroke-width="3"/>
-            <line x1="58" y1="54" x2="26" y2="86" stroke="#1e1e1e" stroke-width="3"/>
-            <circle cx="42" cy="70" r="15" fill="none" stroke="rgba(0,207,255,0.18)" stroke-width="1.5"/>
-          </g>
-          <!-- Body -->
-          <path d="M48 68 L45 46 L85 36 L190 34 L225 44 L230 60 L230 70 L48 70 Z" fill="url(#bd)" filter="url(#gw)"/>
-          <!-- Underbody -->
-          <path d="M50 70 L50 76 L220 74 L230 70 Z" fill="#04080a"/>
-          <!-- Side pod -->
-          <path d="M88 68 L88 42 L170 40 L170 68 Z" fill="rgba(0,0,0,0.5)"/>
-          <!-- Intake -->
-          <ellipse cx="92" cy="56" rx="10" ry="15" fill="#060a0c" stroke="#0099CC" stroke-width="1.5"/>
-          <ellipse cx="92" cy="56" rx="6" ry="10" fill="#020408"/>
-          <!-- Top highlight -->
-          <path d="M85 36 L190 34 L225 44 L218 40 L188 32 L87 34 Z" fill="rgba(0,207,255,0.18)"/>
-          <!-- HK branding -->
-          <rect x="100" y="48" width="52" height="18" rx="3" fill="rgba(0,207,255,0.95)"/>
-          <text x="126" y="61" font-family="Arial" font-weight="900" font-size="14" fill="#000" text-anchor="middle" letter-spacing="2">HK</text>
-          <!-- Cockpit -->
-          <path d="M115 36 L120 16 L168 14 L178 36 Z" fill="url(#dk)"/>
-          <path d="M120 36 L124 18 L164 16 L172 36 Z" fill="#080818"/>
-          <path d="M115 36 L120 16 L124 18 L120 36 Z" fill="#00CFFF" opacity="0.8"/>
-          <path d="M178 36 L168 14 L164 16 L172 36 Z" fill="#00CFFF" opacity="0.8"/>
-          <!-- Windscreen -->
-          <path d="M124 34 L127 20 L161 18 L167 34 Z" fill="rgba(0,207,255,0.1)" stroke="rgba(0,207,255,0.2)" stroke-width=".8"/>
-          <!-- Helmet -->
-          <ellipse cx="145" cy="15" rx="24" ry="20" fill="#FF6500"/>
-          <ellipse cx="150" cy="12" rx="15" ry="11" fill="#FF8C00" opacity="0.6"/>
-          <path d="M126 16 L128 7 L164 5 L168 16 Z" fill="rgba(0,15,30,.85)" stroke="rgba(0,207,255,.6)" stroke-width=".8"/>
-          <path d="M130 15 L131 9 L158 7 L162 15 Z" fill="rgba(0,207,255,.12)"/>
-          <ellipse cx="142" cy="9" rx="9" ry="5.5" fill="rgba(255,255,255,.2)"/>
-          <!-- Front wheel -->
-          <g id="fw" style="transform-origin:218px 70px">
-            <circle cx="218" cy="70" r="18" fill="#111" stroke="#1a1a1a" stroke-width="3"/>
-            <circle cx="218" cy="70" r="12" fill="#0a0a0a" stroke="#2a2a2a" stroke-width="2"/>
-            <circle cx="218" cy="70" r="5" fill="#222"/>
-            <line x1="218" y1="52" x2="218" y2="88" stroke="#222" stroke-width="3"/>
-            <line x1="200" y1="70" x2="236" y2="70" stroke="#222" stroke-width="3"/>
-            <line x1="205" y1="57" x2="231" y2="83" stroke="#1e1e1e" stroke-width="2.5"/>
-            <line x1="231" y1="57" x2="205" y2="83" stroke="#1e1e1e" stroke-width="2.5"/>
-            <circle cx="218" cy="70" r="12" fill="none" stroke="rgba(0,207,255,0.18)" stroke-width="1.5"/>
-          </g>
-          <!-- Front wing -->
-          <path d="M228 46 L275 38 L278 43 L268 46 L278 49 L275 54 L228 52 Z" fill="url(#wg)" filter="url(#gw)"/>
-          <path d="M230 46 L272 39 L275 38 L228 46 Z" fill="rgba(255,255,255,.14)"/>
-          <path d="M229 53 L278 54 L278 58 L229 57 Z" fill="#0077AA" opacity=".8"/>
-          <!-- Exhaust glow -->
-          <ellipse cx="6" cy="52" rx="10" ry="5" fill="#FF6500" opacity="0.5" filter="url(#sg)"/>
-          <ellipse cx="5" cy="52" rx="6" ry="3" fill="#FF9500" opacity="0.7"/>
-          <ellipse cx="4" cy="52" rx="3" ry="2" fill="#FFE000" opacity="0.9"/>
-          <!-- Ground glow -->
-          <ellipse cx="140" cy="87" rx="110" ry="6" fill="rgba(0,207,255,0.07)" filter="url(#sg)"/>
-        </svg>
-      </div>
+      
     </div>
 
     <!-- HOME -->
@@ -402,7 +278,7 @@
     <div class="scr" id="s-scan">
       <button class="back" onclick="stopScan();back()"> Back</button>
       <div class="scanf">
-        <div id="qrvc"><video id="qrv" playsinline muted></video></div>
+        <div id="qrvc"><video id="qrv" playsinline autoplay muted></video></div>
         <p class="shint" id="sst">Tap Start and align QR code in frame</p>
         <button class="btnp" id="sbn" onclick="startScan()">Start Scanner</button>
         <button class="btns" id="ssp" onclick="stopScan()">Stop</button>
@@ -698,8 +574,6 @@ function chk(){
     var lb=document.getElementById('lbar');lb.style.display='block';lb.classList.remove('run');void lb.offsetWidth;lb.classList.add('run');
 
     // Kart: arrive already started (CSS), idle after 1.2s, leave at 2.9s
-    setTimeout(function(){var k=document.getElementById('kart');if(k)k.classList.add('kart-idle');},1000);
-    setTimeout(function(){var k=document.getElementById('kart');if(k){k.classList.remove('kart-idle');k.classList.add('kart-out');}},2100);
 
     // Pre-load parts
     if(!parts.length){var c=sessionStorage.getItem('hk_p');if(c){try{parts=JSON.parse(c);}catch(e){}}
@@ -720,9 +594,7 @@ function chk(){
         welEl.style.cssText='transform:translateX(100%)';welEl.classList.remove('active','behind');
         homeEl.style.cssText='';homeEl.classList.add('active');
         lb.style.display='none';updateUI('home');
-        // Reset kart for next time
-        var k=document.getElementById('kart');if(k){k.classList.remove('kart-idle','kart-out');k.style.animation='none';void k.offsetWidth;k.style.animation='';}
-      },440);
+},440);
     },2500);
   } else {
     pin3='';udots();document.getElementById('pe').innerText='Incorrect PIN — try again';
@@ -818,64 +690,46 @@ function startScan(){
   if(cu&&cu.role==='Read Only'){document.getElementById('sst').innerText='Not available for office access.';return;}
   document.getElementById('sbn').style.display='none';
   document.getElementById('ssp').style.display='block';
-  document.getElementById('sst').innerText='Loading scanner...';
+  document.getElementById('sst').innerText='Starting camera...';
   var v=document.getElementById('qrv');
-  if(window.QrScanner){_sc(v);return;}
-  // Use jsdelivr ESM CDN — much more reliable than unpkg
-  var el=document.createElement('script');
-  el.type='module';
-  el.innerHTML='import QrScanner from "https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/+esm";window.QrScanner=QrScanner;if(window._scReady)window._scReady();';
-  el.onerror=function(){
-    document.getElementById('sst').innerText='Could not load scanner. Check internet & try again.';
-    document.getElementById('sbn').style.display='block';
-    document.getElementById('ssp').style.display='none';
-  };
-  document.head.appendChild(el);
-  // Fallback if module fails silently
-  setTimeout(function(){
-    if(!window.QrScanner){
-      document.getElementById('sst').innerText='Scanner loading slowly... still trying';
-    }
-  },5000);
-  // Set up ready callback
-  window._scReady=function(){_sc(document.getElementById('qrv'));};
-}
-
-window._sc=function(v){
-  if(!window.QrScanner){
-    document.getElementById('sst').innerText='Scanner not loaded yet — try again';
-    document.getElementById('sbn').style.display='block';
-    document.getElementById('ssp').style.display='none';
-    return;
-  }
-  try{
-    qrs=new window.QrScanner(v,function(r){
-      var url=r.data||r;
-      if(url){
-        beep();stopScan();
-        var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
-        setTimeout(function(){window.location.href=dest;},200);
-      }
-    },{preferredCamera:'environment',highlightScanRegion:true,maxScansPerSecond:5});
-    qrs.start().then(function(){
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(function(s){
+      qrs=s;
+      v.srcObject=s;
+      v.setAttribute('playsinline',true);
+      v.play();
       document.getElementById('sst').innerText='Point camera at QR code';
-    }).catch(function(err){
+      var cv=document.createElement('canvas');
+      var ctx=cv.getContext('2d',{willReadFrequently:true});
+      window._qrTimer=setInterval(function(){
+        if(!v.videoWidth||v.paused||v.ended) return;
+        cv.width=v.videoWidth;
+        cv.height=v.videoHeight;
+        ctx.drawImage(v,0,0,cv.width,cv.height);
+        try {
+          var img=ctx.getImageData(0,0,cv.width,cv.height);
+          var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+          if(code&&code.data){
+            var url=code.data;
+            beep();
+            stopScan();
+            var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
+            setTimeout(function(){window.location.href=dest;},200);
+          }
+        } catch(e){}
+      },200);
+    })
+    .catch(function(err){
       document.getElementById('sst').innerText='Camera denied — Settings → Safari → Camera → Allow';
       document.getElementById('sbn').style.display='block';
       document.getElementById('ssp').style.display='none';
     });
-  }catch(e){
-    document.getElementById('sst').innerText='Error: '+e.message;
-    document.getElementById('sbn').style.display='block';
-    document.getElementById('ssp').style.display='none';
-  }
-};
+}
 
 function stopScan(){
-  if(qrs){
-    try{qrs.stop();qrs.destroy();}catch(e){}
-    qrs=null;
-  }
+  if(window._qrTimer){clearInterval(window._qrTimer);window._qrTimer=null;}
+  if(qrs){try{qrs.getTracks().forEach(function(t){t.stop();});}catch(e){}qrs=null;}
+  var v=document.getElementById('qrv');if(v)v.srcObject=null;
   document.getElementById('sbn').style.display='block';
   document.getElementById('ssp').style.display='none';
   document.getElementById('sst').innerText='Tap Start and align QR code in frame';
