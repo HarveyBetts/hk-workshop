@@ -109,7 +109,8 @@
     .tile:active{transform:scale(0.92)}
     .tc {background:linear-gradient(145deg,#0E7490,#0B4F66);border:1px solid rgba(34,211,238,0.3)}
     .tse{background:linear-gradient(145deg,#5B21B6,#3B1370);border:1px solid rgba(139,92,246,0.35)}
-    .tlo{background:linear-gradient(145deg,#D97706,#92400E);border:1px solid rgba(245,158,11,0.4)}
+    .tlo{background:linear-gradient(145deg,#854D0E,#3F2503);border:1px solid rgba(234,179,8,0.45)}
+    .tlo .ti{filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4))}
     .tor{background:linear-gradient(145deg,#047857,#064E3B);border:1px solid rgba(16,185,129,0.35)}
 
     /* Subtle top sheen */
@@ -269,7 +270,7 @@
           <div class="tiles" id="tiles">
             <div class="tile tc" id="tscan" onclick="go('scan');setTimeout(startScan,420)"><div class="ti">📷</div><div class="tl">Scan QR</div><div class="ts">Take or restock</div></div>
             <div class="tile tse" onclick="go('search');lp('search')"><div class="ti">🔍</div><div class="tl">Search</div><div class="ts">Find any part</div></div>
-            <div class="tile tlo" onclick="go('lowstock');lp('lowstock')"><div class="ti">📉</div><div class="tl">Low Stock</div><div class="ts">Needs attention</div></div>
+            <div class="tile tlo" onclick="go('lowstock');lp('lowstock')"><div class="ti">⚠️</div><div class="tl">Low Stock</div><div class="ts">Needs attention</div></div>
             <div class="tile tor" id="tord" onclick="go('order');iord()"><div class="ti">📋</div><div class="tl">Request Order</div><div class="ts">Flag for ordering</div></div>
           </div>
           <div class="wide race wa1" id="wrace" onclick="go('race')"><div class="wi">🏎️</div><div><div class="wl">Racefacer</div><div class="ws">Track & session data</div></div></div>
@@ -640,7 +641,7 @@ function fpt(){rS(document.getElementById('si').value.toLowerCase());}
 
 function sdot(p){
   if(p.qty===0) return '<span class="sdot r"></span><span class="stxt r">Out of stock</span>';
-  if(p.qty<=p.reorder) return '<span class="sdot y"></span><span class="stxt y">Low · '+p.qty+'</span>';
+  if(p.qty<=p.reorder) return '<span class="sdot y"></span><span class="stxt y">'+p.qty+' in stock · Low</span>';
   return '<span class="sdot g"></span><span class="stxt g">'+p.qty+' in stock</span>';
 }
 function rS(q){
@@ -793,7 +794,7 @@ function fodp(){
   var h='';
   f.forEach(function(p){
     var stCol=p.qty===0?'#FF3B30':p.qty<=p.reorder?'#FFD600':'#00C853';
-    var stTxt=p.qty===0?'Out':p.qty<=p.reorder?'Low '+p.qty:p.qty+' in stock';
+    var stTxt=p.qty===0?'Out of stock':p.qty<=p.reorder?p.qty+' in stock · Low':p.qty+' in stock';
     h+='<div class="ddi" onclick="selp(\''+p.sku+'\')">'
       +'<div class="ddn">'+p.desc+'</div>'
       +'<div class="ddm" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:3px">'
@@ -805,7 +806,24 @@ function fodp(){
   });
   dl.innerHTML=h;dl.style.display='block';
 }
-function selp(sku){var p=parts.find(function(x){return x.sku===sku;});if(!p)return;sp=p;document.getElementById('os').value='';document.getElementById('oddl').style.display='none';document.getElementById('osb').style.display='block';document.getElementById('osd').innerText=p.desc;var sc=p.qty===0?'Out of stock':p.qty<=p.reorder?'Low — '+p.qty+' remaining':p.qty+' in stock';document.getElementById('osm').innerHTML='<span style="color:#00CFFF;font-weight:700">'+p.sku+'</span>'+(p.loc?' · <span style="color:#E040FB;font-weight:700">📍 '+p.loc+'</span>':'')+'<br>'+sc+(p.price?' · <span style="color:var(--acc)">$'+parseFloat(p.price).toFixed(2)+' AUD</span>':'');}
+function selp(sku){
+  var p=parts.find(function(x){return x.sku===sku;});
+  if(!p) return;
+  sp=p;
+  document.getElementById('os').value='';
+  document.getElementById('oddl').style.display='none';
+  document.getElementById('osb').style.display='block';
+  document.getElementById('osd').innerText=p.desc;
+  var stCol=p.qty===0?'#FF3B30':p.qty<=p.reorder?'#FFD600':'#00C853';
+  var stTxt=p.qty===0?'Out of stock':p.qty<=p.reorder?p.qty+' in stock · Low':p.qty+' in stock';
+  document.getElementById('osm').innerHTML=
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px">'
+    +'<span style="color:#00CFFF;font-weight:700;background:rgba(0,207,255,0.08);padding:2px 8px;border-radius:5px;border:1px solid rgba(0,207,255,0.2);font-size:11px">'+p.sku+'</span>'
+    +(p.loc?'<span style="color:#E040FB;font-weight:700;background:rgba(224,64,251,0.08);padding:2px 8px;border-radius:5px;border:1px solid rgba(224,64,251,0.2);font-size:11px">📍 '+p.loc+'</span>':'')
+    +'<span style="color:'+stCol+';font-weight:700;font-size:12px">'+stTxt+'</span>'
+    +(p.price?'<span style="color:var(--acc);font-weight:600;font-size:12px">$'+parseFloat(p.price).toFixed(2)+' AUD</span>':'')
+    +'</div>';
+}
 function clrp(){sp=null;document.getElementById('osb').style.display='none';document.getElementById('os').value='';}
 function subord(){
   if(cu&&cu.role==='Read Only'){document.getElementById('msg').className='er';document.getElementById('msg').innerText='Not available for office access.';return;}
