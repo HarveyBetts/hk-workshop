@@ -109,11 +109,9 @@
     .tile:active{transform:scale(0.92)}
     .tc {background:linear-gradient(145deg,#0E7490,#0B4F66);border:1px solid rgba(34,211,238,0.3)}
     .tse{background:linear-gradient(145deg,#5B21B6,#3B1370);border:1px solid rgba(139,92,246,0.35)}
-    .tlo{background:linear-gradient(145deg,#FFD600,#E6A800);border:1px solid rgba(255,214,0,0.5)}
+    .tlo{background:linear-gradient(145deg,#D97706,#92400E);border:1px solid rgba(245,158,11,0.4)}
     .tor{background:linear-gradient(145deg,#047857,#064E3B);border:1px solid rgba(16,185,129,0.35)}
-    /* Low stock tile: dark text on yellow for readability */
-    .tlo .tl{color:#1a1100;text-shadow:0 1px 0 rgba(255,255,255,0.15)}
-    .tlo .ts{color:rgba(26,17,0,0.65)}
+
     /* Subtle top sheen */
     .tile::before{content:'';position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(rgba(255,255,255,0.08),transparent);pointer-events:none}
     .ti{font-size:clamp(24px,6vw,32px);margin-bottom:8px;position:relative;z-index:1}
@@ -271,7 +269,7 @@
           <div class="tiles" id="tiles">
             <div class="tile tc" id="tscan" onclick="go('scan');setTimeout(startScan,420)"><div class="ti">📷</div><div class="tl">Scan QR</div><div class="ts">Take or restock</div></div>
             <div class="tile tse" onclick="go('search');lp('search')"><div class="ti">🔍</div><div class="tl">Search</div><div class="ts">Find any part</div></div>
-            <div class="tile tlo" onclick="go('lowstock');lp('lowstock')"><div class="ti">⚠️</div><div class="tl">Low Stock</div><div class="ts">Needs attention</div></div>
+            <div class="tile tlo" onclick="go('lowstock');lp('lowstock')"><div class="ti">📉</div><div class="tl">Low Stock</div><div class="ts">Needs attention</div></div>
             <div class="tile tor" id="tord" onclick="go('order');iord()"><div class="ti">📋</div><div class="tl">Request Order</div><div class="ts">Flag for ordering</div></div>
           </div>
           <div class="wide race wa1" id="wrace" onclick="go('race')"><div class="wi">🏎️</div><div><div class="wl">Racefacer</div><div class="ws">Track & session data</div></div></div>
@@ -792,7 +790,19 @@ function fodp(){
   if(!q||!parts.length){dl.style.display='none';return;}
   var f=parts.filter(function(p){return p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q);}).slice(0,12);
   if(!f.length){dl.style.display='none';return;}
-  var h='';f.forEach(function(p){h+='<div class="ddi" onclick="selp(\''+p.sku+'\')"><div class="ddn">'+p.desc+'</div><div class="ddm">'+p.sku+(p.loc?' · 📍 '+p.loc:'')+(p.qty===0?' · Out':p.qty<=p.reorder?' · Low '+p.qty:' · '+p.qty)+(p.price?' · $'+parseFloat(p.price).toFixed(2):'')+'</div></div>';});
+  var h='';
+  f.forEach(function(p){
+    var stCol=p.qty===0?'#FF3B30':p.qty<=p.reorder?'#FFD600':'#00C853';
+    var stTxt=p.qty===0?'Out':p.qty<=p.reorder?'Low '+p.qty:p.qty+' in stock';
+    h+='<div class="ddi" onclick="selp(\''+p.sku+'\')">'
+      +'<div class="ddn">'+p.desc+'</div>'
+      +'<div class="ddm" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:3px">'
+      +'<span style="color:#00CFFF;font-weight:700;background:rgba(0,207,255,0.08);padding:2px 7px;border-radius:5px;border:1px solid rgba(0,207,255,0.2)">'+p.sku+'</span>'
+      +(p.loc?'<span style="color:#E040FB;font-weight:700;background:rgba(224,64,251,0.08);padding:2px 7px;border-radius:5px;border:1px solid rgba(224,64,251,0.2)">📍 '+p.loc+'</span>':'')
+      +'<span style="color:'+stCol+';font-weight:700">'+stTxt+'</span>'
+      +(p.price?'<span style="color:#888">$'+parseFloat(p.price).toFixed(2)+'</span>':'')
+      +'</div></div>';
+  });
   dl.innerHTML=h;dl.style.display='block';
 }
 function selp(sku){var p=parts.find(function(x){return x.sku===sku;});if(!p)return;sp=p;document.getElementById('os').value='';document.getElementById('oddl').style.display='none';document.getElementById('osb').style.display='block';document.getElementById('osd').innerText=p.desc;var sc=p.qty===0?'Out of stock':p.qty<=p.reorder?'Low — '+p.qty+' remaining':p.qty+' in stock';document.getElementById('osm').innerHTML='<span style="color:#00CFFF;font-weight:700">'+p.sku+'</span>'+(p.loc?' · <span style="color:#E040FB;font-weight:700">📍 '+p.loc+'</span>':'')+'<br>'+sc+(p.price?' · <span style="color:var(--acc)">$'+parseFloat(p.price).toFixed(2)+' AUD</span>':'');}
