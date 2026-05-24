@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <title>HK Inventory</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+  
   <style>
     :root {
       --bg:#000; --card:#111; --card2:#1a1a1a;
@@ -160,7 +160,10 @@
 
     /* ── Scan ── */
     .scanf{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:0 20px}
-    #qrvc{width:100%;max-width:270px;aspect-ratio:1;border-radius:24px;overflow:hidden;background:var(--card);border:1.5px solid var(--b2);box-shadow:0 0 50px rgba(0,207,255,.08)}
+    #qrvc{width:100%;max-width:270px;aspect-ratio:1;border-radius:24px;overflow:hidden;background:var(--card);border:1.5px solid var(--b2);box-shadow:0 0 50px rgba(0,207,255,.08);position:relative}
+    /* qr-scanner yellow corner highlights */
+    .scan-region-highlight-svg{stroke:#FFD600!important;stroke-width:5!important;filter:drop-shadow(0 0 8px rgba(255,214,0,0.6))}
+    .code-outline-highlight{stroke:#00CFFF!important;stroke-width:3!important}
     #qrvc video{width:100%;height:100%;object-fit:cover;display:block}
     .shint{font-size:13px;color:var(--t2);text-align:center;line-height:1.7}
     .btnp{width:100%;padding:18px;font-size:15px;font-weight:700;border:none;border-radius:16px;cursor:pointer;background:var(--grad);color:#000;font-family:'Inter',sans-serif;box-shadow:0 6px 28px rgba(0,207,255,.2);transition:transform .1s}
@@ -690,46 +693,60 @@ function startScan(){
   if(cu&&cu.role==='Read Only'){document.getElementById('sst').innerText='Not available for office access.';return;}
   document.getElementById('sbn').style.display='none';
   document.getElementById('ssp').style.display='block';
-  document.getElementById('sst').innerText='Starting camera...';
+
+  if(window.QrScanner){
+    _initScanner();
+  } else if(window.qrLibError){
+    document.getElementById('sst').innerText='Scanner failed to load. Check internet.';
+    document.getElementById('sbn').style.display='block';
+    document.getElementById('ssp').style.display='none';
+  } else {
+    document.getElementById('sst').innerText='Loading scanner...';
+    window.onQrReady = _initScanner;
+    setTimeout(function(){
+      if(!window.QrScanner&&!qrs){
+        document.getElementById('sst').innerText='Scanner taking too long — try again';
+      }
+    },10000);
+  }
+}
+
+function _initScanner(){
   var v=document.getElementById('qrv');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
-    .then(function(s){
-      qrs=s;
-      v.srcObject=s;
-      v.setAttribute('playsinline',true);
-      v.play();
+  try {
+    qrs=new window.QrScanner(v,function(r){
+      var url=r.data||r;
+      if(url){
+        beep();
+        stopScan();
+        var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
+        setTimeout(function(){window.location.href=dest;},200);
+      }
+    },{
+      preferredCamera:'environment',
+      highlightScanRegion:true,
+      highlightCodeOutline:true,
+      maxScansPerSecond:5
+    });
+    qrs.start().then(function(){
       document.getElementById('sst').innerText='Point camera at QR code';
-      var cv=document.createElement('canvas');
-      var ctx=cv.getContext('2d',{willReadFrequently:true});
-      window._qrTimer=setInterval(function(){
-        if(!v.videoWidth||v.paused||v.ended) return;
-        cv.width=v.videoWidth;
-        cv.height=v.videoHeight;
-        ctx.drawImage(v,0,0,cv.width,cv.height);
-        try {
-          var img=ctx.getImageData(0,0,cv.width,cv.height);
-          var code=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
-          if(code&&code.data){
-            var url=code.data;
-            beep();
-            stopScan();
-            var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
-            setTimeout(function(){window.location.href=dest;},200);
-          }
-        } catch(e){}
-      },200);
-    })
-    .catch(function(err){
+    }).catch(function(err){
       document.getElementById('sst').innerText='Camera denied — Settings → Safari → Camera → Allow';
       document.getElementById('sbn').style.display='block';
       document.getElementById('ssp').style.display='none';
     });
+  } catch(e){
+    document.getElementById('sst').innerText='Error: '+e.message;
+    document.getElementById('sbn').style.display='block';
+    document.getElementById('ssp').style.display='none';
+  }
 }
 
 function stopScan(){
-  if(window._qrTimer){clearInterval(window._qrTimer);window._qrTimer=null;}
-  if(qrs){try{qrs.getTracks().forEach(function(t){t.stop();});}catch(e){}qrs=null;}
-  var v=document.getElementById('qrv');if(v)v.srcObject=null;
+  if(qrs){
+    try{qrs.stop();qrs.destroy();}catch(e){}
+    qrs=null;
+  }
   document.getElementById('sbn').style.display='block';
   document.getElementById('ssp').style.display='none';
   document.getElementById('sst').innerText='Tap Start and align QR code in frame';
@@ -776,6 +793,16 @@ function loadMgr(){
     document.getElementById('mpi').innerHTML=STAFF.map(function(x){return '<div class="prow"><span style="font-size:13px;font-weight:500">'+x.emoji+' '+x.name+'<br><span style="font-size:11px;color:var(--t2)">'+x.role+'</span></span><span class="pval">'+x.pin+'</span></div>';}).join('');
   });
 }
+</script>
+<script type="module">
+  try {
+    const m = await import('https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/+esm');
+    window.QrScanner = m.default;
+    window.qrLibReady = true;
+    if(window.onQrReady) window.onQrReady();
+  } catch(e) {
+    window.qrLibError = e.message;
+  }
 </script>
 </body>
 </html>
