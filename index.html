@@ -664,58 +664,68 @@ function back(){
   },400);
 }
 
-// ── Swipe back (rAF-batched, iOS spring physics) ──
-var sx=0,sy=0,swiping=false,swipeCur=null,swipePrev=null;
+// ── Swipe back (lazy setup — only activates on real movement) ──
+var sx=0,sy=0,swiping=false,swipeStarted=false,swipeCur=null,swipePrev=null;
 var nav=document.getElementById('nav');
-var swipeDx=0,swipeRAF=0;
+var navW=0;
 
 nav.addEventListener('touchstart',function(e){
   if(!e.touches||!e.touches[0])return;
-  sx=e.touches[0].clientX;sy=e.touches[0].clientY;swiping=false;
-  if(sx>55||stk.length<=1) return;
-  var curId=stk[stk.length-1],prevId=stk[stk.length-2];
-  if(!curId||!prevId) return;
-  // Block swipe-back during login flow
-  if(curId==='welcome'||curId==='pin'||prevId==='pin') return;
-  swipeCur=s(curId);
-  swipePrev=s(prevId);
-  if(!swipeCur||!swipePrev) return;
-  swipeCur.style.transition='none';
-  swipePrev.style.transition='none';
-  swipePrev.style.transform='translate3d(-28%,0,0)';
-  swipePrev.classList.remove('active');
-  swipePrev.classList.add('behind');
-  swipeCur.style.willChange='transform';
-  swipePrev.style.willChange='transform';
-  swiping=true;
-  swipeDx=0;
-  navW=0;
+  sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+  swiping=false;
+  swipeStarted=false;  // not yet committed to a swipe gesture
+  // Just record position. DO NOT modify DOM here — a tap should never affect anything.
 },{passive:true});
 
-var navW=0;
 nav.addEventListener('touchmove',function(e){
-  if(!swiping||!swipeCur||!swipePrev) return;
   if(!e.touches||!e.touches[0])return;
   var dx=e.touches[0].clientX-sx;
   var dy=Math.abs(e.touches[0].clientY-sy);
+  // First-time setup: only initiate swipe if user has moved enough AND started near edge
+  if(!swipeStarted){
+    // Require at least 8px of horizontal movement before committing to swipe
+    if(dx<8) return;
+    // If movement is mostly vertical, not a swipe
+    if(dy>Math.abs(dx)+10) return;
+    // Started too far from edge? Not a swipe.
+    if(sx>55||stk.length<=1) return;
+    // Block during login/welcome
+    var curId=stk[stk.length-1],prevId=stk[stk.length-2];
+    if(!curId||!prevId) return;
+    if(curId==='welcome'||curId==='pin'||prevId==='pin') return;
+    swipeCur=s(curId);
+    swipePrev=s(prevId);
+    if(!swipeCur||!swipePrev) return;
+    // NOW set up the swipe — user has clearly committed to the gesture
+    swipeCur.style.transition='none';
+    swipePrev.style.transition='none';
+    swipePrev.style.transform='translate3d(-28%,0,0)';
+    swipePrev.classList.remove('active');
+    swipePrev.classList.add('behind');
+    swipeCur.style.willChange='transform';
+    swipePrev.style.willChange='transform';
+    swipeStarted=true;
+    swiping=true;
+    navW=nav.offsetWidth;
+  }
+  if(!swiping||!swipeCur||!swipePrev) return;
   if(dy>Math.abs(dx)+10){swiping=false;cancelSwipe();return;}
   if(dx<0)dx=0;
   if(!navW) navW=nav.offsetWidth;
   var pct=dx/navW;
-  // Sync update: iOS touchmove already syncs to paint, no rAF needed
   swipeCur.style.transform='translate3d('+dx+'px,0,0)';
   swipePrev.style.transform='translate3d('+(-28+pct*28)+'%,0,0)';
 },{passive:true});
 
 nav.addEventListener('touchend',function(e){
-  if(!swiping)return;
-  swiping=false;
+  // If swipe never started, this was just a tap — do nothing
+  if(!swiping){swipeStarted=false;return;}
+  swiping=false;swipeStarted=false;
   if(!e.changedTouches||!e.changedTouches[0]){cancelSwipe();return;}
   var dx=e.changedTouches[0].clientX-sx;
   var W=nav.offsetWidth;
   var ease='cubic-bezier(0.32,0.72,0,1)';
   if(dx>W*0.3||dx>140){
-    // Velocity-aware finish: closer to completion = faster snap
     var remaining=W-dx,dur=Math.max(180,Math.min(260,Math.round(remaining/W*320)));
     swipeCur.style.transition='transform '+dur+'ms '+ease;
     swipePrev.style.transition='transform '+dur+'ms '+ease;
@@ -724,14 +734,18 @@ nav.addEventListener('touchend',function(e){
     var sC=swipeCur,sP=swipePrev;
     setTimeout(function(){
       var cid=stk.pop();
-      document.querySelectorAll('.scr').forEach(function(el){
-        el.classList.remove('active','behind');
-        el.style.cssText='';
-      });
+      // Align cascade with intended final positions FIRST (same fix as go/back)
+      sP.classList.remove('behind');
       sP.classList.add('active');
+      sC.classList.remove('active','behind');
+      // Then inline styles
+      sP.style.transition='none';
+      sP.style.transform='translate3d(0,0,0)';
+      sC.style.transition='none';
+      sC.style.transform='translate3d(100%,0,0)';
       if(cid==='scan'&&typeof stopScan==='function') stopScan();
       if(navigator.vibrate){try{navigator.vibrate(8);}catch(e){}}
-      updateUI(stk[stk.length-1]);
+      requestAnimationFrame(function(){updateUI(stk[stk.length-1]);});
     },dur);
     swipeCur=null;swipePrev=null;
   } else {
@@ -740,6 +754,7 @@ nav.addEventListener('touchend',function(e){
 },{passive:true});
 
 function cancelSwipe(){
+  if(!swipeCur&&!swipePrev) return;
   var sC=swipeCur,sP=swipePrev;
   var ease='cubic-bezier(0.32,0.72,0,1)';
   if(sC){
@@ -751,11 +766,23 @@ function cancelSwipe(){
     sP.style.transform='translate3d(-28%,0,0)';
   }
   setTimeout(function(){
-    if(sP){sP.style.cssText='';sP.classList.add('behind');}
-    if(sC){sC.style.cssText='';sC.classList.add('active');}
+    // Align cascade FIRST (same pattern as go/back cleanup)
+    if(sP){
+      sP.classList.add('behind');
+      sP.classList.remove('active');
+      sP.style.transition='none';
+      sP.style.transform='translate3d(-28%,0,0)';
+    }
+    if(sC){
+      sC.classList.add('active');
+      sC.classList.remove('behind');
+      sC.style.transition='none';
+      sC.style.transform='translate3d(0,0,0)';
+    }
   },200);
   swipeCur=null;swipePrev=null;
 }
+
 
 
 
