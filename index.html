@@ -565,20 +565,24 @@ function back(){
   },390);
 }
 
-// ── Swipe back ──
+// ── Swipe back (iOS PWA) ──
 var sx=0,sy=0,sw=false,swC=null,swP=null;
-var nav=document.getElementById('nav');
 
-function getNavW(){return nav.offsetWidth;}
+function attachSwipeListeners(){
+  var nav=document.getElementById('nav');
+  if(!nav) return;
+  nav.addEventListener('touchstart',handleTouchStart,{passive:true});
+  nav.addEventListener('touchmove',handleTouchMove,{passive:false});
+  nav.addEventListener('touchend',handleTouchEnd,{passive:true});
+  nav.addEventListener('touchcancel',handleTouchEnd,{passive:true});
+}
 
-document.addEventListener('touchstart',function(e){
+function handleTouchStart(e){
   if(!e.touches||!e.touches[0])return;
-  sx=e.touches[0].clientX;sy=e.touches[0].clientY;sw=false;
-  // Edge zone check — must start in left 60px
-  if(sx>60) return;
-  // Must have a page to go back to
-  if(stk.length<=1) return;
-  // Set up swipe
+  var t=e.touches[0];
+  sx=t.clientX;sy=t.clientY;sw=false;
+  if(sx>60) return;                 // must be near left edge
+  if(stk.length<=1) return;         // need a page to go back to
   swC=s(stk[stk.length-1]);
   swP=s(stk[stk.length-2]);
   if(!swC||!swP) return;
@@ -589,29 +593,28 @@ document.addEventListener('touchstart',function(e){
   swP.classList.remove('active');
   swP.classList.add('behind');
   sw=true;
-},{passive:true});
+}
 
-document.addEventListener('touchmove',function(e){
-  if(!sw||!swC||!swP) return;
+function handleTouchMove(e){
+  if(!sw||!swC||!swP)return;
   if(!e.touches||!e.touches[0])return;
-  var dx=e.touches[0].clientX-sx;
-  var dy=Math.abs(e.touches[0].clientY-sy);
-  // Cancel if vertical
-  if(dy>dx+10){sw=false;csw();return;}
-  if(dx<=0) return;
-  // Claim the gesture — prevents iOS from doing its own scrolling/zooming
-  e.preventDefault();
-  var W=getNavW(),p=Math.min(dx/W,1);
+  var t=e.touches[0];
+  var dx=t.clientX-sx;
+  var dy=Math.abs(t.clientY-sy);
+  if(dy>Math.abs(dx)+10){sw=false;csw();return;}
+  if(dx<=0)return;
+  e.preventDefault();               // claim the gesture
+  var W=document.getElementById('nav').offsetWidth;
+  var p=Math.min(dx/W,1);
   swC.style.transform='translateX('+dx+'px)';
   swP.style.transform='translateX(calc(-28% + '+(p*28)+'%))';
-},{passive:false});
+}
 
-document.addEventListener('touchend',function(e){
-  if(!sw) return; sw=false;
-  if(!e.changedTouches||!e.changedTouches[0])return;
+function handleTouchEnd(e){
+  if(!sw)return;sw=false;
+  if(!e.changedTouches||!e.changedTouches[0]){csw();return;}
   var dx=e.changedTouches[0].clientX-sx;
-  var W=getNavW();
-  // Trigger if swiped more than 25% or 100px
+  var W=document.getElementById('nav').offsetWidth;
   if(dx>W*0.25||dx>100){
     var dur=Math.max(180,Math.min(320,(W-dx)/W*400));
     swC.style.transition='transform '+dur+'ms cubic-bezier(.25,.46,.45,.94)';
@@ -631,7 +634,7 @@ document.addEventListener('touchend',function(e){
     },dur);
     swC=null;swP=null;
   } else csw();
-},{passive:true});
+}
 
 function csw(){
   if(swC){swC.style.transition='transform .25s cubic-bezier(.25,.46,.45,.94)';swC.style.transform='translateX(0)';}
@@ -643,6 +646,9 @@ function csw(){
   },250);
   swC=null;swP=null;
 }
+
+attachSwipeListeners();
+
 
 // ── UI ──
 function applyRoleVisibility(){
