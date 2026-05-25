@@ -337,6 +337,32 @@
     /* ── Empty ── */
     .emp{text-align:center;color:var(--t2);font-size:14px;padding:32px 0}
     .empic{font-size:32px;display:block;margin-bottom:10px;opacity:.25}
+
+    /* TAKE / RESTOCK in-app page */
+    .tk-row{display:flex;gap:10px;margin-bottom:12px}
+    .tk-box{flex:1;background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:12px 14px}
+    .tk-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;color:var(--t2)}
+    .tk-lbl-cy{color:#00CFFF}
+    .tk-lbl-pk{color:#E040FB}
+    .tk-val{font-size:24px;font-weight:700;color:var(--t1);line-height:1.1}
+    .tk-card{background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:14px 16px;margin-bottom:12px;text-align:center}
+    .tk-desc{font-size:18px;font-weight:700;color:var(--t1);margin-top:2px}
+    .tk-loc{font-size:18px;font-weight:700;color:var(--t1);margin-top:2px}
+    .tk-user-card{background:rgba(0,229,255,0.06);border:1.5px solid rgba(0,229,255,0.22);border-radius:14px;padding:12px 16px;margin-bottom:12px}
+    .tk-name{font-size:18px;font-weight:700;color:var(--t1);margin-top:2px}
+    .tk-qty-wrap{margin-bottom:14px}
+    .tk-qty-wrap input{width:100%;background:var(--card);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;color:var(--t1);font-size:18px;font-weight:600;font-family:'Inter',sans-serif;-webkit-appearance:none}
+    .tk-qty-wrap input:focus{outline:none;border-color:var(--acc)}
+    .tk-btn-row{display:flex;gap:10px;margin-bottom:14px}
+    .tk-take,.tk-restock{flex:1;border:none;border-radius:14px;padding:18px;font-size:17px;font-weight:700;font-family:'Inter',sans-serif;color:#fff;cursor:pointer;transition:opacity 0.2s}
+    .tk-take{background:#E53935}
+    .tk-restock{background:#43A047}
+    .tk-take:active,.tk-restock:active{opacity:0.7}
+    .tk-take:disabled,.tk-restock:disabled{opacity:0.5;cursor:not-allowed}
+    #tkMsg{margin-top:8px}
+    .tkmsg-ok{background:rgba(0,200,83,0.1);border:1.5px solid rgba(0,200,83,0.35);color:#00C853;padding:12px 14px;border-radius:12px;font-weight:600;text-align:center}
+    .tkmsg-err{background:rgba(255,59,48,0.1);border:1.5px solid rgba(255,59,48,0.35);color:#FF5252;padding:12px 14px;border-radius:12px;font-weight:600;text-align:center}
+    .tkmsg-loading{background:rgba(0,207,255,0.08);border:1.5px solid rgba(0,207,255,0.25);color:#00CFFF;padding:12px 14px;border-radius:12px;font-weight:600;text-align:center}
   </style>
 </head>
 <body>
@@ -404,6 +430,38 @@
         <p class="shint" id="sst">Starting camera...</p>
         <button class="btnp" id="sbn" onclick="startScan()" style="display:none">Try Again</button>
         <button class="btns" id="ssp" onclick="stopScan()">Stop</button>
+      </div>
+    </div>
+
+    <!-- TAKE / RESTOCK (in-app, replaces external Apps Script page) -->
+    <div class="scr" id="s-take">
+      <div class="phdr"><button class="back" onclick="back()"> Back</button></div>
+      <div class="sb">
+        <div class="tk-row">
+          <div class="tk-box"><div class="tk-lbl tk-lbl-cy">SKU</div><div class="tk-val" id="tkSku">—</div></div>
+          <div class="tk-box"><div class="tk-lbl tk-lbl-pk">In Stock</div><div class="tk-val" id="tkQty">—</div></div>
+        </div>
+        <div class="tk-card">
+          <div class="tk-lbl tk-lbl-cy" style="text-align:center">Part Description</div>
+          <div class="tk-desc" id="tkDesc">—</div>
+        </div>
+        <div class="tk-card" id="tkLocBox">
+          <div class="tk-lbl tk-lbl-pk" style="text-align:center">Location</div>
+          <div class="tk-loc">📍 <span id="tkLoc"></span></div>
+        </div>
+        <div class="tk-user-card">
+          <div class="tk-lbl tk-lbl-cy">Logged In As</div>
+          <div class="tk-name" id="tkName">—</div>
+        </div>
+        <div class="tk-qty-wrap">
+          <div class="tk-lbl tk-lbl-cy">Quantity</div>
+          <input type="number" id="tkInput" min="1" value="1" inputmode="numeric"/>
+        </div>
+        <div class="tk-btn-row">
+          <button class="tk-take" id="takeBtn" onclick="submitTake('take')">— Take</button>
+          <button class="tk-restock" id="restockBtn" onclick="submitTake('restock')">+ Restock</button>
+        </div>
+        <div id="tkMsg"></div>
       </div>
     </div>
 
@@ -1004,8 +1062,16 @@ function _initScanner(){
       if(url){
         beep();
         stopScan();
-        var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
-        setTimeout(function(){window.location.href=dest;},200);
+        // Extract SKU from URL — keeps everything in-app instead of opening external page
+        var skuMatch=url.match(/[?&]sku=([^&]+)/);
+        if(skuMatch){
+          var sku=decodeURIComponent(skuMatch[1]);
+          setTimeout(function(){openTakeRestock(sku);},250);
+        } else {
+          // Not an HK QR — fall back to external open
+          var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
+          setTimeout(function(){window.location.href=dest;},200);
+        }
       }
     },{
       preferredCamera:'environment',
@@ -1035,6 +1101,63 @@ function stopScan(){
   document.getElementById('sbn').style.display='block';
   document.getElementById('ssp').style.display='none';
   document.getElementById('sst').innerText='Camera stopped';
+}
+
+var currentTakeSku=null;
+function openTakeRestock(sku){
+  if(!parts.length){
+    jsonp(APP+'?action=getparts',function(d){
+      if(d){parts=d.sort(function(a,b){return (a.desc||'').localeCompare(b.desc||'');});try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}}
+      _showTakePage(sku);
+    });
+    return;
+  }
+  _showTakePage(sku);
+}
+function _showTakePage(sku){
+  var p=parts.find(function(x){return x.sku===sku;});
+  if(!p){alert('Part not found: '+sku);return;}
+  currentTakeSku=sku;
+  document.getElementById('tkSku').innerText=p.sku;
+  var stockEl=document.getElementById('tkQty');
+  stockEl.innerText=p.qty;
+  stockEl.style.color=p.qty===0?'#FF3B30':p.qty<=p.reorder?'#FFD600':'#00C853';
+  document.getElementById('tkDesc').innerText=p.desc;
+  if(p.loc){document.getElementById('tkLoc').innerText=p.loc;document.getElementById('tkLocBox').style.display='';}
+  else {document.getElementById('tkLocBox').style.display='none';}
+  document.getElementById('tkName').innerText=cu?cu.name:'';
+  document.getElementById('tkInput').value='1';
+  document.getElementById('tkMsg').innerHTML='';
+  document.getElementById('takeBtn').disabled=false;
+  document.getElementById('restockBtn').disabled=false;
+  go('take');
+}
+function submitTake(action){
+  if(!currentTakeSku||!cu)return;
+  var qty=parseInt(document.getElementById('tkInput').value);
+  if(!qty||qty<1){document.getElementById('tkMsg').innerHTML='<div class="tkmsg-err">Invalid quantity</div>';return;}
+  document.getElementById('takeBtn').disabled=true;
+  document.getElementById('restockBtn').disabled=true;
+  document.getElementById('tkMsg').innerHTML='<div class="tkmsg-loading">Updating stock...</div>';
+  var url=APP+'?action=updatestock&sku='+encodeURIComponent(currentTakeSku)+'&name='+encodeURIComponent(cu.name)+'&qty='+qty+'&type='+action;
+  jsonp(url,function(result){
+    document.getElementById('takeBtn').disabled=false;
+    document.getElementById('restockBtn').disabled=false;
+    if(result&&result.success){
+      document.getElementById('tkMsg').innerHTML='<div class="tkmsg-ok">'+result.message+'</div>';
+      var p=parts.find(function(x){return x.sku===currentTakeSku;});
+      if(p){
+        if(action==='take') p.qty=Math.max(0,p.qty-qty);
+        else p.qty=p.qty+qty;
+        var stockEl=document.getElementById('tkQty');
+        stockEl.innerText=p.qty;
+        stockEl.style.color=p.qty===0?'#FF3B30':p.qty<=p.reorder?'#FFD600':'#00C853';
+        try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}
+      }
+    } else {
+      document.getElementById('tkMsg').innerHTML='<div class="tkmsg-err">'+(result?result.message:'Connection error - please try again')+'</div>';
+    }
+  });
 }
 
 // ── Order ──
