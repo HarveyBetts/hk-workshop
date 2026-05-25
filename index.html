@@ -24,20 +24,31 @@
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
     html,body{height:100%;background:var(--bg);font-family:'Inter',-apple-system,sans-serif;color:var(--t1);overflow:hidden;-webkit-font-smoothing:antialiased}
 
-    /* Desktop: center the app in a phone-shaped column */
+    /* Desktop / tablet — full screen with content constraint */
     @media (min-width: 600px) {
-      body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; }
-      #app {
-        width: 440px !important;
-        max-width: 440px;
-        height: min(900px, 92vh) !important;
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 28px;
-        overflow: hidden;
-        box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 60px rgba(0,207,255,0.03);
-      }
+      #app { max-width: 100vw; width: 100%; }
+      /* Center content inside scrollable pages */
+      .sb, .sf, .pin-wrap, .scanf, .wel-content { max-width: 720px; margin-left: auto; margin-right: auto; width: 100%; }
+      /* Bigger header for desktop */
+      #hdr { padding-left: 32px; padding-right: 32px; }
+      /* Tile grid: 4 columns on big screens, 2 on smaller */
+      .tiles { max-width: 720px; margin: 0 auto; }
+      .wide { max-width: 720px; margin-left: auto; margin-right: auto; width: calc(100% - 0px); }
+      /* Inner pages padding */
+      .sb { padding-left: 32px; padding-right: 32px; }
+      .sf { padding-left: 32px; padding-right: 32px; }
+      .scanf { padding: 0 32px; }
+      /* PIN screen wider gap */
+      .pin-wrap { max-width: 420px; }
+      .pad { max-width: 320px; }
       /* Show subtle keyboard hint on desktop */
       .pin-p::after { content: ' · or use your keyboard'; color: var(--t3); font-size: 12px; }
+    }
+    /* Wide desktop — 4 column tile grid */
+    @media (min-width: 900px) {
+      .tiles { grid-template-columns: repeat(4,1fr); max-width: 960px; }
+      .wide { max-width: 960px; }
+      .sb, .sf { max-width: 960px; padding-left: 40px; padding-right: 40px; }
     }
 
     /* ── Shell ── */
@@ -575,8 +586,17 @@ function sizeTiles(){
   var isRO=cu&&cu.role==='Read Only';
   var navH=document.getElementById('nav').offsetHeight;
   var wides=(isM||isRO)?2:1,wH=55,gap=10,pt=14+16;
-  var tH=navH-pt-(wides*(wH+gap))-gap;
-  var g=document.getElementById('tiles');g.style.height=tH+'px';g.style.flex='none';
+  var isWide=window.innerWidth>=900;
+  // 4-col on wide desktop = 1 row of tiles, need less vertical space
+  var rowsOfTiles=isWide?1:2;
+  // On desktop, tiles take a fixed reasonable height instead of filling everything
+  if(window.innerWidth>=600){
+    var tH=Math.min(navH-pt-(wides*(wH+gap))-gap, isWide?180:420);
+    var g=document.getElementById('tiles');g.style.height=tH+'px';g.style.flex='none';
+  } else {
+    var tH=navH-pt-(wides*(wH+gap))-gap;
+    var g=document.getElementById('tiles');g.style.height=tH+'px';g.style.flex='none';
+  }
 }
 function animTiles(){
   var t=document.getElementById('tiles');
