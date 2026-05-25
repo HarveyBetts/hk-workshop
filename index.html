@@ -59,7 +59,7 @@
       #s-manager .mc:nth-child(2n) { margin-right: 0; }
 
       /* ── Home page: all roles get 2x2 grid layout ── */
-      #s-home .sf { display: flex; align-items: flex-start; justify-content: center; padding-top: 32px; }
+      #s-home .sf { display: flex; align-items: flex-start; justify-content: center; padding: 28px 48px 28px; overflow-y: auto; }
       .home-inner {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
@@ -73,41 +73,47 @@
       /* Every tile / wide becomes a square block */
       .home-inner .tile,
       .home-inner .wide {
-        min-height: 240px;
-        padding: 40px;
-        border-radius: 28px;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
+        min-height: 200px;
+        padding: 36px;
+        border-radius: 26px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         text-align: center;
         gap: 0;
       }
+      /* Ensure hidden tiles stay hidden on desktop */
+      .home-inner .tile[style*="display: none"],
+      .home-inner .wide[style*="display: none"],
+      .home-inner .tile[style*="display:none"],
+      .home-inner .wide[style*="display:none"] {
+        display: none !important;
+      }
       .home-inner .tile .ti,
       .home-inner .wide .wi {
-        font-size: 60px;
-        margin-bottom: 20px;
+        font-size: 52px;
+        margin-bottom: 16px;
         flex-shrink: 0;
       }
       .home-inner .tile .tl,
       .home-inner .wide .wl {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 800;
       }
       .home-inner .tile .ts,
       .home-inner .wide .ws {
-        font-size: 16px;
-        margin-top: 8px;
+        font-size: 15px;
+        margin-top: 6px;
       }
       /* For MANAGER role: Manager Dashboard becomes a thinner bar spanning full width below the 2x2 */
       .home-inner.role-mgr .wide.mgr {
         grid-column: 1 / -1;
-        flex-direction: row !important;
-        min-height: 88px;
-        padding: 24px 36px;
+        flex-direction: row;
+        min-height: 80px;
+        padding: 22px 36px;
         text-align: left;
-        align-items: center !important;
-        justify-content: flex-start !important;
+        align-items: center;
+        justify-content: flex-start;
         gap: 22px;
       }
       .home-inner.role-mgr .wide.mgr .wi {
@@ -483,7 +489,7 @@ function sz(){
   document.getElementById('nav').style.height=(window.innerHeight-document.getElementById('hdr').offsetHeight)+'px';
   if(stk.length&&stk[stk.length-1]==='home') sizeTiles();
 }
-sz();window.addEventListener('resize',sz);window.addEventListener('orientationchange',function(){setTimeout(sz,300);});
+sz();window.addEventListener('resize',function(){sz();if(cu)applyRoleVisibility();});window.addEventListener('orientationchange',function(){setTimeout(sz,300);});
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/hk-inventory/sw.js').catch(function(){});
 
 // ── Fetch staff ──
@@ -630,7 +636,8 @@ function applyRoleVisibility(){
   var isM=cu.role==='Manager'||cu.role==='Assistant Manager';
   var isRO=cu.role==='Read Only';
   var noCam=!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia;
-  var isDesktop=window.innerWidth>=900&&!('ontouchstart' in window);
+  // Better desktop detection: pointer:fine = mouse primary, no touch = desktop
+  var isDesktop=window.innerWidth>=900 && (window.matchMedia('(pointer: fine)').matches || navigator.maxTouchPoints===0);
   var hideScan=isRO||noCam||isDesktop;
   var mt=document.getElementById('mgrt');
   if(mt) mt.style.display=(isM||isRO)?'flex':'none';
