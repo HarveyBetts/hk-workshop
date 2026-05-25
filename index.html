@@ -59,12 +59,12 @@
       #s-manager .mc:nth-child(2n) { margin-right: 0; }
 
       /* ── Home page: all roles get 2x2 grid layout ── */
-      #s-home .sf { display: flex; align-items: flex-start; justify-content: center; padding: 28px 48px 28px; overflow-y: auto; }
+      #s-home .sf { display: flex; align-items: center; justify-content: center; padding: 24px 48px; overflow-y: auto; }
       .home-inner {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
-        gap: 22px;
-        max-width: 1100px;
+        gap: 26px;
+        max-width: 1400px;
         width: 100%;
         height: auto !important;
         padding: 0 !important;
@@ -73,9 +73,9 @@
       /* Every tile / wide becomes a square block */
       .home-inner .tile,
       .home-inner .wide {
-        min-height: 200px;
-        padding: 36px;
-        border-radius: 26px;
+        min-height: 260px;
+        padding: 44px;
+        border-radius: 28px;
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -91,19 +91,19 @@
       }
       .home-inner .tile .ti,
       .home-inner .wide .wi {
-        font-size: 52px;
-        margin-bottom: 16px;
+        font-size: 64px;
+        margin-bottom: 20px;
         flex-shrink: 0;
       }
       .home-inner .tile .tl,
       .home-inner .wide .wl {
-        font-size: 24px;
+        font-size: 28px;
         font-weight: 800;
       }
       .home-inner .tile .ts,
       .home-inner .wide .ws {
-        font-size: 15px;
-        margin-top: 6px;
+        font-size: 16px;
+        margin-top: 8px;
       }
       /* For MANAGER role: Manager Dashboard becomes a thinner bar spanning full width below the 2x2 */
       .home-inner.role-mgr .wide.mgr {
@@ -479,7 +479,7 @@ var STAFF=[
   {name:'Jayden Aginsky', role:'Mechanic',         pin:'6789',emoji:'🔧'},
   {name:'Will Webster',   role:'Mechanic',         pin:'7890',emoji:'🔧'},
   {name:'Christian Oom',  role:'Mechanic',         pin:'8901',emoji:'🔧'},
-  {name:'Office View',    role:'Read Only',        pin:'0000',emoji:'🏢'}
+  {name:'Office',         role:'Office Access',        pin:'0000',emoji:'🏢'}
 ];
 
 // ── Sizing ──
@@ -634,7 +634,7 @@ function csw(){
 function applyRoleVisibility(){
   if(!cu) return;
   var isM=cu.role==='Manager'||cu.role==='Assistant Manager';
-  var isRO=cu.role==='Read Only';
+  var isRO=cu.role==='Office Access';
   var noCam=!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia;
   // Better desktop detection: pointer:fine = mouse primary, no touch = desktop
   var isDesktop=window.innerWidth>=900 && (window.matchMedia('(pointer: fine)').matches || navigator.maxTouchPoints===0);
@@ -669,7 +669,7 @@ function updateUI(id){
 }
 function sizeTiles(){
   var isM=cu&&(cu.role==='Manager'||cu.role==='Assistant Manager');
-  var isRO=cu&&cu.role==='Read Only';
+  var isRO=cu&&cu.role==='Office Access';
   var navH=document.getElementById('nav').offsetHeight;
   var g=document.getElementById('tiles');
   if(window.innerWidth>=900){
@@ -893,7 +893,7 @@ function beep(){
 }
 function startScan(){
   if(qrs) return;
-  if(cu&&cu.role==='Read Only'){document.getElementById('sst').innerText='Not available for office access.';return;}
+  if(cu&&cu.role==='Office Access'){document.getElementById('sst').innerText='Not available for office access.';return;}
   document.getElementById('sbn').style.display='none';
   document.getElementById('ssp').style.display='block';
   document.getElementById('sst').innerText='Opening camera...';
@@ -1018,7 +1018,7 @@ function selp(sku){
 }
 function clrp(){sp=null;document.getElementById('osb').style.display='none';document.getElementById('os').value='';}
 function subord(){
-  if(cu&&cu.role==='Read Only'){document.getElementById('msg').className='er';document.getElementById('msg').innerText='Not available for office access.';return;}
+  if(cu&&cu.role==='Office Access'){document.getElementById('msg').className='er';document.getElementById('msg').innerText='Not available for office access.';return;}
   if(oSent)return;
   var btn=document.querySelector('.btnsub'),name=cu?cu.name:'',notes=document.getElementById('ono').value,msg=document.getElementById('msg');
   if(!name){msg.className='er';msg.innerText='Please select your name';return;}
