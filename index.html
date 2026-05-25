@@ -591,7 +591,7 @@ function chk(){
     // Kart: arrive already started (CSS), idle after 1.2s, leave at 2.9s
 
     // Pre-load parts
-    if(!parts.length){var c=sessionStorage.getItem('hk_p');if(c){try{parts=JSON.parse(c);}catch(e){}}
+    if(!parts.length){var c=sessionStorage.getItem('hk_p');if(c){try{var pp=JSON.parse(c);if(pp.length&&pp[0].hasOwnProperty('used90'))parts=pp;else sessionStorage.removeItem('hk_p');}catch(e){sessionStorage.removeItem('hk_p');}}
       if(!parts.length) jsonp(APP+'?action=getparts',function(d){if(d){parts=d.sort(function(a,b){return (a.desc||'').localeCompare(b.desc||'');});try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}}});}
 
     jsonp(APP+'?action=loglogin&name='+encodeURIComponent(m.name)+'&role='+encodeURIComponent(m.role),function(){});
@@ -631,7 +631,7 @@ function jsonp(url,cb){
 // ── Parts ──
 function lp(t){
   if(parts.length>0){rnd(t);return;}
-  var cc=sessionStorage.getItem('hk_p');if(cc){try{parts=JSON.parse(cc).sort(function(a,b){return (a.desc||'').localeCompare(b.desc||'');});rnd(t);return;}catch(e){}}
+  var cc=sessionStorage.getItem('hk_p');if(cc){try{var pp=JSON.parse(cc);if(pp.length&&pp[0].hasOwnProperty('used90')){parts=pp.sort(function(a,b){return (a.desc||'').localeCompare(b.desc||'');});rnd(t);return;}else sessionStorage.removeItem('hk_p');}catch(e){sessionStorage.removeItem('hk_p');}}
   jsonp(APP+'?action=getparts',function(d){
     if(!d){se(t,'<div class="emp"><span class="empic">⚠️</span>Could not load parts</div>');return;}
     parts=d.sort(function(a,b){return (a.desc||'').localeCompare(b.desc||'');});try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}rnd(t);
@@ -663,25 +663,78 @@ function rS(q){
   se('search',h);
 }
 function rL(){
-  // Sort: out of stock first, then by reorder level desc (most used = highest reorder)
-  var l=parts.filter(function(p){return p.qty<=p.reorder;}).sort(function(a,b){
-    if(a.qty===0&&b.qty!==0) return -1;
-    if(b.qty===0&&a.qty!==0) return 1;
-    return b.reorder-a.reorder; // highest reorder level = most used part
+  // TRUE URGENCY MODEL
+  // For LOW (qty>0): days until current stock runs out = qty / daily_rate
+  // For OUT (qty=0): days until you'll actually NEED the next one = 1 / daily_rate
+  // Result: silent blocks (low, daily use) ranks above chassis (out, used quarterly)
+  function urgency(p){
+    if(!p.used90||p.used90===0) return null;
+    var rate=p.used90/90; // units per day
+    if(p.qty===0) return 1/rate;       // avg days until next time you need one
+    return p.qty/rate;                  // days until you run out
+  }
+  function urgencyInfo(p){
+    var u=urgency(p);
+    if(u===null) return {label:'No recent usage',color:'#666'};
+    var col=u<=7?'#FF3B30':u<=21?'#FFD600':'#888';
+    if(p.qty===0){
+      return {label:'Out · needed every ~'+Math.round(u)+' days · '+(p.used90||0)+' used in 90d',color:col};
+    }
+    return {label:'~'+Math.round(u)+' days left · '+(p.used90||0)+' used in 90d',color:col};
+  }
+
+  // Active = low/out AND used in last 90 days
+  var l=parts.filter(function(p){
+    if(p.qty>p.reorder) return false;
+    if(!p.used90||p.used90===0) return false;
+    return true;
+  }).sort(function(a,b){
+    var au=urgency(a),bu=urgency(b);
+    if(au===null) return 1;
+    if(bu===null) return -1;
+    return au-bu; // lower = more urgent
   });
-  if(!l.length){se('lowstock','<div class="emp"><span class="empic">✅</span>All stock levels are healthy</div>');return;}
+
+  // Dead = low stock but no usage in 90 days
+  var dead=parts.filter(function(p){return p.qty<=p.reorder&&(!p.used90||p.used90===0);});
+
+  if(!l.length&&!dead.length){
+    se('lowstock','<div class="emp"><span class="empic">✅</span>All stock levels are healthy</div>');return;
+  }
+
   var h='';
-  l.forEach(function(p){
-    var c=p.qty===0?'z':'l';
-    h+='<div class="lcard '+c+'">'
-      +'<div class="ctop"><div class="cname">'+p.desc+'</div>'+(p.price&&p.price>0?'<div class="cpr">$'+parseFloat(p.price).toFixed(2)+'</div>':'')+'</div>'
-      +'<div class="cmeta">'+sdot(p)+'</div>'
-      +(p.sku||p.loc?'<div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap">'
-        +(p.sku?'<span style="font-size:11px;color:#00CFFF;font-weight:700;background:rgba(0,207,255,0.08);padding:3px 9px;border-radius:6px;border:1px solid rgba(0,207,255,0.2)">'+p.sku+'</span>':'')
-        +(p.loc?'<span style="font-size:11px;color:#E040FB;font-weight:700;background:rgba(224,64,251,0.08);padding:3px 9px;border-radius:6px;border:1px solid rgba(224,64,251,0.2)">📍 '+p.loc+'</span>':'')
-        +'</div>':'')
-      +'</div>';
-  });
+  if(l.length){
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin:4px 0 10px 4px">Priority · Order Soon</div>';
+    l.forEach(function(p){
+      var cl=p.qty===0?'z':'l';
+      var ui=urgencyInfo(p);
+      h+='<div class="lcard '+cl+'">'
+        +'<div class="ctop"><div class="cname">'+p.desc+'</div>'+(p.price&&p.price>0?'<div class="cpr">$'+parseFloat(p.price).toFixed(2)+'</div>':'')+'</div>'
+        +'<div class="cmeta">'+sdot(p)+'</div>'
+        +'<div style="margin-top:6px"><span style="font-size:11px;color:'+ui.color+';font-weight:700">'+ui.label+'</span></div>'
+        +(p.sku||p.loc?'<div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap">'
+          +(p.sku?'<span style="font-size:11px;color:#00CFFF;font-weight:700;background:rgba(0,207,255,0.08);padding:3px 9px;border-radius:6px;border:1px solid rgba(0,207,255,0.2)">'+p.sku+'</span>':'')
+          +(p.loc?'<span style="font-size:11px;color:#E040FB;font-weight:700;background:rgba(224,64,251,0.08);padding:3px 9px;border-radius:6px;border:1px solid rgba(224,64,251,0.2)">📍 '+p.loc+'</span>':'')
+          +'</div>':'')
+        +'</div>';
+    });
+  }
+
+  if(dead.length){
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin:22px 0 10px 4px">Rarely Used · No Action Needed</div>';
+    h+='<div style="font-size:12px;color:var(--t2);margin:0 4px 10px;line-height:1.5">Low but not used in the last 90 days.</div>';
+    dead.forEach(function(p){
+      h+='<div class="lcard l" style="opacity:0.55">'
+        +'<div class="ctop"><div class="cname">'+p.desc+'</div></div>'
+        +'<div class="cmeta">'+sdot(p)+'</div>'
+        +(p.sku||p.loc?'<div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap">'
+          +(p.sku?'<span style="font-size:11px;color:#00CFFF;font-weight:700;background:rgba(0,207,255,0.08);padding:3px 9px;border-radius:6px;border:1px solid rgba(0,207,255,0.2)">'+p.sku+'</span>':'')
+          +(p.loc?'<span style="font-size:11px;color:#E040FB;font-weight:700;background:rgba(224,64,251,0.08);padding:3px 9px;border-radius:6px;border:1px solid rgba(224,64,251,0.2)">📍 '+p.loc+'</span>':'')
+          +'</div>':'')
+        +'</div>';
+    });
+  }
+
   se('lowstock',h);
 }
 
