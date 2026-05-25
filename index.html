@@ -565,60 +565,84 @@ function back(){
   },390);
 }
 
-// ── Swipe back (iOS-style, working version from earlier session) ──
-var sx=0,sy=0,swiping=false,swipeCur=null,swipePrev=null;
+// ── Swipe back (smooth iOS-style) ──
+var sx=0,sy=0,swiping=false,swipeCur=null,swipePrev=null,swipeRAF=0,swipeDx=0;
 var nav=document.getElementById('nav');
 
 nav.addEventListener('touchstart',function(e){
+  if(!e.touches||!e.touches[0])return;
   sx=e.touches[0].clientX;sy=e.touches[0].clientY;swiping=false;
   if(sx>55||stk.length<=1) return;
-  var curId=stk[stk.length-1];
-  var prevId=stk[stk.length-2];
+  var curId=stk[stk.length-1],prevId=stk[stk.length-2];
   if(!curId||!prevId) return;
   swipeCur=s(curId);
   swipePrev=s(prevId);
-  // Show prev behind
-  swipePrev.style.cssText='';
-  swipePrev.style.transition='none';
-  swipePrev.style.transform='translateX(-28%)';
-  swipePrev.style.display='flex';
+  if(!swipeCur||!swipePrev) return;
+  // Disable transitions and set up initial positions in one paint
   swipeCur.style.transition='none';
+  swipePrev.style.transition='none';
+  swipePrev.style.display='flex';
+  swipePrev.style.transform='translate3d(-28%,0,0)';
+  swipePrev.style.opacity='0.6';
+  // Force GPU compositing
+  swipeCur.style.willChange='transform';
+  swipePrev.style.willChange='transform,opacity';
   swiping=true;
+  swipeDx=0;
 },{passive:true});
 
 nav.addEventListener('touchmove',function(e){
   if(!swiping||!swipeCur||!swipePrev) return;
+  if(!e.touches||!e.touches[0])return;
   var dx=e.touches[0].clientX-sx;
   var dy=Math.abs(e.touches[0].clientY-sy);
-  if(dy>dx&&dy>10){swiping=false;cancelSwipe();return;}
-  if(dx<0) return;
-  var W=nav.offsetWidth;
-  var pct=Math.min(dx/W,1);
-  swipeCur.style.transform='translateX('+dx+'px)';
-  swipePrev.style.transform='translateX(calc(-28% + '+(pct*28)+'%))';
-  swipePrev.style.opacity=0.6+(pct*0.4);
+  // Cancel if mostly vertical
+  if(dy>Math.abs(dx)+10){swiping=false;cancelSwipe();return;}
+  if(dx<0)dx=0;
+  swipeDx=dx;
+  // Schedule the visual update on next animation frame for smoothness
+  if(!swipeRAF){
+    swipeRAF=requestAnimationFrame(function(){
+      swipeRAF=0;
+      if(!swiping||!swipeCur||!swipePrev) return;
+      var W=nav.offsetWidth;
+      var pct=Math.min(swipeDx/W,1);
+      swipeCur.style.transform='translate3d('+swipeDx+'px,0,0)';
+      // Prev page moves from -28% toward 0
+      var prevX=-28+(pct*28);
+      swipePrev.style.transform='translate3d('+prevX+'%,0,0)';
+      swipePrev.style.opacity=(0.6+pct*0.4).toFixed(2);
+    });
+  }
 },{passive:true});
 
 nav.addEventListener('touchend',function(e){
-  if(!swiping){return;}
+  if(!swiping)return;
   swiping=false;
+  if(swipeRAF){cancelAnimationFrame(swipeRAF);swipeRAF=0;}
+  if(!e.changedTouches||!e.changedTouches[0]){cancelSwipe();return;}
   var dx=e.changedTouches[0].clientX-sx;
   var W=nav.offsetWidth;
-  if(dx>W*0.3||dx>160){
-    // Complete — animate to finish
-    var dur=Math.min(300,Math.max(180,(W-dx)/W*380));
-    swipeCur.style.transition='transform '+dur+'ms cubic-bezier(0.25,0.46,0.45,0.94),opacity '+dur+'ms';
-    swipePrev.style.transition='transform '+dur+'ms cubic-bezier(0.25,0.46,0.45,0.94),opacity '+dur+'ms';
-    swipeCur.style.transform='translateX('+W+'px)';
+  // Spring physics easing
+  var ease='cubic-bezier(0.32,0.72,0,1)';
+  if(dx>W*0.3||dx>140){
+    // Complete the back navigation
+    var remaining=W-dx,dur=Math.round(Math.max(180,Math.min(300,remaining/W*340)));
+    swipeCur.style.transition='transform '+dur+'ms '+ease+',opacity '+dur+'ms '+ease;
+    swipePrev.style.transition='transform '+dur+'ms '+ease+',opacity '+dur+'ms '+ease;
+    swipeCur.style.transform='translate3d(100%,0,0)';
     swipeCur.style.opacity='0';
-    swipePrev.style.transform='translateX(0)';
+    swipePrev.style.transform='translate3d(0,0,0)';
     swipePrev.style.opacity='1';
     var sC=swipeCur,sP=swipePrev;
     setTimeout(function(){
       var cid=stk.pop();
-      document.querySelectorAll('.scr').forEach(function(el){el.classList.remove('active','behind');el.style.cssText='';});
+      document.querySelectorAll('.scr').forEach(function(el){
+        el.classList.remove('active','behind');
+        el.style.cssText='';
+      });
       sP.classList.add('active');
-      if(cid==='scan') stopScan();
+      if(cid==='scan'&&typeof stopScan==='function') stopScan();
       updateUI(stk[stk.length-1]);
     },dur);
     swipeCur=null;swipePrev=null;
@@ -628,22 +652,25 @@ nav.addEventListener('touchend',function(e){
 },{passive:true});
 
 function cancelSwipe(){
-  if(swipeCur){
-    swipeCur.style.transition='transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)';
-    swipeCur.style.transform='translateX(0)';
+  if(swipeRAF){cancelAnimationFrame(swipeRAF);swipeRAF=0;}
+  var ease='cubic-bezier(0.32,0.72,0,1)';
+  var sC=swipeCur,sP=swipePrev;
+  if(sC){
+    sC.style.transition='transform 240ms '+ease;
+    sC.style.transform='translate3d(0,0,0)';
   }
-  if(swipePrev){
-    swipePrev.style.transition='transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94),opacity 0.28s';
-    swipePrev.style.transform='translateX(-28%)';
-    swipePrev.style.opacity='0.6';
-    var sC=swipeCur,sP=swipePrev;
-    setTimeout(function(){
-      if(sP){sP.style.cssText='';sP.classList.add('behind');}
-      if(sC){sC.style.cssText='';sC.classList.add('active');}
-      swipeCur=null;swipePrev=null;
-    },280);
+  if(sP){
+    sP.style.transition='transform 240ms '+ease+',opacity 240ms '+ease;
+    sP.style.transform='translate3d(-28%,0,0)';
+    sP.style.opacity='0.6';
   }
+  setTimeout(function(){
+    if(sP){sP.style.cssText='';sP.classList.add('behind');}
+    if(sC){sC.style.cssText='';sC.classList.add('active');}
+  },240);
+  swipeCur=null;swipePrev=null;
 }
+
 
 
 
