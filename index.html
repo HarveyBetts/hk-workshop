@@ -610,15 +610,19 @@ function go(id){
     cur.style.transform='translate3d(-28%,0,0)';
   }
   setTimeout(function(){
-    // Re-affirm final inline positions (defense in depth)
+    // Align cascade BEFORE touching inline — prevents iOS Safari from briefly
+    // painting the wrong position if it drops the inline value during transition reset.
+    nxt.classList.add('active');                // nxt cascade: 100% → 0%
+    if(cur){
+      cur.classList.add('behind');               // cur cascade: 0% → -28%
+      cur.classList.remove('active');
+    }
+    // Cascade now matches intended final values. Safe to refresh inline.
     nxt.style.transition='none';
     nxt.style.transform='translate3d(0,0,0)';
-    nxt.classList.add('active');
     if(cur){
       cur.style.transition='none';
       cur.style.transform='translate3d(-28%,0,0)';
-      cur.classList.remove('active');
-      cur.classList.add('behind');
     }
     requestAnimationFrame(function(){updateUI(id);});
   },400);
@@ -641,20 +645,21 @@ function back(){
   to.style.transition='transform 380ms '+ease;
   to.style.transform='translate3d(0,0,0)';
   setTimeout(function(){
-    // Defense in depth: re-affirm inline transforms at the exact final values.
-    // No visible change (values already match the post-animation state), but
-    // guarantees no compositor recompute can paint a stale frame.
+    // CRITICAL FIX: align cascade (class state) BEFORE touching inline transforms.
+    // Throughout the animation, lowstock had class .active (cascade=0%) but inline 100%.
+    // If iOS Safari briefly drops the inline (e.g. during transition reset), the
+    // cascade's 0% wins and lowstock appears centered for one frame.
+    // Solution: remove .active first so the cascade ALSO says 100% (base .scr default).
+    // Then the inline change can't cause any rendering mismatch.
+    from.classList.remove('active','behind');  // cascade now = 100% (base)
+    to.classList.remove('behind');
+    to.classList.add('active');                 // cascade now = 0%
+    // Now inline and cascade agree. Safe to refresh inline values.
     to.style.transition='none';
     to.style.transform='translate3d(0,0,0)';
     from.style.transition='none';
     from.style.transform='translate3d(100%,0,0)';
-    to.classList.add('active');
-    to.classList.remove('behind');
-    from.classList.remove('active','behind');
     if(fromId==='scan') stopScan();
-    // Defer updateUI() to next paint frame — its synchronous layout reads
-    // (offsetHeight in sizeTiles) can otherwise force the compositor to commit
-    // pending paint mid-frame, briefly showing the wrong state.
     requestAnimationFrame(function(){updateUI(toId);});
   },400);
 }
