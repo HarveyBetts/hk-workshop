@@ -24,31 +24,52 @@
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
     html,body{height:100%;background:var(--bg);font-family:'Inter',-apple-system,sans-serif;color:var(--t1);overflow:hidden;-webkit-font-smoothing:antialiased}
 
-    /* Desktop / tablet — full screen with content constraint */
+    /* ── DESKTOP / TABLET ── */
     @media (min-width: 600px) {
-      #app { max-width: 100vw; width: 100%; }
-      /* Center content inside scrollable pages */
-      .sb, .sf, .pin-wrap, .scanf, .wel-content { max-width: 720px; margin-left: auto; margin-right: auto; width: 100%; }
-      /* Bigger header for desktop */
       #hdr { padding-left: 32px; padding-right: 32px; }
-      /* Tile grid: 4 columns on big screens, 2 on smaller */
-      .tiles { max-width: 720px; margin: 0 auto; }
-      .wide { max-width: 720px; margin-left: auto; margin-right: auto; width: calc(100% - 0px); }
-      /* Inner pages padding */
-      .sb { padding-left: 32px; padding-right: 32px; }
-      .sf { padding-left: 32px; padding-right: 32px; }
+      .sb, .sf, .pin-wrap, .scanf, .wel-content { max-width: 760px; margin-left: auto; margin-right: auto; width: 100%; }
+      .sb, .sf { padding-left: 32px; padding-right: 32px; }
       .scanf { padding: 0 32px; }
-      /* PIN screen wider gap */
       .pin-wrap { max-width: 420px; }
       .pad { max-width: 320px; }
-      /* Show subtle keyboard hint on desktop */
       .pin-p::after { content: ' · or use your keyboard'; color: var(--t3); font-size: 12px; }
+      /* Bigger tiles with more substance */
+      .home-inner { gap: 16px; padding-top: 22px; }
+      .tiles { gap: 16px; }
+      .tile { border-radius: 24px; padding: clamp(18px,2.5vw,28px); }
+      .ti { font-size: clamp(32px,4vw,44px); margin-bottom: 14px; }
+      .tl { font-size: clamp(18px,1.6vw,22px); }
+      .ts { font-size: clamp(13px,1.1vw,15px); }
+      .wide { border-radius: 22px; padding: clamp(16px,1.8vw,22px) clamp(20px,2vw,28px); gap: 18px; }
+      .wi { font-size: clamp(28px,3vw,36px); }
+      .wl { font-size: clamp(17px,1.5vw,20px); }
+      .ws { font-size: clamp(13px,1vw,14px); }
     }
-    /* Wide desktop — 4 column tile grid */
+    /* ── WIDE DESKTOP — 3 cols + nice spacing ── */
     @media (min-width: 900px) {
-      .tiles { grid-template-columns: repeat(4,1fr); max-width: 960px; }
-      .wide { max-width: 960px; }
-      .sb, .sf { max-width: 960px; padding-left: 40px; padding-right: 40px; }
+      .sb, .sf { max-width: 1100px; padding: 0 48px; }
+      #hdr { padding-left: 48px; padding-right: 48px; }
+      /* 3 columns since scan is hidden — gives perfect proportion */
+      .tiles { grid-template-columns: repeat(3,1fr); gap: 20px; }
+      .tile { padding: clamp(24px,2vw,32px); border-radius: 26px; min-height: 180px; }
+      .ti { font-size: clamp(40px,3.5vw,48px); margin-bottom: 16px; }
+      .tl { font-size: clamp(20px,1.5vw,24px); }
+      .ts { font-size: clamp(14px,1vw,16px); }
+      .wide { padding: 22px 28px; border-radius: 22px; min-height: 76px; gap: 20px; }
+      .wi { font-size: 34px; }
+      .wl { font-size: 19px; }
+      .ws { font-size: 14px; }
+      /* Better page titles */
+      .pgtitle { font-size: 32px; margin-bottom: 24px; margin-top: 8px; }
+      .back { font-size: 16px; padding-top: 20px; }
+      /* Search input bigger */
+      .sin { padding: 16px 18px 16px 50px; font-size: 16px; }
+      .sico { left: 18px; font-size: 17px; }
+      /* Manager dashboard cards in 2 columns */
+      #s-manager .sb { max-width: 1200px; }
+      #s-manager .mc { display: inline-block; width: calc(50% - 8px); vertical-align: top; margin-right: 16px; }
+      #s-manager .mc:nth-child(2n+1) { margin-right: 16px; }
+      #s-manager .mc:nth-child(2n) { margin-right: 0; }
     }
 
     /* ── Shell ── */
@@ -583,14 +604,19 @@ function sizeTiles(){
   var isM=cu&&(cu.role==='Manager'||cu.role==='Assistant Manager');
   var isRO=cu&&cu.role==='Read Only';
   var navH=document.getElementById('nav').offsetHeight;
-  var wides=(isM||isRO)?2:1,wH=55,gap=10,pt=14+16;
-  var isWide=window.innerWidth>=900;
-  if(window.innerWidth>=600){
-    var tH=Math.min(navH-pt-(wides*(wH+gap))-gap, isWide?180:420);
-    var g=document.getElementById('tiles');g.style.height=tH+'px';g.style.flex='none';
+  var g=document.getElementById('tiles');
+  if(window.innerWidth>=900){
+    // Wide desktop: let tiles use their natural height (min-height from CSS)
+    g.style.height='';g.style.flex='';
+  } else if(window.innerWidth>=600){
+    // Tablet/medium: tiles take reasonable chunk
+    var tH=Math.min(420,navH*0.55);
+    g.style.height=tH+'px';g.style.flex='none';
   } else {
+    // Phone: fill available space
+    var wides=(isM||isRO)?2:1,wH=55,gap=10,pt=14+16;
     var tH=navH-pt-(wides*(wH+gap))-gap;
-    var g=document.getElementById('tiles');g.style.height=tH+'px';g.style.flex='none';
+    g.style.height=tH+'px';g.style.flex='none';
   }
 }
 function animTiles(){
