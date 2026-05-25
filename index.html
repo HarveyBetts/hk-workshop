@@ -610,9 +610,17 @@ function applyRoleVisibility(){
   var hi=document.getElementById('home-inner');
   if(hi){
     hi.classList.remove('lay-grid','lay-bars');
-    if(isDesktop){
-      if(isRO) hi.classList.add('lay-bars');
-      else hi.classList.add('lay-grid');
+    if(isDesktop) hi.classList.add('lay-bars');
+    // Set grid columns based on visible tile count
+    var ts=document.getElementById('tiles');
+    if(ts&&isDesktop){
+      var visibleCount=0;
+      for(var i=0;i<ts.children.length;i++){
+        if(ts.children[i].style.display!=='none') visibleCount++;
+      }
+      ts.style.gridTemplateColumns=visibleCount>=3?'1fr 1fr 1fr':'1fr 1fr';
+    } else if(ts) {
+      ts.style.gridTemplateColumns='';
     }
   }
 }
