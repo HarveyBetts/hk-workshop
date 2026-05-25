@@ -142,7 +142,7 @@
 
     /* ── Nav ── */
     #nav{flex:1;position:relative;overflow:hidden;min-height:0}
-    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translate3d(100%,0,0);backface-visibility:hidden;-webkit-backface-visibility:hidden;contain:layout style paint}
+    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translate3d(100%,0,0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
     .scr.active{transform:translate3d(0,0,0)}
     .scr.behind{transform:translate3d(-28%,0,0)}
     
@@ -596,19 +596,18 @@ function go(id){
   nxt.style.willChange='transform';
   if(cur) cur.style.willChange='transform';
   void nxt.offsetWidth;
-  nxt.style.transition='transform 280ms '+ease;nxt.style.transform='translate3d(0,0,0)';
-  if(cur){cur.style.transition='transform 280ms '+ease;cur.style.transform='translate3d(-28%,0,0)';}
+  nxt.style.transition='transform 380ms '+ease;nxt.style.transform='translate3d(0,0,0)';
+  if(cur){cur.style.transition='transform 380ms '+ease;cur.style.transform='translate3d(-28%,0,0)';}
   setTimeout(function(){
-    // Class first, then clear inline — prevents flash to default off-screen state
     nxt.classList.add('active');
     nxt.style.cssText='';
     if(cur){
-      cur.classList.add('behind');
       cur.classList.remove('active');
+      cur.classList.add('behind');
       cur.style.cssText='';
     }
     updateUI(id);
-  },285);
+  },420);
 }
 function back(){
   if(stk.length<=1) return;
@@ -618,18 +617,20 @@ function back(){
   to.style.transition='none';to.style.transform='translate3d(-28%,0,0)';to.classList.remove('active');
   from.style.willChange='transform';to.style.willChange='transform';
   void from.offsetWidth;
-  from.style.transition='transform 280ms '+ease;from.style.transform='translate3d(100%,0,0)';
-  to.style.transition='transform 280ms '+ease;to.style.transform='translate3d(0,0,0)';
+  from.style.transition='transform 380ms '+ease;from.style.transform='translate3d(100%,0,0)';
+  to.style.transition='transform 380ms '+ease;to.style.transform='translate3d(0,0,0)';
   setTimeout(function(){
-    // Class first, then clear inline — prevents the glitch
-    to.classList.add('active');
+    // CRITICAL: remove 'behind' BEFORE adding 'active' so the two classes never both apply.
+    // When both are present, .behind wins per CSS order, and iOS can paint that single-frame
+    // state — the cause of the "flash of parts page" the user reports.
     to.classList.remove('behind');
+    to.classList.add('active');
     to.style.cssText='';
     from.classList.remove('active','behind');
     from.style.cssText='';
     if(fromId==='scan') stopScan();
     updateUI(toId);
-  },285);
+  },420);
 }
 
 // ── Swipe back (rAF-batched, iOS spring physics) ──
@@ -643,6 +644,8 @@ nav.addEventListener('touchstart',function(e){
   if(sx>55||stk.length<=1) return;
   var curId=stk[stk.length-1],prevId=stk[stk.length-2];
   if(!curId||!prevId) return;
+  // Block swipe-back during login flow
+  if(curId==='welcome'||curId==='pin'||prevId==='pin') return;
   swipeCur=s(curId);
   swipePrev=s(prevId);
   if(!swipeCur||!swipePrev) return;
