@@ -142,10 +142,10 @@
 
     /* ── Nav ── */
     #nav{flex:1;position:relative;overflow:hidden;min-height:0}
-    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translateX(100%);will-change:transform}
+    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translateX(100%)}
     .scr.active{transform:translateX(0)}
     .scr.behind{transform:translateX(-28%)}
-    .scr.behind::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.45);pointer-events:none;z-index:99}
+    
     .sb{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px calc(max(env(safe-area-inset-bottom),0px) + 60px)}
     .sf{flex:1;overflow:hidden;padding:0 20px calc(max(env(safe-area-inset-bottom),0px) + 16px)}
 
@@ -257,9 +257,9 @@
 
     /* ── Part cards ── */
     .pcard{border-radius:16px;padding:14px 16px;margin-bottom:8px;background:var(--card);border:1px solid var(--b1)}
-    .pcard.h{background:rgba(0,200,83,.05);border:1px solid rgba(0,200,83,.25);box-shadow:0 0 14px rgba(0,200,83,0.10)}
-    .pcard.l{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.30);box-shadow:0 0 16px rgba(255,214,0,0.13)}
-    .pcard.z{background:rgba(255,59,48,.06);border:1px solid rgba(255,59,48,.28);box-shadow:0 0 16px rgba(255,59,48,0.12)}
+    .pcard.h{background:rgba(0,200,83,.05);border:1px solid rgba(0,200,83,.32)}
+    .pcard.l{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.38)}
+    .pcard.z{background:rgba(255,59,48,.06);border:1px solid rgba(255,59,48,.35)}
     .ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
     .cname{font-size:14px;font-weight:600;line-height:1.4;flex:1}
     .cpr{font-size:13px;font-weight:700;color:var(--acc);flex-shrink:0}
@@ -273,9 +273,9 @@
     .stxt.g{color:var(--grn)}.stxt.y{color:#FFD600}.stxt.r{color:var(--red)}
     .cmeta-sk{font-size:11px;color:var(--t2)}
     .lcard{border-radius:16px;padding:14px 16px;margin-bottom:8px}
-    .lcard.h{background:rgba(0,200,83,.05);border:1px solid rgba(0,200,83,.25);box-shadow:0 0 14px rgba(0,200,83,0.10)}
-    .lcard.z{background:rgba(255,59,48,.06);border:1px solid rgba(255,59,48,.28);box-shadow:0 0 16px rgba(255,59,48,0.12)}
-    .lcard.l{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.30);box-shadow:0 0 16px rgba(255,214,0,0.13)}
+    .lcard.h{background:rgba(0,200,83,.05);border:1px solid rgba(0,200,83,.32)}
+    .lcard.z{background:rgba(255,59,48,.06);border:1px solid rgba(255,59,48,.35)}
+    .lcard.l{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.38)}
 
     /* ── Scan ── */
     .scanf{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:0 20px}
@@ -569,8 +569,8 @@ function back(){
   },390);
 }
 
-// ── Swipe back (smooth iOS-style) ──
-var sx=0,sy=0,swiping=false,swipeCur=null,swipePrev=null,swipeRAF=0,swipeDx=0;
+// ── Swipe back (minimal, direct transforms) ──
+var sx=0,sy=0,swiping=false,swipeCur=null,swipePrev=null;
 var nav=document.getElementById('nav');
 
 nav.addEventListener('touchstart',function(e){
@@ -582,17 +582,12 @@ nav.addEventListener('touchstart',function(e){
   swipeCur=s(curId);
   swipePrev=s(prevId);
   if(!swipeCur||!swipePrev) return;
-  // Disable transitions and set up initial positions in one paint
   swipeCur.style.transition='none';
   swipePrev.style.transition='none';
-  swipePrev.style.display='flex';
   swipePrev.style.transform='translate3d(-28%,0,0)';
-  swipePrev.style.opacity='0.6';
-  // Force GPU compositing
-  swipeCur.style.willChange='transform';
-  swipePrev.style.willChange='transform,opacity';
+  swipePrev.classList.remove('active');
+  swipePrev.classList.add('behind');
   swiping=true;
-  swipeDx=0;
 },{passive:true});
 
 nav.addEventListener('touchmove',function(e){
@@ -600,44 +595,27 @@ nav.addEventListener('touchmove',function(e){
   if(!e.touches||!e.touches[0])return;
   var dx=e.touches[0].clientX-sx;
   var dy=Math.abs(e.touches[0].clientY-sy);
-  // Cancel if mostly vertical
   if(dy>Math.abs(dx)+10){swiping=false;cancelSwipe();return;}
   if(dx<0)dx=0;
-  swipeDx=dx;
-  // Schedule the visual update on next animation frame for smoothness
-  if(!swipeRAF){
-    swipeRAF=requestAnimationFrame(function(){
-      swipeRAF=0;
-      if(!swiping||!swipeCur||!swipePrev) return;
-      var W=nav.offsetWidth;
-      var pct=Math.min(swipeDx/W,1);
-      swipeCur.style.transform='translate3d('+swipeDx+'px,0,0)';
-      // Prev page moves from -28% toward 0
-      var prevX=-28+(pct*28);
-      swipePrev.style.transform='translate3d('+prevX+'%,0,0)';
-      swipePrev.style.opacity=(0.6+pct*0.4).toFixed(2);
-    });
-  }
+  var W=nav.offsetWidth;
+  var pct=dx/W;
+  swipeCur.style.transform='translate3d('+dx+'px,0,0)';
+  swipePrev.style.transform='translate3d('+(-28+pct*28)+'%,0,0)';
 },{passive:true});
 
 nav.addEventListener('touchend',function(e){
   if(!swiping)return;
   swiping=false;
-  if(swipeRAF){cancelAnimationFrame(swipeRAF);swipeRAF=0;}
   if(!e.changedTouches||!e.changedTouches[0]){cancelSwipe();return;}
   var dx=e.changedTouches[0].clientX-sx;
   var W=nav.offsetWidth;
-  // Spring physics easing
   var ease='cubic-bezier(0.32,0.72,0,1)';
   if(dx>W*0.3||dx>140){
-    // Complete the back navigation
-    var remaining=W-dx,dur=Math.round(Math.max(180,Math.min(300,remaining/W*340)));
-    swipeCur.style.transition='transform '+dur+'ms '+ease+',opacity '+dur+'ms '+ease;
-    swipePrev.style.transition='transform '+dur+'ms '+ease+',opacity '+dur+'ms '+ease;
+    var dur=220;
+    swipeCur.style.transition='transform '+dur+'ms '+ease;
+    swipePrev.style.transition='transform '+dur+'ms '+ease;
     swipeCur.style.transform='translate3d(100%,0,0)';
-    swipeCur.style.opacity='0';
     swipePrev.style.transform='translate3d(0,0,0)';
-    swipePrev.style.opacity='1';
     var sC=swipeCur,sP=swipePrev;
     setTimeout(function(){
       var cid=stk.pop();
@@ -656,24 +634,23 @@ nav.addEventListener('touchend',function(e){
 },{passive:true});
 
 function cancelSwipe(){
-  if(swipeRAF){cancelAnimationFrame(swipeRAF);swipeRAF=0;}
-  var ease='cubic-bezier(0.32,0.72,0,1)';
   var sC=swipeCur,sP=swipePrev;
+  var ease='cubic-bezier(0.32,0.72,0,1)';
   if(sC){
-    sC.style.transition='transform 240ms '+ease;
+    sC.style.transition='transform 200ms '+ease;
     sC.style.transform='translate3d(0,0,0)';
   }
   if(sP){
-    sP.style.transition='transform 240ms '+ease+',opacity 240ms '+ease;
+    sP.style.transition='transform 200ms '+ease;
     sP.style.transform='translate3d(-28%,0,0)';
-    sP.style.opacity='0.6';
   }
   setTimeout(function(){
     if(sP){sP.style.cssText='';sP.classList.add('behind');}
     if(sC){sC.style.cssText='';sC.classList.add('active');}
-  },240);
+  },200);
   swipeCur=null;swipePrev=null;
 }
+
 
 
 
