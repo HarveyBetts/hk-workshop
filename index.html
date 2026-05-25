@@ -339,22 +339,20 @@
     .empic{font-size:32px;display:block;margin-bottom:10px;opacity:.25}
 
     /* TAKE / RESTOCK in-app page (compact, matches app design) */
-    #s-take .sb{display:flex;flex-direction:column}
-    .tk-spacer{flex:1;min-height:24px}
-    .tk-name-hdr{font-size:clamp(26px,7vw,34px);font-weight:700;color:var(--t1);line-height:1.15;margin:10px 0 14px}
-    .tk-stock-row{display:flex;align-items:center;gap:7px;margin-bottom:14px;font-size:15px}
-    .tk-pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-    .tk-pill{display:inline-flex;align-items:center;font-size:13px;font-weight:700;padding:7px 13px;border-radius:8px}
+    .tk-name-hdr{font-size:clamp(30px,8vw,40px);font-weight:700;color:var(--t1);line-height:1.15;margin:12px 0 18px}
+    .tk-stock-row{display:flex;align-items:center;gap:9px;margin-bottom:18px;font-size:18px}
+    .tk-pill-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+    .tk-pill{display:inline-flex;align-items:center;font-size:15px;font-weight:700;padding:9px 15px;border-radius:9px}
     .tk-pill-sku{color:#00CFFF;background:rgba(0,207,255,0.08);border:1px solid rgba(0,207,255,0.22)}
     .tk-pill-loc{color:#E040FB;background:rgba(224,64,251,0.08);border:1px solid rgba(224,64,251,0.22)}
-    .tk-user-line{font-size:14px;color:var(--t2);padding-bottom:18px;border-bottom:1px solid var(--b1)}
+    .tk-user-line{font-size:17px;color:var(--t2);padding-bottom:20px;border-bottom:1px solid var(--b1);margin-bottom:22px}
     .tk-user-line span{color:var(--t1);font-weight:700}
-    .tk-mini-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t2);margin-bottom:8px}
-    .tk-qty-wrap{margin-bottom:16px}
-    .tk-qty-wrap input{width:100%;background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:16px 18px;color:var(--t1);font-size:20px;font-weight:600;font-family:'Inter',sans-serif;-webkit-appearance:none;box-sizing:border-box}
+    .tk-mini-lbl{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t2);margin-bottom:10px}
+    .tk-qty-wrap{margin-bottom:18px}
+    .tk-qty-wrap input{width:100%;background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;color:var(--t1);font-size:22px;font-weight:600;font-family:'Inter',sans-serif;-webkit-appearance:none;box-sizing:border-box}
     .tk-qty-wrap input:focus{outline:none;border-color:var(--acc)}
     .tk-btn-row{display:flex;gap:10px;margin-bottom:12px}
-    .tk-take,.tk-restock{flex:1;border:none;border-radius:14px;padding:20px;font-size:18px;font-weight:700;font-family:'Inter',sans-serif;color:#fff;cursor:pointer;transition:opacity 0.2s}
+    .tk-take,.tk-restock{flex:1;border:none;border-radius:14px;padding:22px;font-size:20px;font-weight:700;font-family:'Inter',sans-serif;color:#fff;cursor:pointer;transition:opacity 0.2s}
     .tk-take{background:#E53935}
     .tk-restock{background:#43A047}
     .tk-take:active,.tk-restock:active{opacity:0.7}
@@ -444,7 +442,6 @@
           <span class="tk-pill tk-pill-loc" id="tkLocPill" style="display:none">📍 <span id="tkLoc"></span></span>
         </div>
         <div class="tk-user-line">Logged in as <span id="tkName">—</span></div>
-        <div class="tk-spacer"></div>
         <div class="tk-qty-wrap">
           <div class="tk-mini-lbl">Quantity</div>
           <input type="number" id="tkInput" min="1" value="1" inputmode="numeric"/>
@@ -972,7 +969,8 @@ function rL(){
     h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin:22px 0 10px 4px">Rarely Used · No Action Needed</div>';
     h+='<div style="font-size:12px;color:var(--t2);margin:0 4px 10px;line-height:1.5">Low but not used in the last 90 days.</div>';
     dead.forEach(function(p){
-      h+='<div class="lcard l" style="opacity:0.55">'
+      var dcl=p.qty===0?'z':'l';
+      h+='<div class="lcard '+dcl+'" style="opacity:0.55">'
         +'<div class="ctop"><div class="cname">'+p.desc+'</div></div>'
         +'<div class="cmeta">'+sdot(p)+'</div>'
         +(p.sku||p.loc?'<div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap">'
