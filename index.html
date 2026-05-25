@@ -142,9 +142,9 @@
 
     /* ── Nav ── */
     #nav{flex:1;position:relative;overflow:hidden;min-height:0}
-    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translateX(100%)}
-    .scr.active{transform:translateX(0)}
-    .scr.behind{transform:translateX(-28%)}
+    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translate3d(100%,0,0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+    .scr.active{transform:translate3d(0,0,0)}
+    .scr.behind{transform:translate3d(-28%,0,0)}
     
     .sb{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px calc(max(env(safe-area-inset-bottom),0px) + 60px)}
     .sf{flex:1;overflow:hidden;padding:0 20px calc(max(env(safe-area-inset-bottom),0px) + 16px)}
@@ -591,34 +591,40 @@ function showRoot(id){
 function go(id){
   var curId=stk.length?stk[stk.length-1]:null,cur=curId?s(curId):null,nxt=s(id);
   if(!nxt||id===curId) return;stk.push(id);
-  nxt.style.transition='none';nxt.style.transform='translateX(100%)';nxt.classList.remove('active','behind');
+  var ease='cubic-bezier(0.32,0.72,0,1)';
+  nxt.style.transition='none';nxt.style.transform='translate3d(100%,0,0)';nxt.classList.remove('active','behind');
+  nxt.style.willChange='transform';
+  if(cur) cur.style.willChange='transform';
   void nxt.offsetWidth;
-  nxt.style.transition='transform .38s cubic-bezier(.25,.46,.45,.94)';nxt.style.transform='translateX(0)';
-  if(cur){cur.style.transition='transform .38s cubic-bezier(.25,.46,.45,.94)';cur.style.transform='translateX(-28%)';}
+  nxt.style.transition='transform 260ms '+ease;nxt.style.transform='translate3d(0,0,0)';
+  if(cur){cur.style.transition='transform 260ms '+ease;cur.style.transform='translate3d(-28%,0,0)';}
   setTimeout(function(){
     nxt.style.cssText='';nxt.classList.add('active');
     if(cur){cur.style.cssText='';cur.classList.remove('active');cur.classList.add('behind');}
     updateUI(id);
-  },390);
+  },270);
 }
 function back(){
   if(stk.length<=1) return;
   var fromId=stk.pop(),toId=stk[stk.length-1],from=s(fromId),to=s(toId);
-  from.style.transition='none';from.style.transform='translateX(0)';from.classList.remove('behind');
-  to.style.transition='none';to.style.transform='translateX(-28%)';to.classList.remove('active');
+  var ease='cubic-bezier(0.32,0.72,0,1)';
+  from.style.transition='none';from.style.transform='translate3d(0,0,0)';from.classList.remove('behind');
+  to.style.transition='none';to.style.transform='translate3d(-28%,0,0)';to.classList.remove('active');
+  from.style.willChange='transform';to.style.willChange='transform';
   void from.offsetWidth;
-  from.style.transition='transform .38s cubic-bezier(.25,.46,.45,.94)';from.style.transform='translateX(100%)';
-  to.style.transition='transform .38s cubic-bezier(.25,.46,.45,.94)';to.style.transform='translateX(0)';
+  from.style.transition='transform 260ms '+ease;from.style.transform='translate3d(100%,0,0)';
+  to.style.transition='transform 260ms '+ease;to.style.transform='translate3d(0,0,0)';
   setTimeout(function(){
-    from.style.cssText='transform:translateX(100%)';from.classList.remove('active','behind');
+    from.style.cssText='transform:translate3d(100%,0,0)';from.classList.remove('active','behind');
     to.style.cssText='';to.classList.add('active');to.classList.remove('behind');
     if(fromId==='scan') stopScan();updateUI(toId);
-  },390);
+  },270);
 }
 
-// ── Swipe back (minimal, direct transforms) ──
+// ── Swipe back (rAF-batched, iOS spring physics) ──
 var sx=0,sy=0,swiping=false,swipeCur=null,swipePrev=null;
 var nav=document.getElementById('nav');
+var swipeDx=0,swipeRAF=0;
 
 nav.addEventListener('touchstart',function(e){
   if(!e.touches||!e.touches[0])return;
@@ -634,7 +640,10 @@ nav.addEventListener('touchstart',function(e){
   swipePrev.style.transform='translate3d(-28%,0,0)';
   swipePrev.classList.remove('active');
   swipePrev.classList.add('behind');
+  swipeCur.style.willChange='transform';
+  swipePrev.style.willChange='transform';
   swiping=true;
+  swipeDx=0;
 },{passive:true});
 
 nav.addEventListener('touchmove',function(e){
@@ -644,21 +653,31 @@ nav.addEventListener('touchmove',function(e){
   var dy=Math.abs(e.touches[0].clientY-sy);
   if(dy>Math.abs(dx)+10){swiping=false;cancelSwipe();return;}
   if(dx<0)dx=0;
-  var W=nav.offsetWidth;
-  var pct=dx/W;
-  swipeCur.style.transform='translate3d('+dx+'px,0,0)';
-  swipePrev.style.transform='translate3d('+(-28+pct*28)+'%,0,0)';
+  swipeDx=dx;
+  // Batch transform updates with paint frames for buttery smoothness
+  if(!swipeRAF){
+    swipeRAF=requestAnimationFrame(function(){
+      swipeRAF=0;
+      if(!swiping||!swipeCur||!swipePrev) return;
+      var W=nav.offsetWidth;
+      var pct=swipeDx/W;
+      swipeCur.style.transform='translate3d('+swipeDx+'px,0,0)';
+      swipePrev.style.transform='translate3d('+(-28+pct*28)+'%,0,0)';
+    });
+  }
 },{passive:true});
 
 nav.addEventListener('touchend',function(e){
   if(!swiping)return;
   swiping=false;
+  if(swipeRAF){cancelAnimationFrame(swipeRAF);swipeRAF=0;}
   if(!e.changedTouches||!e.changedTouches[0]){cancelSwipe();return;}
   var dx=e.changedTouches[0].clientX-sx;
   var W=nav.offsetWidth;
   var ease='cubic-bezier(0.32,0.72,0,1)';
   if(dx>W*0.3||dx>140){
-    var dur=220;
+    // Velocity-aware finish: closer to completion = faster snap
+    var remaining=W-dx,dur=Math.max(180,Math.min(260,Math.round(remaining/W*320)));
     swipeCur.style.transition='transform '+dur+'ms '+ease;
     swipePrev.style.transition='transform '+dur+'ms '+ease;
     swipeCur.style.transform='translate3d(100%,0,0)';
@@ -672,6 +691,7 @@ nav.addEventListener('touchend',function(e){
       });
       sP.classList.add('active');
       if(cid==='scan'&&typeof stopScan==='function') stopScan();
+      if(navigator.vibrate){try{navigator.vibrate(8);}catch(e){}}
       updateUI(stk[stk.length-1]);
     },dur);
     swipeCur=null;swipePrev=null;
@@ -681,6 +701,7 @@ nav.addEventListener('touchend',function(e){
 },{passive:true});
 
 function cancelSwipe(){
+  if(swipeRAF){cancelAnimationFrame(swipeRAF);swipeRAF=0;}
   var sC=swipeCur,sP=swipePrev;
   var ease='cubic-bezier(0.32,0.72,0,1)';
   if(sC){
@@ -697,6 +718,7 @@ function cancelSwipe(){
   },200);
   swipeCur=null;swipePrev=null;
 }
+
 
 
 
