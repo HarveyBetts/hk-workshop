@@ -194,8 +194,8 @@
     /* Animated ambient glow */100%{opacity:1;transform:scale(1.06)}}
     #s-home .sf{position:relative;z-index:1}
 
-    .home-inner{display:flex;flex-direction:column;height:100%;gap:10px;padding-top:14px}
-    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .home-inner{display:flex;flex-direction:column;height:100%;gap:10px;padding-top:14px;padding-bottom:calc(env(safe-area-inset-bottom) + 12px);box-sizing:border-box}
+    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0}
 
     /* Tile entrance */
     @keyframes tileIn{from{opacity:0;transform:translateY(28px) scale(0.92)}to{opacity:1;transform:none}}
@@ -610,14 +610,17 @@ function go(id){
     cur.style.transform='translate3d(-28%,0,0)';
   }
   setTimeout(function(){
-    // Update classes only — leave inline transforms at their correct final values.
-    // This prevents any fallback-to-class-state flash, since inline always wins.
+    // Re-affirm final inline positions (defense in depth)
+    nxt.style.transition='none';
+    nxt.style.transform='translate3d(0,0,0)';
     nxt.classList.add('active');
     if(cur){
+      cur.style.transition='none';
+      cur.style.transform='translate3d(-28%,0,0)';
       cur.classList.remove('active');
       cur.classList.add('behind');
     }
-    updateUI(id);
+    requestAnimationFrame(function(){updateUI(id);});
   },400);
 }
 function back(){
@@ -638,14 +641,21 @@ function back(){
   to.style.transition='transform 380ms '+ease;
   to.style.transform='translate3d(0,0,0)';
   setTimeout(function(){
-    // Update classes — DO NOT clear inline styles. Inline transforms are at correct
-    // final positions; clearing them would briefly let class/cascade rules paint
-    // a wrong state, which is the "flash of previous screen" bug.
+    // Defense in depth: re-affirm inline transforms at the exact final values.
+    // No visible change (values already match the post-animation state), but
+    // guarantees no compositor recompute can paint a stale frame.
+    to.style.transition='none';
+    to.style.transform='translate3d(0,0,0)';
+    from.style.transition='none';
+    from.style.transform='translate3d(100%,0,0)';
     to.classList.add('active');
     to.classList.remove('behind');
     from.classList.remove('active','behind');
     if(fromId==='scan') stopScan();
-    updateUI(toId);
+    // Defer updateUI() to next paint frame — its synchronous layout reads
+    // (offsetHeight in sizeTiles) can otherwise force the compositor to commit
+    // pending paint mid-frame, briefly showing the wrong state.
+    requestAnimationFrame(function(){updateUI(toId);});
   },400);
 }
 
@@ -784,20 +794,15 @@ function updateUI(id){
   // sz() removed from nav path — only runs on resize/orientation now (was causing layout thrash on every transition)
 }
 function sizeTiles(){
-  var isM=cu&&(cu.role==='Manager'||cu.role==='Assistant Manager');
-  var isRO=cu&&cu.role==='Office Access';
-  var navH=document.getElementById('nav').offsetHeight;
+  // Pure CSS flexbox handles tile sizing now — flex:1 on .tiles fills available space.
+  // Only desktop+tablet need any JS intervention (handled by .home-inner CSS rules).
   var g=document.getElementById('tiles');
   if(window.innerWidth>=900){
-    // Desktop — CSS grid handles everything via display:contents trick
     g.style.height='';g.style.flex='';
   } else if(window.innerWidth>=600){
-    var tH=Math.min(420,navH*0.55);
-    g.style.height=tH+'px';g.style.flex='none';
+    g.style.height='';g.style.flex='';
   } else {
-    var wides=(isM||isRO)?2:1,wH=55,gap=10,pt=14+16;
-    var tH=navH-pt-(wides*(wH+gap))-gap;
-    g.style.height=tH+'px';g.style.flex='none';
+    g.style.height='';g.style.flex='';
   }
 }
 function animTiles(){
