@@ -45,31 +45,48 @@
       .wl { font-size: clamp(17px,1.5vw,20px); }
       .ws { font-size: clamp(13px,1vw,14px); }
     }
-    /* ── WIDE DESKTOP — 3 cols + nice spacing ── */
+    /* ── WIDE DESKTOP ── */
     @media (min-width: 900px) {
-      .sb, .sf { max-width: 1100px; padding: 0 48px; }
+      .sb, .sf { max-width: 1200px; padding: 0 48px; }
       #hdr { padding-left: 48px; padding-right: 48px; }
-      /* 3 columns since scan is hidden — gives perfect proportion */
-      .tiles { grid-template-columns: repeat(3,1fr); gap: 20px; }
-      .tile { padding: clamp(24px,2vw,32px); border-radius: 26px; min-height: 180px; }
-      .ti { font-size: clamp(40px,3.5vw,48px); margin-bottom: 16px; }
-      .tl { font-size: clamp(20px,1.5vw,24px); }
-      .ts { font-size: clamp(14px,1vw,16px); }
-      .wide { padding: 22px 28px; border-radius: 22px; min-height: 76px; gap: 20px; }
-      .wi { font-size: 34px; }
-      .wl { font-size: 19px; }
-      .ws { font-size: 14px; }
-      /* Better page titles */
       .pgtitle { font-size: 32px; margin-bottom: 24px; margin-top: 8px; }
       .back { font-size: 16px; padding-top: 20px; }
-      /* Search input bigger */
       .sin { padding: 16px 18px 16px 50px; font-size: 16px; }
       .sico { left: 18px; font-size: 17px; }
       /* Manager dashboard cards in 2 columns */
-      #s-manager .sb { max-width: 1200px; }
+      #s-manager .sb { max-width: 1300px; }
       #s-manager .mc { display: inline-block; width: calc(50% - 8px); vertical-align: top; margin-right: 16px; }
-      #s-manager .mc:nth-child(2n+1) { margin-right: 16px; }
       #s-manager .mc:nth-child(2n) { margin-right: 0; }
+
+      /* ── LAYOUT A: 2x2 TILE GRID (Mechanic/Manager) ── */
+      .home-inner.lay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; padding-top: 28px; }
+      .home-inner.lay-grid .tiles { display: contents; }
+      .home-inner.lay-grid .tile { min-height: 240px; border-radius: 26px; padding: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .home-inner.lay-grid .tile .ti { font-size: 56px; margin-bottom: 18px; }
+      .home-inner.lay-grid .tile .tl { font-size: 26px; }
+      .home-inner.lay-grid .tile .ts { font-size: 15px; margin-top: 6px; }
+      /* Racefacer becomes a tile */
+      .home-inner.lay-grid .wide.race { flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 240px; padding: 36px; border-radius: 26px; gap: 0; }
+      .home-inner.lay-grid .wide.race .wi { font-size: 56px; margin-bottom: 18px; }
+      .home-inner.lay-grid .wide.race .wl { font-size: 26px; }
+      .home-inner.lay-grid .wide.race .ws { font-size: 15px; margin-top: 6px; }
+      /* Manager Dashboard spans both columns */
+      .home-inner.lay-grid .wide.mgr { grid-column: 1 / -1; padding: 24px 32px; border-radius: 22px; }
+      .home-inner.lay-grid .wide.mgr .wi { font-size: 34px; }
+      .home-inner.lay-grid .wide.mgr .wl { font-size: 20px; }
+      .home-inner.lay-grid .wide.mgr .ws { font-size: 14px; }
+
+      /* ── LAYOUT B: 2-col tiles + wide bars (Read Only / Office) ── */
+      .home-inner.lay-bars { padding-top: 28px; gap: 20px; }
+      .home-inner.lay-bars .tiles { grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+      .home-inner.lay-bars .tile { min-height: 220px; border-radius: 26px; padding: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .home-inner.lay-bars .tile .ti { font-size: 52px; margin-bottom: 18px; }
+      .home-inner.lay-bars .tile .tl { font-size: 24px; }
+      .home-inner.lay-bars .tile .ts { font-size: 15px; margin-top: 6px; }
+      .home-inner.lay-bars .wide { max-width: 1100px; margin: 0 auto; padding: 24px 32px; border-radius: 22px; min-height: 80px; }
+      .home-inner.lay-bars .wide .wi { font-size: 34px; }
+      .home-inner.lay-bars .wide .wl { font-size: 20px; }
+      .home-inner.lay-bars .wide .ws { font-size: 14px; }
     }
 
     /* ── Shell ── */
@@ -324,7 +341,7 @@
             <div class="tile tor" id="tord" onclick="go('order');iord()"><div class="ti">📋</div><div class="tl">Request Order</div><div class="ts">Flag for ordering</div></div>
           </div>
           <div class="wide race wa1" id="wrace" onclick="go('race')"><div class="wi">🏎️</div><div><div class="wl">Racefacer</div><div class="ws">Track & session data</div></div></div>
-          <div class="wide mgr wa2" id="mgrt" style="display:none" onclick="go('manager');loadMgr()"><div class="wi">👑</div><div><div class="wl">Manager Dashboard</div><div class="ws">Live data & staff</div></div></div>
+          <div class="wide mgr wa2" id="mgrt" style="display:none" onclick="go('manager');loadMgr()"><div class="wi">⭐</div><div><div class="wl">Manager Dashboard</div><div class="ws">Live data & staff</div></div></div>
         </div>
       </div>
     </div>
@@ -580,7 +597,6 @@ function applyRoleVisibility(){
   if(!cu) return;
   var isM=cu.role==='Manager'||cu.role==='Assistant Manager';
   var isRO=cu.role==='Read Only';
-  // Detect device with no camera (desktop without webcam OR no touch + wide screen)
   var noCam=!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia;
   var isDesktop=window.innerWidth>=900&&!('ontouchstart' in window);
   var hideScan=isRO||noCam||isDesktop;
@@ -589,6 +605,16 @@ function applyRoleVisibility(){
   var ts=document.getElementById('tscan'),to=document.getElementById('tord');
   if(ts) ts.style.display=hideScan?'none':'flex';
   if(to) to.style.display=isRO?'none':'flex';
+  // On desktop: arrange Racefacer as a 4th TILE for Mechanic/Manager (symmetrical 2x2)
+  // Read Only keeps wide-bar layout (looks good already)
+  var hi=document.getElementById('home-inner');
+  if(hi){
+    hi.classList.remove('lay-grid','lay-bars');
+    if(isDesktop){
+      if(isRO) hi.classList.add('lay-bars');
+      else hi.classList.add('lay-grid');
+    }
+  }
 }
 
 function updateUI(id){
@@ -606,14 +632,12 @@ function sizeTiles(){
   var navH=document.getElementById('nav').offsetHeight;
   var g=document.getElementById('tiles');
   if(window.innerWidth>=900){
-    // Wide desktop: let tiles use their natural height (min-height from CSS)
+    // Desktop — CSS grid handles everything via display:contents trick
     g.style.height='';g.style.flex='';
   } else if(window.innerWidth>=600){
-    // Tablet/medium: tiles take reasonable chunk
     var tH=Math.min(420,navH*0.55);
     g.style.height=tH+'px';g.style.flex='none';
   } else {
-    // Phone: fill available space
     var wides=(isM||isRO)?2:1,wH=55,gap=10,pt=14+16;
     var tH=navH-pt-(wides*(wH+gap))-gap;
     g.style.height=tH+'px';g.style.flex='none';
