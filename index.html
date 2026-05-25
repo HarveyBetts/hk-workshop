@@ -142,7 +142,7 @@
 
     /* ── Nav ── */
     #nav{flex:1;position:relative;overflow:hidden;min-height:0}
-    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translate3d(100%,0,0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+    .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transform:translate3d(100%,0,0);transition:transform 380ms cubic-bezier(0.32,0.72,0,1);backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform}
     .scr.active{transform:translate3d(0,0,0)}
     .scr.behind{transform:translate3d(-28%,0,0)}
     
@@ -591,40 +591,25 @@ function showRoot(id){
 function go(id){
   var curId=stk.length?stk[stk.length-1]:null,cur=curId?s(curId):null,nxt=s(id);
   if(!nxt||id===curId) return;stk.push(id);
-  var ease='cubic-bezier(0.32,0.72,0,1)';
-  nxt.style.transition='none';nxt.style.transform='translate3d(100%,0,0)';nxt.classList.remove('active','behind');
-  nxt.style.willChange='transform';
-  if(cur) cur.style.willChange='transform';
-  void nxt.offsetWidth;
-  nxt.style.transition='transform 380ms '+ease;nxt.style.transform='translate3d(0,0,0)';
-  if(cur){cur.style.transition='transform 380ms '+ease;cur.style.transform='translate3d(-28%,0,0)';}
-  setTimeout(function(){
-    // Update classes only. Leave inline transform untouched — it already matches
-    // the correct final value from the animation. Clearing it can cause a sub-frame
-    // flicker as the compositor recalculates.
-    nxt.classList.add('active');
-    if(cur){
-      cur.classList.remove('active');
-      cur.classList.add('behind');
-    }
-    updateUI(id);
-  },420);
+  // Pure class-based animation — CSS handles the transition timing & easing.
+  // Add 'behind' BEFORE removing 'active' so both classes briefly coexist —
+  // .behind wins per CSS order, eliminating any transient mid-state.
+  if(cur){
+    cur.classList.add('behind');
+    cur.classList.remove('active');
+  }
+  nxt.classList.add('active');
+  setTimeout(function(){updateUI(id);},420);
 }
 function back(){
   if(stk.length<=1) return;
   var fromId=stk.pop(),toId=stk[stk.length-1],from=s(fromId),to=s(toId);
-  var ease='cubic-bezier(0.32,0.72,0,1)';
-  from.style.transition='none';from.style.transform='translate3d(0,0,0)';from.classList.remove('behind');
-  to.style.transition='none';to.style.transform='translate3d(-28%,0,0)';to.classList.remove('active');
-  from.style.willChange='transform';to.style.willChange='transform';
-  void from.offsetWidth;
-  from.style.transition='transform 380ms '+ease;from.style.transform='translate3d(100%,0,0)';
-  to.style.transition='transform 380ms '+ease;to.style.transform='translate3d(0,0,0)';
+  // Pure class-based animation. Add 'active' before removing 'behind' so .behind wins
+  // in the brief overlap, then transition naturally goes from -28% to 0 once 'behind' goes.
+  to.classList.add('active');
+  to.classList.remove('behind');
+  from.classList.remove('active','behind');
   setTimeout(function(){
-    // Class updates only — inline transforms already at correct values.
-    to.classList.remove('behind');
-    to.classList.add('active');
-    from.classList.remove('active','behind');
     if(fromId==='scan') stopScan();
     updateUI(toId);
   },420);
