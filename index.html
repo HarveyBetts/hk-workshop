@@ -369,7 +369,7 @@
 <div id="lbar"><div id="lbp"></div></div>
 <div id="app">
   <div id="hdr">
-    <div class="hlogo">
+    <div class="hlogo" onclick="goHome()" style="cursor:pointer">
       <img class="hk-icon" src="icon-192.png" alt="HK">
       <div><div class="hname">Inventory</div><div class="hsub">Hyper Karting</div></div>
     </div>
@@ -929,6 +929,48 @@ function chk(){
     var pd=document.getElementById('pd');pd.classList.add('sh');setTimeout(function(){pd.classList.remove('sh');},440);
   }
 }
+function goHome(){
+  // Don't do anything if not logged in, already on home, or on pin/welcome screens
+  if(!cu) return;
+  var current=stk[stk.length-1];
+  if(current==='home'||current==='pin'||current==='welcome') return;
+  // Single animated transition: current screen slides off right, home slides in from left
+  var from=s(current),to=s('home');
+  if(!from||!to) return;
+  // Stop scanner if needed
+  if(current==='scan'&&typeof stopScan==='function') stopScan();
+  // Reset all other screens (in case stack is deep)
+  document.querySelectorAll('.scr').forEach(function(el){
+    if(el!==from&&el!==to){el.classList.remove('active','behind');el.style.cssText='';}
+  });
+  var ease='cubic-bezier(0.32,0.72,0,1)';
+  // Setup
+  from.style.transition='none';
+  from.style.transform='translate3d(0,0,0)';
+  to.style.transition='none';
+  to.style.transform='translate3d(-28%,0,0)';
+  to.classList.remove('active');
+  void from.offsetWidth;
+  // Animate
+  from.style.transition='transform 480ms '+ease;
+  from.style.transform='translate3d(100%,0,0)';
+  to.style.transition='transform 480ms '+ease;
+  to.style.transform='translate3d(0,0,0)';
+  setTimeout(function(){
+    // Align cascade first (same fix as back())
+    from.classList.remove('active','behind');
+    to.classList.remove('behind');
+    to.classList.add('active');
+    // Then inline
+    to.style.transition='none';
+    to.style.transform='translate3d(0,0,0)';
+    from.style.transition='none';
+    from.style.transform='translate3d(100%,0,0)';
+    stk=['home'];
+    requestAnimationFrame(function(){updateUI('home');});
+  },500);
+}
+
 function logout(){cu=null;pin3='';homeAnimated=false;sessionStorage.removeItem('hk_u');sessionStorage.removeItem('hk_ud');udots();document.getElementById('pe').innerHTML='&nbsp;';stk=['pin'];showRoot('pin');}
 
 // ── JSONP ──
