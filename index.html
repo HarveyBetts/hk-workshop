@@ -261,7 +261,7 @@
     .sin::placeholder{color:var(--t3)}
 
     /* ── Part cards ── */
-    .pcard{border-radius:16px;padding:14px 16px;margin-bottom:8px;background:var(--card);border:1px solid var(--b1)}
+    .pcard{border-radius:16px;padding:14px 16px;margin-bottom:8px;background:var(--card);border:1px solid var(--b1);content-visibility:auto;contain-intrinsic-size:0 110px}
     .pcard.h{background:rgba(0,200,83,.05);border:1px solid rgba(0,200,83,.32)}
     .pcard.l{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.38)}
     .pcard.z{background:rgba(255,59,48,.06);border:1px solid rgba(255,59,48,.35)}
@@ -737,9 +737,13 @@ var pendingDx=0,rafPending=false;
 function applySwipeFrame(){
   rafPending=false;
   if(!swipeCur||!swipePrev) return;
-  var pct=pendingDx/navW;
-  swipeCur.style.transform='translate3d('+pendingDx+'px,0,0)';
-  swipePrev.style.transform='translate3d('+(-28+pct*28)+'%,0,0)';
+  // Pixel-snap to whole numbers — sub-pixel transforms cause GPU jank on older iOS devices
+  var dxSnap=Math.round(pendingDx);
+  var pct=dxSnap/navW;
+  swipeCur.style.transform='translate3d('+dxSnap+'px,0,0)';
+  // For the parallax background page, also pixel-snap by converting percentage to pixels
+  var prevPx=Math.round((-0.28+pct*0.28)*navW);
+  swipePrev.style.transform='translate3d('+prevPx+'px,0,0)';
 }
 
 nav.addEventListener('touchmove',function(e){
@@ -765,6 +769,9 @@ nav.addEventListener('touchmove',function(e){
     swipeStarted=true;
     swiping=true;
     navW=nav.offsetWidth;
+    // Lock body to prevent Safari's bottom bar/scroll interference during the swipe
+    document.body.style.overflow='hidden';
+    document.body.style.touchAction='none';
   }
   if(!swiping||!swipeCur||!swipePrev) return;
   if(dy>Math.abs(dx)+10){swiping=false;cancelSwipe();return;}
@@ -779,6 +786,9 @@ nav.addEventListener('touchmove',function(e){
 },{passive:true});
 
 nav.addEventListener('touchend',function(e){
+  // Unlock body scroll
+  document.body.style.overflow='';
+  document.body.style.touchAction='';
   // If swipe never started, this was just a tap — do nothing
   if(!swiping){swipeStarted=false;return;}
   swiping=false;swipeStarted=false;
