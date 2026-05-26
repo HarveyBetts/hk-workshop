@@ -59,9 +59,9 @@
       .back { font-size: 16px; padding-top: 20px; }
       .sin { padding: 16px 18px 16px 50px; font-size: 16px; }
       .sico { left: 18px; font-size: 17px; }
-      /* ── Home page: uses ALL the horizontal dead-space, every item equal-sized ── */
+      /* ── Home page: ALL visible items merged into one role-aware grid using dead-space ── */
       #s-home .sf {
-        display: block;  /* not flex — block + auto margins on home-inner centers it cleanly */
+        display: block;
         max-width: 100% !important;
         padding: 32px 48px;
         overflow-y: auto;
@@ -69,8 +69,7 @@
         box-sizing: border-box;
       }
       .home-inner {
-        display: flex !important;
-        flex-direction: column;
+        display: grid !important;
         gap: 24px;
         max-width: 1800px;
         width: 100%;
@@ -79,19 +78,32 @@
         min-height: 0 !important;
         padding: 0 !important;
       }
-      /* Both tiles and wides become auto-fit grids — visible items fill the row equally.
-         flex:none crucial — overrides the .tiles flex:3 1 0 from base rule that was
-         making it grow uncontrollably and overlap with .wides-grid. */
+      /* Flatten the tiles and wides-grid containers — children become direct grid items */
       .home-inner .tiles,
       .home-inner .wides-grid {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 24px;
-        flex: none !important;
-        min-height: 0 !important;
-        width: 100%;
+        display: contents !important;
       }
-      /* Override the mobile span rule on desktop — auto-fit handles symmetry */
+      /* Column count varies per role to fill the screen symmetrically */
+      .home-inner.role-mech  { grid-template-columns: repeat(3, 1fr); }   /* 3 cols, 5 items = 3+2 */
+      .home-inner.role-office{ grid-template-columns: repeat(3, 1fr); }   /* 3 cols, 6 items = 3x2 */
+      .home-inner.role-mgr   { grid-template-columns: repeat(4, 1fr); }   /* 4 cols, 8 items = 4x2 */
+      /* On desktop, Generate Order is a regular tile (NOT a strip) — override the mobile strip CSS */
+      @media (min-width: 900px) {
+        .wide.gord {
+          min-height: 240px !important;
+          flex-direction: column !important;
+          gap: 0 !important;
+          padding: 36px 28px !important;
+          text-align: center !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        .wide.gord > div:not(.wi) {
+          flex-direction: column !important;
+          align-items: center !important;
+        }
+      }
+      /* Override the mobile odd-last-child span rule on desktop */
       .home-inner .wides-grid > .wide:last-child:nth-child(odd) { grid-column: auto; }
       /* Every tile and wide becomes a uniform big square */
       .home-inner .tile,
@@ -204,7 +216,7 @@
     #s-home .sf{position:relative;z-index:1}
 
     .home-inner{display:flex;flex-direction:column;height:100%;gap:10px;padding-top:14px;box-sizing:border-box}
-    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:3 1 0;min-height:0}
+    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
     /* Tile entrance */
     @keyframes tileIn{from{opacity:0;transform:translateY(28px) scale(0.92)}to{opacity:1;transform:none}}
@@ -213,6 +225,23 @@
     .ta .tile:nth-child(3){animation:tileIn .5s cubic-bezier(0.34,1.56,0.64,1) 140ms both}
     .ta .tile:nth-child(4){animation:tileIn .5s cubic-bezier(0.34,1.56,0.64,1) 210ms both}
     @keyframes wideIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+    /* Phone-only: Generate Order is a thin full-width strip below the main 2x2 wides grid */
+    @media (max-width: 899px) {
+      .wide.gord {
+        min-height: 64px !important;
+        flex-direction: row !important;
+        gap: 14px !important;
+        padding: 14px 22px !important;
+        text-align: left;
+        align-items: center;
+        justify-content: flex-start;
+      }
+      .wide.gord .wi { font-size: 28px !important; margin-bottom: 0 !important; }
+      .wide.gord > div:not(.wi) { align-items: flex-start !important; flex-direction: row !important; gap: 12px !important; flex-wrap: wrap; }
+      .wide.gord .wl { font-size: 16px !important; }
+      .wide.gord .ws { font-size: 12px !important; margin-top: 0 !important; }
+    }
+
     /* Wides grid — same 2-column layout as tiles so every item is equal size.
        A lone last item spans both columns to stay symmetric. */
     .wides-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-shrink:0}
@@ -220,11 +249,12 @@
     /* New entrance animation slots for fin + gord (slight stagger) */
     .wa3{animation:wideIn .5s cubic-bezier(0.34,1.56,0.64,1) 420ms both}
     .wa4{animation:wideIn .5s cubic-bezier(0.34,1.56,0.64,1) 490ms both}
+    .wa5{animation:wideIn .5s cubic-bezier(0.34,1.56,0.64,1) 560ms both}
     .wa1{animation:wideIn .5s cubic-bezier(0.34,1.56,0.64,1) 280ms both}
     .wa2{animation:wideIn .5s cubic-bezier(0.34,1.56,0.64,1) 350ms both}
 
     /* SOLID COLORED TILES */
-    .tile{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(14px,3.5vw,20px);cursor:pointer;position:relative;overflow:hidden;transition:transform .12s;user-select:none;text-align:center;min-height:0}
+    .tile{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(14px,3.5vw,20px);cursor:pointer;position:relative;overflow:hidden;transition:transform .12s;user-select:none;text-align:center;min-height:160px}
     .tile:active{transform:scale(0.92)}
     .tc {background:linear-gradient(145deg,#0E7490,#0B4F66);border:1px solid rgba(34,211,238,0.3)}
     .tse{background:linear-gradient(145deg,#5B21B6,#3B1370);border:1px solid rgba(139,92,246,0.35)}
@@ -249,6 +279,7 @@
     .wide.mgr{background:linear-gradient(145deg,#334155,#0F172A);border-color:rgba(148,163,184,0.4)}
     .wide.fin{background:linear-gradient(145deg,#BE185D,#831843);border-color:rgba(244,114,182,0.4)}
     .wide.gord{background:linear-gradient(145deg,#4338CA,#1E1B4B);border-color:rgba(129,140,248,0.45)}
+    .wide.beacon{background:linear-gradient(145deg,#65A30D,#3F6212);border-color:rgba(190,242,100,0.5)}
     .wi{font-size:clamp(28px,7vw,36px);margin-bottom:6px;flex-shrink:0}
     .wl{font-size:clamp(14px,3.8vw,16px);font-weight:800;color:#fff;line-height:1.15}
     .ws{font-size:clamp(11px,2.8vw,12px);color:rgba(255,255,255,0.65);margin-top:3px;line-height:1.3}
@@ -486,7 +517,8 @@
             <div class="wide race wa1" id="wrace" onclick="go('race')"><div class="wi">🏎️</div><div><div class="wl">Racefacer</div><div class="ws">Track & session data</div></div></div>
             <div class="wide mgr wa2" id="mgrt" style="display:none" onclick="go('manager');loadMgr()"><div class="wi">⭐</div><div><div class="wl">Manager Dashboard</div><div class="ws">Live data & staff</div></div></div>
             <div class="wide fin wa3" id="wfin" style="display:none" onclick="go('finance');loadFin()"><div class="wi">💰</div><div><div class="wl">Finance</div><div class="ws">Stock value & spend</div></div></div>
-            <div class="wide gord wa4" id="wgord" style="display:none" onclick="go('genorder')"><div class="wi">📦</div><div><div class="wl">Generate Order</div><div class="ws">Auto-build RIMO order</div></div></div>
+            <div class="wide beacon wa4" id="wbeacon" onclick="go('beacons')"><div class="wi">📡</div><div><div class="wl">Beacons</div><div class="ws">Track layouts & maps</div></div></div>
+            <div class="wide gord wa5" id="wgord" style="display:none" onclick="go('genorder')"><div class="wi">📦</div><div><div class="wl">Generate Order</div><div class="ws">Auto-build RIMO order</div></div></div>
           </div>
         </div>
       </div>
@@ -641,6 +673,22 @@
         <div class="mc"><div class="mct">🛒 Reorder Forecast Cost</div><div id="fin-reorder"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">🏎 Cost per Repair</div><div class="emp" style="padding:14px 4px;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div>
         <div class="mc"><div class="mct">🏎 Cost per Kart per Month</div><div class="emp" style="padding:14px 4px;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div>
+      </div>
+    </div>
+
+    <!-- BEACONS -->
+    <div class="scr" id="s-beacons">
+      <div class="phdr">
+        <button class="back" onclick="back()"> Back</button>
+      </div>
+      <div class="sb">
+        <div class="pgtitle">Beacons</div>
+        <div class="rcard">
+          <div style="font-size:56px;margin-bottom:16px">📡</div>
+          <div style="font-size:18px;font-weight:800;color:#A3E635;margin-bottom:10px">Coming Soon</div>
+          <div style="font-size:14px;color:var(--t2);line-height:2.3;text-align:left;display:inline-block">🗺️&nbsp; Visual map per track layout<br>📍&nbsp; Beacon positions marked<br>🚧&nbsp; Barrier placement reference<br>⚡&nbsp; Dehaardt electrical loop config<br>🔄&nbsp; Auto-sync from Racefacer layout<br>📋&nbsp; Setup checklist per layout<br>📐&nbsp; Distance &amp; positioning data</div>
+        </div>
+        <div class="mc" style="text-align:center"><div style="font-size:13px;color:var(--t2);line-height:1.8">Track configuration reference · awaiting setup<br><span style="color:#A3E635;font-weight:600">Coming soon</span></div></div>
       </div>
     </div>
 
