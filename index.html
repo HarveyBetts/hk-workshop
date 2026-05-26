@@ -316,6 +316,19 @@
     #msg.er{background:rgba(255,59,48,.1);border:1px solid rgba(255,59,48,.2);color:#f87171;display:block}
     #msg.ld{background:var(--acc2);border:1px solid rgba(0,207,255,.15);color:var(--acc);display:block}
 
+
+    /* Manager Dashboard stat cards */
+    .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+    .stat-card{background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--clr,#00CFFF)}
+    .stat-num{font-size:28px;font-weight:800;line-height:1;letter-spacing:-0.5px;color:var(--clr,#00CFFF)}
+    .stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--t2);margin-top:6px}
+    .stat-take{--clr:#FF5252}
+    .stat-restock{--clr:#43A047}
+    .stat-staff{--clr:#FFD600}
+    .stat-soon{--clr:#FF9800}
+    @media (min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr)}.stat-num{font-size:32px}}
+
     /* ── Manager ── */
     .mc{background:var(--card);border:1px solid var(--b1);border-radius:16px;padding:16px;margin-bottom:10px}
     .mc:first-of-type{margin-top:6px}
@@ -525,11 +538,17 @@
       <div class="phdr"><button class="back" onclick="back()"> Back</button></div>
       <div class="sb">
         <div class="pgtitle">Manager Dashboard</div>
+        <!-- Quick stats row -->
+        <div class="stats-grid">
+          <div class="stat-card stat-take"><div class="stat-num" id="st-takes">—</div><div class="stat-lbl">Taken Today</div></div>
+          <div class="stat-card stat-restock"><div class="stat-num" id="st-restocks">—</div><div class="stat-lbl">Restocked Today</div></div>
+          <div class="stat-card stat-staff"><div class="stat-num" id="st-staff">—</div><div class="stat-lbl">Active Staff</div></div>
+          <div class="stat-card stat-soon"><div class="stat-num" id="st-soon">—</div><div class="stat-lbl">Stockouts ≤30d</div></div>
+        </div>
         <div class="mc"><div class="mct">Active Today</div><div id="mli"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Today's Activity</div><div id="mta"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Leaderboard · This Week</div><div id="mlb"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Most Taken · This Week</div><div id="mtp"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
-        <div class="mc"><div class="mct">Low Stock</div><div id="mls"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Predicted Stockouts · 90 Days</div><div id="mso"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Staff PINs</div><div id="mpi"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
       </div>
@@ -615,6 +634,9 @@ function showRoot(id){
 function go(id){
   var curId=stk.length?stk[stk.length-1]:null,cur=curId?s(curId):null,nxt=s(id);
   if(!nxt||id===curId) return;stk.push(id);
+  // Reset scroll position to top whenever entering a screen
+  var sb=nxt.querySelector('.sb');
+  if(sb) sb.scrollTop=0;
   var ease='cubic-bezier(0.32,0.72,0,1)';
   // Set starting positions WITHOUT transition
   nxt.style.transition='none';
@@ -1399,7 +1421,20 @@ function subord(){
 function loadMgr(){
   jsonp(APP+'?action=getmanagerdata',function(d){
     if(!d)return;
+    // Compute daily totals for stat cards
+    var totalTake=0,totalRestock=0;
+    (d.todayLog||[]).forEach(function(r){
+      if(r.action==='TAKEN') totalTake+=r.qty;
+      if(r.action==='RESTOCK') totalRestock+=r.qty;
+    });
     var li=d.loggedInToday||[];
+    var soon=(d.stockouts||[]).filter(function(p){return p.daysLeft<=30;}).length;
+    // Populate stat cards
+    document.getElementById('st-takes').innerText=totalTake;
+    document.getElementById('st-restocks').innerText=totalRestock;
+    document.getElementById('st-staff').innerText=li.length;
+    document.getElementById('st-soon').innerText=soon;
+
     document.getElementById('mli').innerHTML=li.length===0?'<div class="emp" style="padding:4px 0;font-size:13px">No one logged in yet today</div>':li.map(function(u){var sf=STAFF.find(function(s){return s.name===u.name;})||{emoji:'🔧'};return '<div class="schip">'+sf.emoji+' '+u.name.split(' ')[0]+'</div>';}).join('');
     var ts={};(d.todayLog||[]).forEach(function(r){if(!ts[r.name])ts[r.name]={t:0,r:0};if(r.action==='TAKEN')ts[r.name].t+=r.qty;if(r.action==='RESTOCK')ts[r.name].r+=r.qty;});
     var ns=Object.keys(ts);
@@ -1408,7 +1443,6 @@ function loadMgr(){
     var med=['🥇','🥈','🥉'];
     document.getElementById('mlb').innerHTML=!(d.staffList||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px">No activity this week</div>':d.staffList.map(function(x,i){return '<div class="mr"><div class="mrl">'+(med[i]||'')+' '+x.name+'</div><div class="mrr"><span class="bdg bt">−'+x.taken+'</span> <span class="bdg br">+'+x.restocked+'</span></div></div>';}).join('');
     document.getElementById('mtp').innerHTML=!(d.topWeek||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px">No data this week</div>':d.topWeek.map(function(p,i){return '<div class="mr"><div class="mrl">'+(i+1)+'. '+p.desc+'</div><div class="mrr" style="color:#f87171;font-weight:700">'+p.qty+'</div></div>';}).join('');
-    document.getElementById('mls').innerHTML=!(d.lowStock||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px;color:var(--grn)">All stock healthy</div>':d.lowStock.map(function(p){var cl=p.qty===0?'var(--red)':'var(--amb)';return '<div class="mr"><div class="mrl">'+p.desc+(p.loc?'<br><span style="font-size:11px;color:var(--t2)">📍 '+p.loc+'</span>':'')+'</div><div class="mrr" style="color:'+cl+';font-weight:700">'+p.qty+'</div></div>';}).join('');
     document.getElementById('mso').innerHTML=!(d.stockouts||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px;color:var(--grn)">None predicted in 90 days</div>':d.stockouts.map(function(p){var cl=p.daysLeft<=7?'var(--red)':p.daysLeft<=14?'var(--amb)':'var(--t2)';return '<div class="mr"><div class="mrl">'+p.desc+'</div><div class="mrr" style="color:'+cl+';font-weight:600">'+p.daysLeft+'d · '+p.date+'</div></div>';}).join('');
     document.getElementById('mpi').innerHTML=STAFF.map(function(x){return '<div class="prow"><span style="font-size:13px;font-weight:500">'+x.emoji+' '+x.name+'<br><span style="font-size:11px;color:var(--t2)">'+x.role+'</span></span><span class="pval">'+x.pin+'</span></div>';}).join('');
   });
