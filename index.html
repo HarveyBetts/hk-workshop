@@ -194,8 +194,9 @@
     /* Animated ambient glow */100%{opacity:1;transform:scale(1.06)}}
     #s-home .sf{position:relative;z-index:1}
 
-    .home-inner{display:flex;flex-direction:column;height:100%;gap:10px;padding-top:14px;padding-bottom:calc(env(safe-area-inset-bottom) + 12px);box-sizing:border-box}
-    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0}
+    .home-inner{display:flex;flex-direction:column;height:100%;gap:10px;padding-top:14px;padding-bottom:calc(env(safe-area-inset-bottom) + 12px);box-sizing:border-box;justify-content:flex-start}
+    .home-inner .wide:first-of-type{margin-top:auto}
+    .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:0 1 auto;min-height:0}
 
     /* Tile entrance */
     @keyframes tileIn{from{opacity:0;transform:translateY(28px) scale(0.92)}to{opacity:1;transform:none}}
@@ -208,7 +209,7 @@
     .wa2{animation:wideIn .5s cubic-bezier(0.34,1.56,0.64,1) 350ms both}
 
     /* SOLID COLORED TILES */
-    .tile{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(14px,3.5vw,20px);cursor:pointer;position:relative;overflow:hidden;transition:transform .12s;user-select:none;text-align:center}
+    .tile{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(14px,3.5vw,20px);cursor:pointer;position:relative;overflow:hidden;transition:transform .12s;user-select:none;text-align:center;aspect-ratio:1/1.15;min-height:0}
     .tile:active{transform:scale(0.92)}
     .tc {background:linear-gradient(145deg,#0E7490,#0B4F66);border:1px solid rgba(34,211,238,0.3)}
     .tse{background:linear-gradient(145deg,#5B21B6,#3B1370);border:1px solid rgba(139,92,246,0.35)}
