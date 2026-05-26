@@ -561,6 +561,7 @@
         <div class="mc"><div class="mct">Leaderboard · This Week</div><div id="mlb"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Most Taken · This Week</div><div id="mtp"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
         <div class="mc"><div class="mct">Predicted Stockouts · 90 Days</div><div id="mso"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
+        <div class="mc"><div class="mct">🚨 Racefacer Mismatches</div><div id="mrf"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct">Staff PINs</div><div id="mpi"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
       </div>
     </div>
@@ -1470,6 +1471,16 @@ function loadMgr(){
     document.getElementById('mlb').innerHTML=!(d.staffList||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px">No activity this week</div>':d.staffList.map(function(x,i){return '<div class="mr"><div class="mrl">'+(med[i]||'')+' '+x.name+'</div><div class="mrr"><span class="bdg bt">−'+x.taken+'</span> <span class="bdg br">+'+x.restocked+'</span></div></div>';}).join('');
     document.getElementById('mtp').innerHTML=!(d.topWeek||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px">No data this week</div>':d.topWeek.map(function(p,i){return '<div class="mr"><div class="mrl">'+(i+1)+'. '+p.desc+'</div><div class="mrr" style="color:#f87171;font-weight:700">'+p.qty+'</div></div>';}).join('');
     document.getElementById('mso').innerHTML=!(d.stockouts||[]).length?'<div class="emp" style="padding:4px 0;font-size:13px;color:var(--grn)">None predicted in 90 days</div>':d.stockouts.map(function(p){var cl=p.daysLeft<90?'#FF3B30':p.daysLeft<=120?'#FFD600':'#00C853';return '<div class="mr"><div class="mrl">'+p.desc+'</div><div class="mrr" style="color:'+cl+';font-weight:600">'+p.daysLeft+'d · '+p.date+'</div></div>';}).join('');
+    // Racefacer mismatch section — populated once API is integrated.
+    // Expected format: d.racefacerMismatches = [{ desc:'25mm Silent Block', sku:'1384023', appQty:93, rfQty:88, diff:-5 }, ...]
+    var rfm=d.racefacerMismatches;
+    if(rfm===undefined){
+      document.getElementById('mrf').innerHTML='<div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div>';
+    } else if(!rfm.length){
+      document.getElementById('mrf').innerHTML='<div class="emp" style="padding:4px 0;font-size:13px;color:var(--grn)">All parts in sync ✓</div>';
+    } else {
+      document.getElementById('mrf').innerHTML=rfm.map(function(p){var d=p.diff||0;var cl=Math.abs(d)>=5?'#FF3B30':'#FFD600';var sign=d>0?'+':'';return '<div class="mr"><div class="mrl">'+p.desc+(p.sku?'<br><span style="font-size:11px;color:var(--t2)">SKU: '+p.sku+'</span>':'')+'</div><div class="mrr" style="color:'+cl+';font-weight:700;text-align:right"><div style="font-size:11px;color:var(--t2);font-weight:500">App: '+p.appQty+' · RF: '+p.rfQty+'</div><div>'+sign+d+'</div></div></div>';}).join('');
+    }
     document.getElementById('mpi').innerHTML=STAFF.map(function(x){return '<div class="prow"><span style="font-size:13px;font-weight:500">'+x.emoji+' '+x.name+'<br><span style="font-size:11px;color:var(--t2)">'+x.role+'</span></span><span class="pval">'+x.pin+'</span></div>';}).join('');
     if(btn){btn.classList.remove('spinning');if(lbl)lbl.innerText='Updated · just now';}
     setTimeout(function(){if(lbl)lbl.innerText='Refresh';},3000);
