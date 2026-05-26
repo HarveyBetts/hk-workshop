@@ -275,7 +275,21 @@
     @media (max-width: 899px) {
       .home-inner.role-mgr .tile,
       .home-inner.role-mgr .wide:not(.gord) {
-        min-height: 118px;
+        min-height: 108px;
+      }
+      /* Also shrink the icon and text size proportionally so they don't overflow the smaller cells */
+      .home-inner.role-mgr .tile .ti,
+      .home-inner.role-mgr .wide:not(.gord) .wi {
+        font-size: clamp(24px,6vw,30px);
+        margin-bottom: 4px;
+      }
+      .home-inner.role-mgr .tile .tl,
+      .home-inner.role-mgr .wide:not(.gord) .wl {
+        font-size: clamp(13px,3.4vw,15px);
+      }
+      .home-inner.role-mgr .tile .ts,
+      .home-inner.role-mgr .wide:not(.gord) .ws {
+        font-size: clamp(10px,2.5vw,11px);
       }
     }
 
@@ -324,7 +338,7 @@
     .tl{font-size:clamp(15px,4vw,18px);font-weight:800;color:#fff;letter-spacing:-0.3px;position:relative;z-index:1}
     .ts{font-size:clamp(11px,3vw,13px);color:rgba(255,255,255,0.65);margin-top:4px;position:relative;z-index:1}
 
-    .wide{min-height:140px;background:var(--card);border:1px solid var(--b1);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:0;padding:18px 14px;cursor:pointer;transition:transform .12s;user-select:none;min-width:0;overflow:hidden}
+    .wide{min-height:160px;background:var(--card);border:1px solid var(--b1);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:0;padding:18px 14px;cursor:pointer;transition:transform .12s;user-select:none;min-width:0;overflow:hidden}
     .wide > div:not(.wi){display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;min-width:0}
     .wide:active{transform:scale(0.97)}
     .wide::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:rgba(255,255,255,0.07);border-radius:22px}
@@ -1096,11 +1110,10 @@ function applyRoleVisibility(){
   var hi=document.getElementById('home-inner');
   if(hi){
     hi.classList.remove('role-mgr','role-mech','role-office');
-    if(isDesktop){
-      if(isM) hi.classList.add('role-mgr');
-      else if(isRO) hi.classList.add('role-office');
-      else hi.classList.add('role-mech');
-    }
+    // Apply role classes on ALL viewports — needed for phone manager min-height override
+    if(isM) hi.classList.add('role-mgr');
+    else if(isRO) hi.classList.add('role-office');
+    else hi.classList.add('role-mech');
     var ts2=document.getElementById('tiles');
     if(ts2) ts2.style.gridTemplateColumns='';
   }
