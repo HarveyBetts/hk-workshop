@@ -1081,6 +1081,17 @@ function beep(){
     });
   }catch(e){}
 }
+function showScanError(){
+  var sst=document.getElementById('sst');
+  if(sst){
+    sst.innerHTML='<div style="color:#FF5252;font-weight:700;font-size:19px;letter-spacing:0.5px;">⚠ NOT A HK QR CODE</div><div style="color:var(--t2);font-size:13px;margin-top:8px;line-height:1.4;">Only QR codes generated for HK parts can be scanned</div>';
+  }
+  var sbn=document.getElementById('sbn');
+  if(sbn) sbn.style.display='';
+  // Error haptic (short-pause-short pattern)
+  if(navigator.vibrate){try{navigator.vibrate([60,40,60]);}catch(e){}}
+}
+
 function startScan(){
   if(qrs) return;
   if(cu&&cu.role==='Office Access'){document.getElementById('sst').innerText='Not available for office access.';return;}
@@ -1133,16 +1144,16 @@ function _initScanner(){
       if(url){
         beep();
         stopScan();
-        // Extract SKU from URL — keeps everything in-app instead of opening external page
+        // Validate it's a legitimate HK QR: must contain our Apps Script URL AND a sku parameter
+        var isHKUrl=url.indexOf('script.google.com')!==-1;
         var skuMatch=url.match(/[?&]sku=([^&]+)/);
-        if(skuMatch){
-          var sku=decodeURIComponent(skuMatch[1]);
-          setTimeout(function(){openTakeRestock(sku);},250);
-        } else {
-          // Not an HK QR — fall back to external open
-          var dest=url+(url.indexOf('name=')===-1?(url.indexOf('?')===-1?'?':'&')+'name='+encodeURIComponent(cu?cu.name:''):'');
-          setTimeout(function(){window.location.href=dest;},200);
+        if(!isHKUrl||!skuMatch){
+          // Not an HK QR — show error, don't navigate anywhere
+          setTimeout(showScanError,200);
+          return;
         }
+        var sku=decodeURIComponent(skuMatch[1]);
+        setTimeout(function(){openTakeRestock(sku);},250);
       }
     },{
       preferredCamera:'environment',
