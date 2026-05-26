@@ -84,9 +84,55 @@
         display: contents !important;
       }
       /* Column count varies per role to fill the screen symmetrically */
-      .home-inner.role-mech  { grid-template-columns: repeat(3, 1fr); }   /* 3 cols, 5 items = 3+2 */
-      .home-inner.role-office{ grid-template-columns: repeat(3, 1fr); }   /* 3 cols, 6 items = 3x2 */
-      .home-inner.role-mgr   { grid-template-columns: repeat(4, 1fr); }   /* 4 cols, 8 items = 4x2 */
+      /* Mac column counts per role:
+         Mech   = 2 cols (4 tiles 2x2 + Beacons strip)
+         Office = 2 cols (4 tiles 2x2 + Finance strip + Beacons strip)
+         Mgr    = 4 cols (8 tiles 4x2) */
+      .home-inner.role-mech   { grid-template-columns: repeat(2, 1fr); }
+      .home-inner.role-office { grid-template-columns: repeat(2, 1fr); }
+      .home-inner.role-mgr    { grid-template-columns: repeat(4, 1fr); }
+      /* Bigger Mac tiles — use the vertical dead space */
+      .home-inner .tile, .home-inner .wide {
+        min-height: 300px !important;
+      }
+      /* Strip styling on Mac for Beacons (mech + office) and Finance (office only) */
+      .home-inner.role-mech .wide.beacon,
+      .home-inner.role-office .wide.beacon,
+      .home-inner.role-office .wide.fin {
+        grid-column: span 2 !important;
+        min-height: 110px !important;
+        flex-direction: row !important;
+        padding: 24px 40px !important;
+        gap: 22px !important;
+        text-align: left !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+      }
+      .home-inner.role-mech .wide.beacon .wi,
+      .home-inner.role-office .wide.beacon .wi,
+      .home-inner.role-office .wide.fin .wi {
+        font-size: 44px !important;
+        margin-bottom: 0 !important;
+      }
+      .home-inner.role-mech .wide.beacon > div:not(.wi),
+      .home-inner.role-office .wide.beacon > div:not(.wi),
+      .home-inner.role-office .wide.fin > div:not(.wi) {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 16px !important;
+        flex-wrap: wrap;
+      }
+      .home-inner.role-mech .wide.beacon .wl,
+      .home-inner.role-office .wide.beacon .wl,
+      .home-inner.role-office .wide.fin .wl {
+        font-size: 24px !important;
+      }
+      .home-inner.role-mech .wide.beacon .ws,
+      .home-inner.role-office .wide.beacon .ws,
+      .home-inner.role-office .wide.fin .ws {
+        font-size: 14px !important;
+        margin-top: 0 !important;
+      }
       /* On desktop, Generate Order is a regular tile (NOT a strip) — override the mobile strip CSS */
       @media (min-width: 900px) {
         .wide.gord {
@@ -225,6 +271,14 @@
     .ta .tile:nth-child(3){animation:tileIn .5s cubic-bezier(0.34,1.56,0.64,1) 140ms both}
     .ta .tile:nth-child(4){animation:tileIn .5s cubic-bezier(0.34,1.56,0.64,1) 210ms both}
     @keyframes wideIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+    /* iPhone Manager: shrink tiles so all 9 items (4 tiles + 4 wides + Gen Order strip) fit on screen */
+    @media (max-width: 899px) {
+      .home-inner.role-mgr .tile,
+      .home-inner.role-mgr .wide:not(.gord) {
+        min-height: 118px;
+      }
+    }
+
     /* Phone-only: Generate Order is a thin full-width strip below the main 2x2 wides grid */
     @media (max-width: 899px) {
       .wide.gord {
