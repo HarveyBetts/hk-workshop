@@ -577,7 +577,19 @@ var stk=[];
   // Pre-fetch staff in background immediately
   fetchStaff(null);
   if(u&&ud===new Date().toDateString()){
-    try{cu=JSON.parse(u);applyRoleVisibility();stk=['home'];showRoot('home');return;}catch(e){}
+    try{
+      cu=JSON.parse(u);applyRoleVisibility();stk=['home'];showRoot('home');
+      // Preload parts from sessionStorage cache, then refresh in background.
+      // Ensures scanning is INSTANT — no network wait on first scan after app open.
+      var pc=sessionStorage.getItem('hk_p');
+      if(pc){try{var pp=JSON.parse(pc);if(pp.length&&pp[0].hasOwnProperty('used90'))parts=pp;}catch(e){}}
+      // Refresh in background regardless (keeps data fresh)
+      jsonp(APP+'?action=getparts',function(d){
+        if(d){parts=d.sort(function(a,b){return (a.desc||'').localeCompare(b.desc||'');});
+          try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}}
+      });
+      return;
+    }catch(e){}
   }
   stk=['pin'];showRoot('pin');
 })();
