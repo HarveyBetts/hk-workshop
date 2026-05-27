@@ -1,12 +1,13 @@
 {
-  "name": "HK Inventory",
-  "short_name": "HK Inventory",
+  "name": "HK Workshop",
+  "short_name": "HK Workshop",
   "start_url": "/hk-inventory/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#00e5ff",
+  "orientation": "portrait",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
