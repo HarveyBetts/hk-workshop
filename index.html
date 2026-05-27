@@ -310,6 +310,46 @@
       .wide.gord .ws { font-size: 12px !important; margin-top: 0 !important; }
     }
 
+    /* ── iPhone home: tiles stretch to fill ALL available viewport height ──
+       Replaces fixed min-heights with flex+grid 1fr so layout scales from iPhone SE
+       to iPhone Pro Max. Without this, larger phones (iPhone 17, Pro Max etc.) end up
+       with the same compact tiles as smaller phones and dead space at the bottom. */
+    @media (max-width: 899px) {
+      /* The home screen body becomes a flex column filling all available height */
+      #s-home .sf {
+        display: flex;
+        flex-direction: column;
+        overflow-y: hidden;
+      }
+      .home-inner {
+        flex: 1 1 auto;
+        display: flex !important;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 0;
+        height: auto;
+      }
+      /* Both grids flex-grow to share the remaining space equally */
+      .home-inner .tiles,
+      .home-inner .wides-grid {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        grid-auto-rows: 1fr;
+      }
+      /* Override the fixed min-heights so the grid auto-rows takes over —
+         tiles now stretch to fill the row they're in */
+      .home-inner .tile,
+      .home-inner .wide:not(.gord) {
+        min-height: 0 !important;
+      }
+      /* Manager has 5 wides where the last (Generate Order) is a strip.
+         Pin the strip to its compact size; let the two 2-col rows stretch. */
+      .home-inner.role-mgr .wides-grid {
+        grid-template-rows: 1fr 1fr auto;
+      }
+    }
+
+
     /* Wides grid — same 2-column layout as tiles so every item is equal size.
        A lone last item spans both columns to stay symmetric. */
     .wides-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-shrink:0}
@@ -348,9 +388,9 @@
     .wide.fin{background:linear-gradient(145deg,#BE185D,#831843);border-color:rgba(244,114,182,0.4)}
     .wide.gord{background:linear-gradient(145deg,#4338CA,#1E1B4B);border-color:rgba(129,140,248,0.45)}
     .wide.beacon{background:linear-gradient(145deg,#65A30D,#3F6212);border-color:rgba(190,242,100,0.5)}
-    .wi{font-size:clamp(28px,7vw,36px);margin-bottom:6px;flex-shrink:0}
-    .wl{font-size:clamp(14px,3.8vw,16px);font-weight:800;color:#fff;line-height:1.15}
-    .ws{font-size:clamp(11px,2.8vw,12px);color:rgba(255,255,255,0.65);margin-top:3px;line-height:1.3}
+    .wi{font-size:clamp(28px,8vw,52px);margin-bottom:6px;flex-shrink:0}
+    .wl{font-size:clamp(14px,4.5vw,22px);font-weight:800;color:#fff;line-height:1.15}
+    .ws{font-size:clamp(11px,3.2vw,16px);color:rgba(255,255,255,0.65);margin-top:3px;line-height:1.3}
 
     /* ── Back btn ── */
     .back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--acc);font-size:15px;font-weight:600;cursor:pointer;padding:8px 0;flex-shrink:0;font-family:'Inter',sans-serif}
