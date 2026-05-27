@@ -378,7 +378,7 @@
     .wide.fin{background:linear-gradient(145deg,#BE185D,#831843);border-color:rgba(244,114,182,0.4)}
     .wide.gord{background:linear-gradient(145deg,#4338CA,#1E1B4B);border-color:rgba(129,140,248,0.45)}
     .wide.beacon{background:linear-gradient(145deg,#65A30D,#3F6212);border-color:rgba(190,242,100,0.5)}
-    .wide.kartinfo{background:linear-gradient(145deg,#92400E,#451A03);border-color:rgba(245,158,11,0.45)}
+    .wide.kartinfo{background:linear-gradient(145deg,#1E40AF,#172554);border-color:rgba(96,165,250,0.5)}
     .wi{font-size:clamp(28px,8vw,52px);margin-bottom:6px;flex-shrink:0}
     .wl{font-size:clamp(14px,4.5vw,22px);font-weight:800;color:#fff;line-height:1.15}
     .ws{font-size:clamp(11px,3.2vw,16px);color:rgba(255,255,255,0.65);margin-top:3px;line-height:1.3}
@@ -870,38 +870,97 @@
       </div>
       <div class="sb">
         <div class="pgtitle">Kart Info</div>
-        <!-- Status legend -->
-        <div class="kart-legend"><span class="kl-dot kl-ok"></span>OK&nbsp;&nbsp;<span class="kl-dot kl-maint"></span>Maintenance&nbsp;&nbsp;<span class="kl-dot kl-damaged"></span>Damaged</div>
-        <!-- Kart filter -->
-        <div class="sinw"><span class="sico">🔍</span><input class="sin" type="text" id="kart-search" placeholder="Search by kart #..." oninput="filterKarts(this.value)"></div>
-        <!-- Kart chip grid -->
-        <div class="kart-chip-grid" id="kart-chips"></div>
-        <!-- Selected kart detail -->
-        <div id="kart-detail" style="display:none">
-          <div class="kart-detail-header">
-            <div class="kart-num-big" id="kd-num">—</div>
-            <div class="kart-meta">
-              <div class="kart-name" id="kd-name">—</div>
-              <div class="kart-id-line" id="kd-idline">—</div>
-              <div class="kart-status-pill" id="kd-status">—</div>
+
+        <!-- Main tab navigation -->
+        <div class="subtabs" id="kart-main-tabs">
+          <button class="subtab active" data-mtab="info" onclick="selectKartMainTab('info')">Kart Info</button>
+          <button class="subtab" data-mtab="wiring" onclick="selectKartMainTab('wiring')">Wiring</button>
+          <button class="subtab" data-mtab="cpu" onclick="selectKartMainTab('cpu')">CPU / WiFi</button>
+          <button class="subtab" data-mtab="beacons" onclick="selectKartMainTab('beacons')">Beacons</button>
+          <button class="subtab" data-mtab="help" onclick="selectKartMainTab('help')">Troubleshoot</button>
+        </div>
+
+        <!-- ── TAB 1: Kart Info ── -->
+        <div id="kmt-info" class="kart-main-pane">
+          <!-- Kart type selector -->
+          <div class="ktype-grid" id="kart-type-grid">
+            <button class="ktype-btn active" data-ktype="Adult"        onclick="selectKartType('Adult')">Adult <span class="ktype-count" id="ktc-Adult">0</span></button>
+            <button class="ktype-btn"        data-ktype="Intermediate" onclick="selectKartType('Intermediate')">Intermediate <span class="ktype-count" id="ktc-Intermediate">0</span></button>
+            <button class="ktype-btn"        data-ktype="Junior"       onclick="selectKartType('Junior')">Junior <span class="ktype-count" id="ktc-Junior">0</span></button>
+            <button class="ktype-btn"        data-ktype="Mini"         onclick="selectKartType('Mini')">Mini <span class="ktype-count" id="ktc-Mini">0</span></button>
+          </div>
+          <div class="kart-legend">
+            <span><span class="kl-dot kl-ok"></span>OK</span>
+            <span><span class="kl-dot kl-maint"></span>Maintenance</span>
+            <span><span class="kl-dot kl-damaged"></span>Damaged</span>
+          </div>
+          <div class="sinw"><span class="sico">🔍</span><input class="sin" type="text" id="kart-search" placeholder="Search by kart #..." oninput="filterKarts(this.value)"></div>
+          <div class="kart-chip-grid" id="kart-chips"></div>
+          <div id="kart-detail" style="display:none">
+            <div class="kart-detail-header">
+              <div class="kart-num-big" id="kd-num">—</div>
+              <div class="kart-meta">
+                <div class="kart-name" id="kd-name">—</div>
+                <div class="kart-id-line" id="kd-idline">—</div>
+                <div class="kart-status-pill" id="kd-status">—</div>
+              </div>
             </div>
+            <div class="mc"><div class="mct">Live Status</div><div class="placeholder-text">On track · Online · State of charge<br><span class="ph-sub">Awaiting Racefacer / WFM integration</span></div></div>
+            <div class="mc"><div class="mct">Specifications</div><div class="placeholder-text">Mileage · Total laps · Working hours · Total cost · Brand · Model · Engine · In-service date<br><span class="ph-sub">Awaiting Racefacer integration</span></div></div>
+            <div class="mc"><div class="mct">Repair History</div><div class="placeholder-text">Full history of repairs, dates, mileage at repair, parts used, mechanic, cost<br><span class="ph-sub">Awaiting Racefacer integration</span></div></div>
           </div>
-          <!-- Sub-tab pills (horizontally scrollable) -->
-          <div class="subtabs">
-            <button class="subtab active" data-tab="overview" onclick="selectKartTab('overview')">Overview</button>
-            <button class="subtab" data-tab="repairs" onclick="selectKartTab('repairs')">Repairs</button>
-            <button class="subtab" data-tab="wiring" onclick="selectKartTab('wiring')">Wiring</button>
-            <button class="subtab" data-tab="logs" onclick="selectKartTab('logs')">Logs</button>
-            <button class="subtab" data-tab="beaconlogs" onclick="selectKartTab('beaconlogs')">Beacons</button>
-            <button class="subtab" data-tab="help" onclick="selectKartTab('help')">Help</button>
+        </div>
+
+        <!-- ── TAB 2: Wiring Diagram ── -->
+        <div id="kmt-wiring" class="kart-main-pane" style="display:none">
+          <div class="rcard">
+            <div style="font-size:56px;margin-bottom:14px">⚡</div>
+            <div style="font-size:18px;font-weight:800;color:#3B82F6;margin-bottom:8px">Wiring Diagram</div>
+            <div style="font-size:13px;color:var(--t2);line-height:1.7">Annotated wiring schematic for SiNUS iON.<br>Upload pending.</div>
           </div>
-          <!-- Sub-tab content panels -->
-          <div id="kt-overview" class="kart-pane"></div>
-          <div id="kt-repairs" class="kart-pane" style="display:none"></div>
-          <div id="kt-wiring" class="kart-pane" style="display:none"></div>
-          <div id="kt-logs" class="kart-pane" style="display:none"></div>
-          <div id="kt-beaconlogs" class="kart-pane" style="display:none"></div>
-          <div id="kt-help" class="kart-pane" style="display:none"></div>
+          <div class="mc">
+            <div class="mct">🤖 Ask Wiring Assistant</div>
+            <div class="placeholder-text" style="text-align:left">Once the diagram is uploaded, you'll be able to ask questions like:<br>&nbsp;&nbsp;&nbsp;• "Where does the throttle pedal connect?"<br>&nbsp;&nbsp;&nbsp;• "What colour is the brake-cut wire?"<br>&nbsp;&nbsp;&nbsp;• "Which fuse protects the CPU?"<br><span class="ph-sub">Feature awaiting wiring diagram upload + AI configuration</span></div>
+          </div>
+        </div>
+
+        <!-- ── TAB 3: CPU / WiFi Logs ── -->
+        <div id="kmt-cpu" class="kart-main-pane" style="display:none">
+          <div class="rcard">
+            <div style="font-size:56px;margin-bottom:14px">📡</div>
+            <div style="font-size:18px;font-weight:800;color:#3B82F6;margin-bottom:8px">CPU / WiFi Logs</div>
+            <div style="font-size:13px;color:var(--t2);line-height:1.7">Live status & connection history per kart.<br>Pulled from WFM dashboard.</div>
+          </div>
+          <div class="mc">
+            <div class="mct">What will appear here</div>
+            <div class="placeholder-text" style="text-align:left">&nbsp;&nbsp;&nbsp;• Last online timestamp per kart<br>&nbsp;&nbsp;&nbsp;• WiFi signal strength history<br>&nbsp;&nbsp;&nbsp;• Karts currently offline (auto-flagged)<br>&nbsp;&nbsp;&nbsp;• CPU board uptime / restart events<br>&nbsp;&nbsp;&nbsp;• Pattern detection on "stuck offline" karts<br><span class="ph-sub">Awaiting WFM API integration</span></div>
+          </div>
+        </div>
+
+        <!-- ── TAB 4: Dehaardt Beacon Logs ── -->
+        <div id="kmt-beacons" class="kart-main-pane" style="display:none">
+          <div class="rcard">
+            <div style="font-size:56px;margin-bottom:14px">📍</div>
+            <div style="font-size:18px;font-weight:800;color:#3B82F6;margin-bottom:8px">Dehaardt Beacon Logs</div>
+            <div style="font-size:13px;color:var(--t2);line-height:1.7">Beacon signal diagnostics per kart.<br>Pulled from Racefacer.</div>
+          </div>
+          <div class="mc">
+            <div class="mct">What will appear here</div>
+            <div class="placeholder-text" style="text-align:left">&nbsp;&nbsp;&nbsp;• Sections where signal was lost<br>&nbsp;&nbsp;&nbsp;• Beacon signal strength per zone<br>&nbsp;&nbsp;&nbsp;• Karts that consistently lose beacon contact<br>&nbsp;&nbsp;&nbsp;• Suggested beacon position fixes<br>&nbsp;&nbsp;&nbsp;• Antenna fault detection<br><span class="ph-sub">Awaiting Racefacer API integration</span></div>
+          </div>
+        </div>
+
+        <!-- ── TAB 5: Troubleshooting ── -->
+        <div id="kmt-help" class="kart-main-pane" style="display:none">
+          <div class="rcard">
+            <div style="font-size:56px;margin-bottom:14px">🛠️</div>
+            <div style="font-size:18px;font-weight:800;color:#3B82F6;margin-bottom:8px">Troubleshooting</div>
+            <div style="font-size:13px;color:var(--t2);line-height:1.7">Common issues and step-by-step fixes.<br>Knowledge base — grows as we learn.</div>
+          </div>
+          <div class="mc">
+            <div class="mct">What will appear here</div>
+            <div class="placeholder-text" style="text-align:left">&nbsp;&nbsp;&nbsp;• Symptom-based search (e.g. "stuck offline")<br>&nbsp;&nbsp;&nbsp;• Step-by-step fix instructions<br>&nbsp;&nbsp;&nbsp;• Photos / videos for tricky repairs<br>&nbsp;&nbsp;&nbsp;• Linked parts (jumps to scan or order)<br>&nbsp;&nbsp;&nbsp;• Add-your-own entries (Manager edit)<br><span class="ph-sub">Content to be added — managers will be able to add entries from the app</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2005,107 +2064,152 @@ var staffEditMode=false;
 // Sample data — when Racefacer API is integrated, replace KART_LIST with API fetch.
 // Status: "ok" / "maint" (for maintenance) / "damaged"
 var KART_LIST=[
-  {num:4,  status:'maint',    name:'Adult Track',kartId:'FR-13',transponder:'104942',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:118402,laps:301245,hours:4892,cost:8420.50,startDate:'08.11.2021'},
-  {num:15, status:'ok',       name:'Adult Track',kartId:'FR-24',transponder:'104947',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:121553,laps:308112,hours:4955,cost:8123.10,startDate:'08.11.2021'},
-  {num:16, status:'damaged',  name:'Adult Track',kartId:'FR-25',transponder:'104948',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:124881,laps:315402,hours:5010,cost:9248.75,startDate:'08.11.2021'},
-  {num:18, status:'damaged',  name:'Adult Track',kartId:'FR-27',transponder:'104950',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:123014,laps:311208,hours:4988,cost:8901.30,startDate:'08.11.2021'},
-  {num:19, status:'maint',    name:'Adult Track',kartId:'FR-28',transponder:'104951',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:120218,laps:305773,hours:4946,cost:7902.50,startDate:'08.11.2021'},
-  {num:20, status:'damaged',  name:'Adult Track',kartId:'FR-29',transponder:'104952',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:122745,laps:310845,hours:4972,cost:8612.00,startDate:'08.11.2021'},
-  {num:22, status:'damaged',  name:'Adult Track',kartId:'FR-31',transponder:'104953',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:125606,laps:317426,hours:5024,cost:9912.29,startDate:'08.11.2021'},
-  {num:23, status:'ok',       name:'Adult Track',kartId:'FR-32',transponder:'104954',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:119987,laps:304102,hours:4928,cost:7811.45,startDate:'08.11.2021'},
-  {num:24, status:'damaged',  name:'Adult Track',kartId:'FR-33',transponder:'104955',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:121440,laps:307891,hours:4961,cost:8487.10,startDate:'08.11.2021'},
-  {num:26, status:'ok',       name:'Adult Track',kartId:'FR-35',transponder:'104957',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:119102,laps:301847,hours:4906,cost:7642.00,startDate:'08.11.2021'},
-  {num:27, status:'maint',    name:'Adult Track',kartId:'FR-36',transponder:'104958',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:122388,laps:309920,hours:4984,cost:8330.85,startDate:'08.11.2021'},
-  {num:28, status:'damaged',  name:'Adult Track',kartId:'FR-37',transponder:'104959',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:124012,laps:313800,hours:5005,cost:9100.50,startDate:'08.11.2021'},
-  {num:29, status:'ok',       name:'Adult Track',kartId:'FR-38',transponder:'104960',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:118780,laps:300915,hours:4885,cost:7388.20,startDate:'08.11.2021'},
-  {num:30, status:'maint',    name:'Adult Track',kartId:'FR-39',transponder:'104961',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:120902,laps:306214,hours:4940,cost:8044.60,startDate:'08.11.2021'},
-  {num:32, status:'damaged',  name:'Adult Track',kartId:'FR-41',transponder:'104963',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:123567,laps:312577,hours:4997,cost:8775.40,startDate:'08.11.2021'},
-  {num:33, status:'damaged',  name:'Adult Track',kartId:'FR-42',transponder:'104964',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:121810,laps:308432,hours:4970,cost:8520.15,startDate:'08.11.2021'},
-  {num:34, status:'maint',    name:'Adult Track',kartId:'FR-43',transponder:'104965',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:122044,laps:309017,hours:4974,cost:8602.00,startDate:'08.11.2021'},
-  {num:35, status:'damaged',  name:'Adult Track',kartId:'FR-44',transponder:'104966',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:124433,laps:314845,hours:5013,cost:9015.25,startDate:'08.11.2021'},
-  {num:37, status:'damaged',  name:'Adult Track',kartId:'FR-46',transponder:'104968',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:123289,laps:311902,hours:4995,cost:8830.70,startDate:'08.11.2021'},
-  {num:38, status:'ok',       name:'Adult Track',kartId:'FR-47',transponder:'104969',brand:'RiMO',model:'SiNUS iON',engine:'Electric',mileage:120555,laps:305081,hours:4937,cost:8001.85,startDate:'08.11.2021'}
-];
-// Sample repair history per kart (will be replaced by Racefacer API data)
-var SAMPLE_REPAIRS={
-  22:[
-    {date:'14.05.2026 13:36',title:"Stuck offline and on speed 1/2. Doesn't change when reset. System error on next race.",mileage:125572,cost:9.99,user:'Harvey Betts',status:'open'},
-    {date:'13.05.2026 22:16',title:"Stuck offline majority of shift. Shows speed 1. Tried resetting, no change.",mileage:125531,cost:4.90,user:'Will Webster',status:'open'},
-    {date:'11.05.2026 14:22',title:'Offline',mileage:125572,dateRepaired:'11.05.2026',cost:9.99,user:'Harvey Betts',status:'fixed'},
-    {date:'10.05.2026 09:15',title:'Left side 25mm torn',mileage:125531,dateRepaired:'10.05.2026',cost:4.90,user:'Will Webster',status:'fixed'},
-    {date:'08.05.2026 11:40',title:'Flat front left tyre',mileage:125060,dateRepaired:'08.05.2026',cost:28.00,user:'Will Webster',status:'fixed'}
-  ]
-};
-// Static troubleshooting guide (manually curated, updates as we learn)
-var TROUBLESHOOTING=[
-  {symptom:'Kart stuck offline / not connecting to WiFi',fix:'1. Power-cycle the kart (key off → wait 10s → key on)\n2. Check the antenna connector inside the dash — must be screwed tight\n3. Verify the WFM dashboard shows the kart\'s MAC address\n4. If still offline, swap CPU board with a known-good kart to isolate fault'},
-  {symptom:'Stuck on Speed 1/2 — won\'t change with mode button',fix:'1. Check the speed-selector wiring loom for damage\n2. Look for a flashing fault code on the kart\'s display\n3. Reset via WFM dashboard (Restart command)\n4. If persistent, replace the speed-mode control board'},
-  {symptom:'Kart slows down or stops on a specific section of track',fix:'1. Check beacon position at that section — barrier may be blocking signal\n2. Verify Dehaardt loop is energized (test with multimeter)\n3. Look for damage to beacon antenna underneath kart\n4. Check ground clearance — antenna can\'t be touching the loop'},
-  {symptom:'Accelerator not engaging — no response from pedal',fix:'1. Check accelerator wiring loom plug at the back of the pedal\n2. Inspect the throttle position sensor (TPS) for wear or contamination\n3. Test continuity from TPS to control board\n4. If TPS is faulty, replace with RSC3202 (SKU 1382446)'},
-  {symptom:'Motor running but no drive / wheels not turning',fix:'1. Check motor coupling and drive belt for slippage or breakage\n2. Inspect rear axle and bearings for play or seizure\n3. Verify motor is receiving correct voltage (check via WFM)\n4. If motor confirmed dead, replace as unit'},
-  {symptom:'Battery draining unusually fast / kart dies mid-session',fix:'1. Check cell balance via WFM battery report\n2. Inspect for any short circuits in the wiring loom (smell test for burnt insulation)\n3. Test battery health — capacity should be > 80% of new\n4. If a single cell is bad, the whole pack typically needs replacement'},
-  {symptom:'Brake feels spongy / weak braking force',fix:'1. Inspect brake pads for wear (replace if < 2mm)\n2. Check brake disc for warping or score marks\n3. Bleed the brake line — air in line causes spongy feel\n4. Test the brake master cylinder for leaks'},
-  {symptom:'Karts time/laps not registering on Racefacer',fix:'1. Check transponder is fitted and powered (LED should be lit)\n2. Verify kart number in WFM matches Racefacer config\n3. Check the timing line antenna under track for damage\n4. Restart the Racefacer timing software'}
+  // ── ADULT karts ──
+  {type:'Adult',num:4, status:'maint',   kartId:'FR-13',transponder:'104942',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:118402,laps:301245,hours:4892,cost:8420.50,startDate:'08.11.2021'},
+  {type:'Adult',num:15,status:'ok',      kartId:'FR-24',transponder:'104947',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:121553,laps:308112,hours:4955,cost:8123.10,startDate:'08.11.2021'},
+  {type:'Adult',num:16,status:'damaged', kartId:'FR-25',transponder:'104948',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:124881,laps:315402,hours:5010,cost:9248.75,startDate:'08.11.2021'},
+  {type:'Adult',num:18,status:'damaged', kartId:'FR-27',transponder:'104950',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:123014,laps:311208,hours:4988,cost:8901.30,startDate:'08.11.2021'},
+  {type:'Adult',num:19,status:'maint',   kartId:'FR-28',transponder:'104951',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:120218,laps:305773,hours:4946,cost:7902.50,startDate:'08.11.2021'},
+  {type:'Adult',num:20,status:'damaged', kartId:'FR-29',transponder:'104952',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:122745,laps:310845,hours:4972,cost:8612.00,startDate:'08.11.2021'},
+  {type:'Adult',num:22,status:'damaged', kartId:'FR-31',transponder:'104953',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:125606,laps:317426,hours:5024,cost:9912.29,startDate:'08.11.2021'},
+  {type:'Adult',num:23,status:'ok',      kartId:'FR-32',transponder:'104954',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:119987,laps:304102,hours:4928,cost:7811.45,startDate:'08.11.2021'},
+  {type:'Adult',num:24,status:'damaged', kartId:'FR-33',transponder:'104955',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:121440,laps:307891,hours:4961,cost:8487.10,startDate:'08.11.2021'},
+  {type:'Adult',num:26,status:'ok',      kartId:'FR-35',transponder:'104957',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:119102,laps:301847,hours:4906,cost:7642.00,startDate:'08.11.2021'},
+  {type:'Adult',num:27,status:'maint',   kartId:'FR-36',transponder:'104958',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:122388,laps:309920,hours:4984,cost:8330.85,startDate:'08.11.2021'},
+  {type:'Adult',num:28,status:'damaged', kartId:'FR-37',transponder:'104959',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:124012,laps:313800,hours:5005,cost:9100.50,startDate:'08.11.2021'},
+  {type:'Adult',num:29,status:'ok',      kartId:'FR-38',transponder:'104960',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:118780,laps:300915,hours:4885,cost:7388.20,startDate:'08.11.2021'},
+  {type:'Adult',num:30,status:'maint',   kartId:'FR-39',transponder:'104961',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:120902,laps:306214,hours:4940,cost:8044.60,startDate:'08.11.2021'},
+  {type:'Adult',num:32,status:'damaged', kartId:'FR-41',transponder:'104963',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:123567,laps:312577,hours:4997,cost:8775.40,startDate:'08.11.2021'},
+  {type:'Adult',num:33,status:'damaged', kartId:'FR-42',transponder:'104964',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:121810,laps:308432,hours:4970,cost:8520.15,startDate:'08.11.2021'},
+  {type:'Adult',num:34,status:'maint',   kartId:'FR-43',transponder:'104965',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:122044,laps:309017,hours:4974,cost:8602.00,startDate:'08.11.2021'},
+  {type:'Adult',num:35,status:'damaged', kartId:'FR-44',transponder:'104966',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:124433,laps:314845,hours:5013,cost:9015.25,startDate:'08.11.2021'},
+  {type:'Adult',num:37,status:'damaged', kartId:'FR-46',transponder:'104968',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:123289,laps:311902,hours:4995,cost:8830.70,startDate:'08.11.2021'},
+  {type:'Adult',num:38,status:'ok',      kartId:'FR-47',transponder:'104969',brand:'RiMO',model:'SiNUS iON',     engine:'Electric',mileage:120555,laps:305081,hours:4937,cost:8001.85,startDate:'08.11.2021'},
+  // ── INTERMEDIATE karts ──
+  {type:'Intermediate',num:1,status:'ok',     kartId:'IT-01',transponder:'105011',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:65420,laps:182455,hours:2710,cost:4220.30,startDate:'12.03.2022'},
+  {type:'Intermediate',num:2,status:'maint',  kartId:'IT-02',transponder:'105012',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:66108,laps:184220,hours:2735,cost:4501.80,startDate:'12.03.2022'},
+  {type:'Intermediate',num:3,status:'ok',     kartId:'IT-03',transponder:'105013',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:64999,laps:181344,hours:2698,cost:4055.40,startDate:'12.03.2022'},
+  {type:'Intermediate',num:4,status:'damaged',kartId:'IT-04',transponder:'105014',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:67250,laps:186817,hours:2762,cost:4810.95,startDate:'12.03.2022'},
+  {type:'Intermediate',num:5,status:'ok',     kartId:'IT-05',transponder:'105015',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:65733,laps:183188,hours:2722,cost:4180.65,startDate:'12.03.2022'},
+  {type:'Intermediate',num:6,status:'ok',     kartId:'IT-06',transponder:'105016',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:64811,laps:180955,hours:2691,cost:3978.10,startDate:'12.03.2022'},
+  {type:'Intermediate',num:7,status:'maint',  kartId:'IT-07',transponder:'105017',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:66890,laps:185445,hours:2755,cost:4625.20,startDate:'12.03.2022'},
+  {type:'Intermediate',num:8,status:'ok',     kartId:'IT-08',transponder:'105018',brand:'RiMO',model:'SiNUS iON Mid',engine:'Electric',mileage:65122,laps:181878,hours:2705,cost:4099.50,startDate:'12.03.2022'},
+  // ── JUNIOR karts ──
+  {type:'Junior',num:1,status:'ok',     kartId:'JR-01',transponder:'105101',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:42150,laps:120100,hours:1855,cost:2810.40,startDate:'05.07.2022'},
+  {type:'Junior',num:2,status:'ok',     kartId:'JR-02',transponder:'105102',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:41880,laps:119422,hours:1840,cost:2755.10,startDate:'05.07.2022'},
+  {type:'Junior',num:3,status:'maint',  kartId:'JR-03',transponder:'105103',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:42802,laps:121580,hours:1872,cost:2992.85,startDate:'05.07.2022'},
+  {type:'Junior',num:4,status:'damaged',kartId:'JR-04',transponder:'105104',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:43102,laps:122044,hours:1882,cost:3145.50,startDate:'05.07.2022'},
+  {type:'Junior',num:5,status:'ok',     kartId:'JR-05',transponder:'105105',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:42044,laps:120211,hours:1846,cost:2701.90,startDate:'05.07.2022'},
+  {type:'Junior',num:6,status:'ok',     kartId:'JR-06',transponder:'105106',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:41956,laps:119876,hours:1843,cost:2688.25,startDate:'05.07.2022'},
+  {type:'Junior',num:7,status:'maint',  kartId:'JR-07',transponder:'105107',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:42688,laps:121344,hours:1869,cost:2950.15,startDate:'05.07.2022'},
+  {type:'Junior',num:8,status:'ok',     kartId:'JR-08',transponder:'105108',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:42220,laps:120516,hours:1857,cost:2820.60,startDate:'05.07.2022'},
+  {type:'Junior',num:9,status:'damaged',kartId:'JR-09',transponder:'105109',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:43520,laps:122944,hours:1889,cost:3210.75,startDate:'05.07.2022'},
+  {type:'Junior',num:10,status:'ok',    kartId:'JR-10',transponder:'105110',brand:'RiMO',model:'Junior Kid',engine:'Electric',mileage:41733,laps:119445,hours:1838,cost:2645.40,startDate:'05.07.2022'},
+  // ── MINI karts ──
+  {type:'Mini',num:1,status:'ok',     kartId:'MN-01',transponder:'105201',brand:'RiMO',model:'EVO Mini',engine:'Electric',mileage:22450,laps:78200,hours:980,cost:1455.30,startDate:'18.09.2022'},
+  {type:'Mini',num:2,status:'ok',     kartId:'MN-02',transponder:'105202',brand:'RiMO',model:'EVO Mini',engine:'Electric',mileage:22188,laps:77502,hours:972,cost:1422.85,startDate:'18.09.2022'},
+  {type:'Mini',num:3,status:'maint',  kartId:'MN-03',transponder:'105203',brand:'RiMO',model:'EVO Mini',engine:'Electric',mileage:23044,laps:79388,hours:992,cost:1610.20,startDate:'18.09.2022'},
+  {type:'Mini',num:4,status:'ok',     kartId:'MN-04',transponder:'105204',brand:'RiMO',model:'EVO Mini',engine:'Electric',mileage:22655,laps:78444,hours:984,cost:1488.10,startDate:'18.09.2022'},
+  {type:'Mini',num:5,status:'damaged',kartId:'MN-05',transponder:'105205',brand:'RiMO',model:'EVO Mini',engine:'Electric',mileage:23488,laps:80014,hours:1001,cost:1722.50,startDate:'18.09.2022'},
+  {type:'Mini',num:6,status:'ok',     kartId:'MN-06',transponder:'105206',brand:'RiMO',model:'EVO Mini',engine:'Electric',mileage:22311,laps:77821,hours:976,cost:1440.75,startDate:'18.09.2022'}
 ];
 // State
 var SELECTED_KART=null;
+var SELECTED_KART_TYPE='Adult';
 var ACTIVE_KART_TAB='overview';
 
 function loadKartInfo(){
   // Stub for refresh button — when API is wired, fetch fresh kart data here.
   var btn=document.getElementById('rb-kart'),lbl=document.getElementById('rt-kart');
   if(btn){btn.classList.add('spinning');if(lbl)lbl.innerText='Updating...';}
+  updateKartTypeCounts();
   renderKartChips();
+  // Default to "Kart Info" tab on first load
+  if(!ACTIVE_KART_MAIN_TAB) ACTIVE_KART_MAIN_TAB='info';
+  selectKartMainTab(ACTIVE_KART_MAIN_TAB);
   setTimeout(function(){
     if(btn){btn.classList.remove('spinning');if(lbl){lbl.innerText='Updated · just now';setTimeout(function(){if(lbl)lbl.innerText='Refresh';},3000);}}
   },300);
 }
 
+// Switch between the 5 main tabs in the Kart Info screen
+var ACTIVE_KART_MAIN_TAB='info';
+function selectKartMainTab(tab){
+  ACTIVE_KART_MAIN_TAB=tab;
+  document.querySelectorAll('#kart-main-tabs .subtab').forEach(function(b){
+    b.classList.toggle('active', b.dataset.mtab===tab);
+  });
+  ['info','wiring','cpu','beacons','help'].forEach(function(t){
+    var el=document.getElementById('kmt-'+t);
+    if(el) el.style.display=(t===tab)?'block':'none';
+  });
+}
+
 function renderKartChips(filter){
   var q=(filter||'').trim().toLowerCase();
-  var list=KART_LIST.filter(function(k){return !q||String(k.num).indexOf(q)>=0;});
+  // Filter by selected kart type FIRST, then by search query
+  var list=KART_LIST
+    .filter(function(k){return k.type===SELECTED_KART_TYPE;})
+    .filter(function(k){return !q||String(k.num).indexOf(q)>=0;});
   var html=list.map(function(k){
-    return '<div class="kart-chip'+(SELECTED_KART&&SELECTED_KART.num===k.num?' selected':'')+'" data-status="'+k.status+'" onclick="selectKart('+k.num+')"><span class="kc-badge"></span><div class="kc-num">'+k.num+'</div></div>';
+    var isSel=SELECTED_KART&&SELECTED_KART.num===k.num&&SELECTED_KART.type===k.type;
+    return '<div class="kart-chip'+(isSel?' selected':'')+'" data-status="'+k.status+'" onclick="selectKart('+k.num+',\''+k.type+'\')"><span class="kc-badge"></span><div class="kc-num">'+k.num+'</div></div>';
   }).join('');
   var grid=document.getElementById('kart-chips');
   if(grid) grid.innerHTML=html||'<div class="emp" style="grid-column:1/-1;padding:14px 0;text-align:center;color:var(--t2);font-size:13px">No karts match that number</div>';
 }
 
+// Update the counts shown in each type button
+function updateKartTypeCounts(){
+  var counts={Adult:0,Intermediate:0,Junior:0,Mini:0};
+  KART_LIST.forEach(function(k){if(counts.hasOwnProperty(k.type))counts[k.type]++;});
+  ['Adult','Intermediate','Junior','Mini'].forEach(function(t){
+    var el=document.getElementById('ktc-'+t);
+    if(el) el.innerText=counts[t];
+  });
+}
+
+// Switch which kart-type group is shown
+function selectKartType(type){
+  SELECTED_KART_TYPE=type;
+  document.querySelectorAll('.ktype-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.ktype===type);
+  });
+  // Clear current kart selection when switching types — Junior 1 ≠ Adult 1
+  SELECTED_KART=null;
+  var det=document.getElementById('kart-detail');
+  if(det) det.style.display='none';
+  // Clear search & re-render
+  var sb=document.getElementById('kart-search');
+  if(sb) sb.value='';
+  renderKartChips();
+}
+
 function filterKarts(v){renderKartChips(v);}
 
-function selectKart(num){
-  var k=KART_LIST.find(function(x){return x.num===num;});
+function selectKart(num,type){
+  var k=KART_LIST.find(function(x){return x.num===num&&x.type===type;});
   if(!k) return;
   SELECTED_KART=k;
-  // Highlight the selected chip
-  document.querySelectorAll('.kart-chip').forEach(function(el){
-    el.classList.toggle('selected',Number(el.querySelector('.kc-num').innerText)===num);
-  });
+  // Highlight the selected chip — re-render to update visual state correctly
   // Show detail panel
   var det=document.getElementById('kart-detail');
   if(det) det.style.display='block';
   // Populate header
   document.getElementById('kd-num').innerText=k.num;
-  document.getElementById('kd-name').innerText=k.name;
+  document.getElementById('kd-name').innerText=k.type+' Kart #'+k.num;
   document.getElementById('kd-idline').innerText='ID: '+k.kartId+' · Transponder: '+k.transponder;
   var statusLabels={ok:'OK',maint:'For Maintenance',damaged:'Damaged'};
   var statusEl=document.getElementById('kd-status');
   statusEl.className='kart-status-pill '+k.status;
   statusEl.innerText=statusLabels[k.status];
-  // Reset to Overview when picking a new kart
-  selectKartTab('overview');
   // Scroll detail into view smoothly
   setTimeout(function(){if(det) det.scrollIntoView({behavior:'smooth',block:'start'});},80);
 }
 
 function selectKartTab(tab){
+  // Stub — kept for compatibility, no tabs defined yet
   ACTIVE_KART_TAB=tab;
-  document.querySelectorAll('.subtab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
-  ['overview','repairs','wiring','logs','beaconlogs','help'].forEach(function(t){
-    var el=document.getElementById('kt-'+t);
-    if(el) el.style.display=(t===tab)?'block':'none';
-  });
-  renderKartTabContent(tab);
 }
 
 function renderKartTabContent(tab){
