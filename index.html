@@ -139,23 +139,24 @@
     .tl{font-size:clamp(13px,3.2vw,24px);font-weight:800;color:#fff;letter-spacing:-0.3px;line-height:1.1;position:relative;z-index:1}
     .ts{font-size:clamp(10px,2.4vw,15px);color:rgba(255,255,255,0.65);line-height:1.2;position:relative;z-index:1}
 
-    /* Colour palette — one per tab */
-    .tile.tc      {background:linear-gradient(145deg,#0E7490,#0B4F66);border:1px solid rgba(34,211,238,0.30)}
-    .tile.tse     {background:linear-gradient(145deg,#5B21B6,#3B1370);border:1px solid rgba(139,92,246,0.35)}
-    .tile.tlo     {background:linear-gradient(145deg,#CA8A04,#854D0E);border:1px solid rgba(234,179,8,0.50)}
-    .tile.tor     {background:linear-gradient(145deg,#047857,#064E3B);border:1px solid rgba(16,185,129,0.35)}
-    .tile.mgr     {background:linear-gradient(145deg,#334155,#0F172A);border:1px solid rgba(148,163,184,0.40)}
-    .tile.fin     {background:linear-gradient(145deg,#BE185D,#831843);border:1px solid rgba(244,114,182,0.40)}
-    .tile.hkai    {background:linear-gradient(145deg,#7C3AED,#06B6D4);border:1px solid rgba(124,58,237,0.50)}
+    /* Colour palette — one per tab (blues / teals / indigos kept distinct) */
+    .tile.tc      {background:linear-gradient(145deg,#0891B2,#0E5F73);border:1px solid rgba(34,211,238,0.32)}
+    .tile.tse     {background:linear-gradient(145deg,#2563EB,#1E3A8A);border:1px solid rgba(96,165,250,0.42)}
+    .tile.tlo     {background:linear-gradient(145deg,#D97706,#8A4B0A);border:1px solid rgba(251,191,36,0.50)}
+    .tile.tor     {background:linear-gradient(145deg,#059669,#064E3B);border:1px solid rgba(52,211,153,0.38)}
+    .tile.mgr     {background:linear-gradient(145deg,#475569,#1E293B);border:1px solid rgba(148,163,184,0.40)}
+    .tile.fin     {background:linear-gradient(145deg,#DB2777,#831843);border:1px solid rgba(244,114,182,0.42)}
+    .tile.hkai    {background:linear-gradient(145deg,#7C3AED,#5B21B6);border:1px solid rgba(167,139,250,0.50)}
     .tile.tasks   {background:linear-gradient(145deg,#EA580C,#7C2D12);border:1px solid rgba(251,146,60,0.50)}
-    .tile.race    {background:linear-gradient(145deg,#991B1B,#5B0F0F);border:1px solid rgba(220,38,38,0.40)}
-    .tile.kartinfo{background:linear-gradient(145deg,#1E40AF,#172554);border:1px solid rgba(96,165,250,0.50)}
-    .tile.beacon  {background:linear-gradient(145deg,#65A30D,#3F6212);border:1px solid rgba(190,242,100,0.50)}
-    .tile.gord    {background:linear-gradient(145deg,#4338CA,#1E1B4B);border:1px solid rgba(129,140,248,0.45)}
-    /* Gold tile needs darker text for contrast */
-    .tile.tlo .tl,.tile.tlo .ts{text-shadow:0 1px 3px rgba(0,0,0,0.5)}
-    .tile.tlo .ts{color:rgba(255,255,255,0.85)}
-    .tile.tlo .ti{filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5))}
+    .tile.chats   {background:linear-gradient(145deg,#C026D3,#6B21A8);border:1px solid rgba(232,121,249,0.50)}
+    .tile.race    {background:linear-gradient(145deg,#DC2626,#7F1D1D);border:1px solid rgba(248,113,113,0.42)}
+    .tile.kartinfo{background:linear-gradient(145deg,#0D9488,#115E59);border:1px solid rgba(45,212,191,0.50)}
+    .tile.beacon  {background:linear-gradient(145deg,#84CC16,#3F6212);border:1px solid rgba(190,242,100,0.55)}
+    .tile.gord    {background:linear-gradient(145deg,#4F46E5,#312E81);border:1px solid rgba(129,140,248,0.48)}
+    /* Bright amber/lime tiles need darker text for contrast */
+    .tile.tlo .tl,.tile.tlo .ts,.tile.beacon .tl,.tile.beacon .ts{text-shadow:0 1px 3px rgba(0,0,0,0.55)}
+    .tile.tlo .ts,.tile.beacon .ts{color:rgba(255,255,255,0.85)}
+    .tile.tlo .ti,.tile.beacon .ti{filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5))}
 
     /* Entrance animation */
     @keyframes tileIn{from{opacity:0;transform:translateY(18px) scale(0.96)}to{opacity:1;transform:none}}
@@ -172,6 +173,7 @@
     .home-grid.ta .tile:nth-child(10){animation-delay:360ms}
     .home-grid.ta .tile:nth-child(11){animation-delay:400ms}
     .home-grid.ta .tile:nth-child(12){animation-delay:440ms}
+    .home-grid.ta .tile:nth-child(13){animation-delay:480ms}
 
     /* ── Back btn ── */
     .back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--acc);font-size:15px;font-weight:600;cursor:pointer;padding:8px 0;flex-shrink:0;font-family:'Inter',sans-serif}
@@ -475,6 +477,7 @@
             <div class="tile fin"      id="wfin" style="display:none" onclick="go('finance');loadFin()"><div class="ti">💰</div><div class="tl">Finance</div><div class="ts">Stock value &amp; spend</div></div>
             <div class="tile hkai"     id="whkai" onclick="go('hkai')"><div class="ti">🤖</div><div class="tl">HK AI</div><div class="ts">Coming soon</div></div>
             <div class="tile tasks"    id="wtasks" onclick="go('tasks')"><div class="ti">✅</div><div class="tl">Tasks</div><div class="ts">Coming soon</div></div>
+            <div class="tile chats"    id="wchats" onclick="go('chats')"><div class="ti">💬</div><div class="tl">Chats</div><div class="ts">Coming soon</div></div>
             <div class="tile race"     id="wrace" onclick="go('race')"><div class="ti">🏎️</div><div class="tl">Racefacer</div><div class="ts">Coming soon</div></div>
             <div class="tile kartinfo" id="wkart" onclick="go('kartinfo')"><div class="ti">🏁</div><div class="tl">Kart Info</div><div class="ts">Coming soon</div></div>
             <div class="tile beacon"   id="wbeacon" onclick="go('beacons')"><div class="ti">📡</div><div class="tl">Beacons</div><div class="ts">Coming soon</div></div>
@@ -713,6 +716,22 @@
           <div style="font-size:14px;color:var(--t2);line-height:2.3;text-align:left;display:inline-block">📋&nbsp; Managers assign tasks to mechanics<br>📅&nbsp; Due dates &amp; priority<br>📝&nbsp; Mechanics add progress notes<br>🔔&nbsp; Status updates as work progresses<br>✔️&nbsp; Mark complete when done</div>
         </div>
         <div class="mc" style="text-align:center"><div style="font-size:13px;color:var(--t2);line-height:1.8">Assign · track · complete<br><span style="color:#FB923C;font-weight:600">Coming soon</span></div></div>
+      </div>
+    </div>
+
+    <!-- CHATS -->
+    <div class="scr" id="s-chats">
+      <div class="phdr">
+        <button class="back" onclick="back()"> Back</button>
+      </div>
+      <div class="sb">
+        <div class="pgtitle">Chats</div>
+        <div class="rcard">
+          <div style="font-size:56px;margin-bottom:16px">💬</div>
+          <div style="font-size:18px;font-weight:800;color:#E879F9;margin-bottom:10px">Coming Soon</div>
+          <div style="font-size:14px;color:var(--t2);line-height:2.3;text-align:left;display:inline-block">💬&nbsp; Message anyone on the team<br>👥&nbsp; One big workshop group chat<br>🔔&nbsp; Notifications for new messages<br>📎&nbsp; Share parts, photos &amp; updates</div>
+        </div>
+        <div class="mc" style="text-align:center"><div style="font-size:13px;color:var(--t2);line-height:1.8">Talk to the whole team<br><span style="color:#E879F9;font-weight:600">Coming soon</span></div></div>
       </div>
     </div>
 
@@ -1433,11 +1452,16 @@ function _initScanner(){
       if(url){
         beep();
         stopScan();
-        // Validate it's a legitimate HK QR: must contain our Apps Script URL AND a sku parameter
-        var isHKUrl=url.indexOf('script.google.com')!==-1;
+        // Accept any HK part code: a URL containing ?sku=... (current Google URL,
+        // or any future domain) OR a bare "HK:<sku>" token. Backend-agnostic, so
+        // printed tags keep working after the Sheets → app migration.
         var skuMatch=url.match(/[?&]sku=([^&]+)/);
-        if(!isHKUrl||!skuMatch){
-          // Not an HK QR — show error, don't navigate anywhere
+        if(!skuMatch){
+          var bare=url.match(/^\s*HK:([\w\-.\/]+)\s*$/i);
+          if(bare) skuMatch=bare;
+        }
+        if(!skuMatch){
+          // Not an HK code — show error, don't navigate anywhere
           setTimeout(showScanError,200);
           return;
         }
