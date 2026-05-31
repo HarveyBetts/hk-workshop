@@ -140,19 +140,19 @@
     .ts{font-size:clamp(10px,2.4vw,15px);color:rgba(255,255,255,0.65);line-height:1.2;position:relative;z-index:1}
 
     /* Colour palette — one per tab (blues / teals / indigos kept distinct) */
-    .tile.tc      {background:linear-gradient(145deg,#22D3EE,#0E7490);border:1px solid rgba(34,211,238,0.75)}
-    .tile.tse     {background:linear-gradient(145deg,#3B82F6,#1E40AF);border:1px solid rgba(96,165,250,0.75)}
-    .tile.tlo     {background:linear-gradient(145deg,#FB923C,#C2410C);border:1px solid rgba(251,146,60,0.85)}
-    .tile.tor     {background:linear-gradient(145deg,#34D399,#047857);border:1px solid rgba(52,211,153,0.75)}
-    .tile.mgr     {background:linear-gradient(145deg,#FBBF24,#A16207);border:1px solid rgba(250,204,21,0.8)}
-    .tile.fin     {background:linear-gradient(145deg,#F472B6,#BE185D);border:1px solid rgba(244,114,182,0.8)}
-    .tile.hkai    {background:linear-gradient(145deg,#A78BFA,#6D28D9);border:1px solid rgba(167,139,250,0.8)}
-    .tile.tasks   {background:linear-gradient(145deg,#F87171,#B91C1C);border:1px solid rgba(248,113,113,0.8)}
-    .tile.chats   {background:linear-gradient(145deg,#E879F9,#A21CAF);border:1px solid rgba(232,121,249,0.8)}
-    .tile.race    {background:linear-gradient(145deg,#FB7185,#9F1239);border:1px solid rgba(251,113,133,0.8)}
-    .tile.kartinfo{background:linear-gradient(145deg,#2DD4BF,#0F766E);border:1px solid rgba(45,212,191,0.8)}
-    .tile.beacon  {background:linear-gradient(145deg,#A3E635,#4D7C0F);border:1px solid rgba(163,230,53,0.85)}
-    .tile.gord    {background:linear-gradient(145deg,#818CF8,#3730A3);border:1px solid rgba(129,140,248,0.8)}
+    .tile.tc      {background:linear-gradient(145deg,#0891B2,#0E5F73);border:1px solid rgba(34,211,238,0.32)}
+    .tile.tse     {background:linear-gradient(145deg,#2563EB,#1E3A8A);border:1px solid rgba(96,165,250,0.42)}
+    .tile.tlo     {background:linear-gradient(145deg,#EAB308,#A16207);border:1px solid rgba(250,204,21,0.6)}
+    .tile.tor     {background:linear-gradient(145deg,#059669,#064E3B);border:1px solid rgba(52,211,153,0.38)}
+    .tile.mgr     {background:linear-gradient(145deg,#475569,#1E293B);border:1px solid rgba(148,163,184,0.40)}
+    .tile.fin     {background:linear-gradient(145deg,#DB2777,#831843);border:1px solid rgba(244,114,182,0.42)}
+    .tile.hkai    {background:linear-gradient(145deg,#7C3AED,#5B21B6);border:1px solid rgba(167,139,250,0.50)}
+    .tile.tasks   {background:linear-gradient(145deg,#EA580C,#7C2D12);border:1px solid rgba(251,146,60,0.50)}
+    .tile.chats   {background:linear-gradient(145deg,#C026D3,#6B21A8);border:1px solid rgba(232,121,249,0.50)}
+    .tile.race    {background:linear-gradient(145deg,#DC2626,#7F1D1D);border:1px solid rgba(248,113,113,0.42)}
+    .tile.kartinfo{background:linear-gradient(145deg,#0D9488,#115E59);border:1px solid rgba(45,212,191,0.50)}
+    .tile.beacon  {background:linear-gradient(145deg,#84CC16,#3F6212);border:1px solid rgba(190,242,100,0.55)}
+    .tile.gord    {background:linear-gradient(145deg,#4F46E5,#312E81);border:1px solid rgba(129,140,248,0.48)}
     /* Bright amber/lime tiles need darker text for contrast */
     .tile.tlo .tl,.tile.tlo .ts,.tile.beacon .tl,.tile.beacon .ts{text-shadow:0 1px 3px rgba(0,0,0,0.55)}
     .tile.tlo .ts,.tile.beacon .ts{color:rgba(255,255,255,0.85)}
@@ -690,7 +690,7 @@
         <div class="mc"><div class="mct">🚨 Racefacer Discrepancies</div><div id="mrf"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct">📦 Racefacer Warehouse Stock</div><div id="mrfw"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct" id="staff-pin-header" style="display:flex;justify-content:space-between;align-items:center"><span>Staff PINs</span><button class="staff-edit-btn" onclick="toggleStaffEdit()">Edit</button></div><div id="mpi"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
-        <div class="mc"><div class="mct">🔐 Master Access Code</div><div id="mpin-body"><button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal · top secret</button></div></div>
+        <div class="mc"><div class="mct">🔐 Master Access Code</div><div id="mpin-body"><button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal master code</button></div></div>
       </div>
     </div>
 
@@ -840,6 +840,7 @@
   <div class="m-tools">
     <input class="m-search-in" id="m-search" placeholder="Search parts..." oninput="mSearch()">
     <button class="m-add" onclick="mOpenAdd()">+ Add</button>
+    <button class="m-add" style="background:var(--card2);color:var(--t1);border:1px solid var(--b2)" onclick="mExportAllQR()">⤓ QR PDF</button>
   </div>
   <div class="m-list" id="m-list"></div>
 </div>
@@ -875,6 +876,7 @@
     </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ===== HK Workshop — Supabase backend (Phase 1: live core) ===== */
@@ -925,14 +927,63 @@ function stockMove(sku,qty,type,cb){
   fetch(SB_FN+'stock-move',{method:'POST',headers:HDRS,body:JSON.stringify({pin:(cu&&cu.pin)||'',sku:sku,qty:qty,type:type})})
     .then(function(r){return r.json();}).then(cb).catch(function(){cb({success:false,message:'Connection error - please try again'});});
 }
-/* Manager Dashboard data — activity rebuilds as real scans accumulate */
-function sbManagerData(cb){ cb({todayLog:[],loggedInToday:[],staffList:[],topWeek:[],stockouts:[]}); }
-/* Finance data — live stock value + top-value parts computed from current parts */
+/* Manager Dashboard — live from the logs + logins tables */
+function sbManagerData(cb){
+  var now=new Date();
+  function sameDay(d){return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()&&d.getDate()===now.getDate();}
+  var weekAgo=new Date(now.getTime()-7*864e5), ninety=new Date(now.getTime()-90*864e5);
+  var pMap={}; (parts||[]).forEach(function(p){pMap[p.sku]={desc:p.desc,qty:p.qty,reorder:p.reorder};});
+  Promise.all([SBC.from('logs').select('*'),SBC.from('logins').select('*')]).then(function(rs){
+    var logs=(rs[0]&&rs[0].data)||[], logins=(rs[1]&&rs[1].data)||[];
+    var todayLog=[], weekTaken={}, staffWeek={}, usage90={};
+    logs.forEach(function(l){
+      var d=new Date(l.ts); if(isNaN(d))return;
+      var sku=String(l.sku||''),act=String(l.action||''),qty=Number(l.qty)||0,nm=String(l.staff_name||'');
+      var desc=(pMap[sku]&&pMap[sku].desc)||sku;
+      if(sameDay(d)) todayLog.unshift({time:d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}),name:nm,action:act,sku:sku,desc:desc,qty:qty,rem:Number(l.remaining_qty)||0});
+      if(d>=weekAgo){ if(act==='TAKEN')weekTaken[sku]=(weekTaken[sku]||0)+qty; if(!staffWeek[nm])staffWeek[nm]={taken:0,restocked:0,actions:0}; staffWeek[nm].actions++; if(act==='TAKEN')staffWeek[nm].taken+=qty; if(act==='RESTOCK')staffWeek[nm].restocked+=qty; }
+      if(d>=ninety&&act==='TAKEN') usage90[sku]=(usage90[sku]||0)+qty;
+    });
+    var topWeek=Object.keys(weekTaken).sort(function(a,b){return weekTaken[b]-weekTaken[a];}).slice(0,5).map(function(sk){return {sku:sk,desc:(pMap[sk]&&pMap[sk].desc)||sk,qty:weekTaken[sk]};});
+    var staffList=Object.keys(staffWeek).sort(function(a,b){return staffWeek[b].actions-staffWeek[a].actions;}).map(function(n){return {name:n,taken:staffWeek[n].taken,restocked:staffWeek[n].restocked,actions:staffWeek[n].actions};});
+    var stockouts=[];
+    Object.keys(usage90).forEach(function(sk){ var dr=usage90[sk]/90, qty=(pMap[sk]&&pMap[sk].qty)||0, days=dr>0?Math.floor(qty/dr):999; if(days<=120){ var sd=new Date(now.getTime()+days*864e5); stockouts.push({sku:sk,desc:(pMap[sk]&&pMap[sk].desc)||sk,qty:qty,daysLeft:days,date:sd.toLocaleDateString('en-AU',{day:'numeric',month:'short'})}); }});
+    stockouts.sort(function(a,b){return a.daysLeft-b.daysLeft;});
+    var seen={}, loggedInToday=[];
+    logins.forEach(function(x){ var d=new Date(x.ts); if(isNaN(d)||!sameDay(d))return; var n=String(x.name||''); if(n&&!seen[n]){seen[n]=1;loggedInToday.push({name:n,role:String(x.role||'')});} });
+    cb({todayLog:todayLog,topWeek:topWeek,staffList:staffList,stockouts:stockouts,loggedInToday:loggedInToday});
+  }).catch(function(){ cb({todayLog:[],topWeek:[],staffList:[],stockouts:[],loggedInToday:[]}); });
+}
+/* Finance — live from logs x price + current parts */
 function sbFinanceData(cb){
-  var sv=0,exp=[];
-  (parts||[]).forEach(function(p){var v=(Number(p.price)||0)*(Number(p.qty)||0);sv+=v;if(v>0)exp.push({sku:p.sku,desc:p.desc,qty:p.qty,price:Number(p.price)||0,value:v});});
-  exp.sort(function(a,b){return b.value-a.value;});exp=exp.slice(0,10);
-  cb({stockValue:Math.round(sv),spendMonth:0,spendYTD:0,spendLastYr:0,dailyAvg:0,yoyChange:null,monthly12:[],categoryList:[],expensiveInStock:exp,deadStockValue:0,deadStockItems:[],reorderForecastCost:0,reorderForecastItems:[],topTakenMonth:[]});
+  var now=new Date(), thisYr=now.getFullYear(), lastYr=thisYr-1, thisMo=now.getMonth(), ninety=new Date(now.getTime()-90*864e5);
+  var pMap={}; (parts||[]).forEach(function(p){pMap[p.sku]={desc:p.desc,price:Number(p.price)||0,qty:p.qty,reorder:p.reorder};});
+  var sv=0, exp=[];
+  (parts||[]).forEach(function(p){var v=(Number(p.price)||0)*(Number(p.qty)||0); sv+=v; if(v>0)exp.push({sku:p.sku,desc:p.desc,qty:p.qty,price:Number(p.price)||0,value:v});});
+  exp.sort(function(a,b){return b.value-a.value;}); exp=exp.slice(0,10);
+  SBC.from('logs').select('*').then(function(res){
+    var logs=(res&&res.data)||[];
+    var spendMonth=0,spendYTD=0,spendLastYr=0,spend90=0,monthly={},spendSku={},lastTaken={},usage90={};
+    logs.forEach(function(l){
+      var d=new Date(l.ts); if(isNaN(d)||String(l.action||'')!=='TAKEN')return;
+      var sku=String(l.sku||''),q=Number(l.qty)||0,price=(pMap[sku]&&pMap[sku].price)||0,cost=q*price,y=d.getFullYear();
+      if(y===thisYr)spendYTD+=cost; if(y===lastYr)spendLastYr+=cost;
+      if(y===thisYr&&d.getMonth()===thisMo){spendMonth+=cost; spendSku[sku]=(spendSku[sku]||0)+cost;}
+      if(d>=ninety){spend90+=cost; usage90[sku]=(usage90[sku]||0)+q;}
+      lastTaken[sku]=d;
+      var mk=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2); monthly[mk]=(monthly[mk]||0)+cost;
+    });
+    var monthly12=[]; for(var m=11;m>=0;m--){var dd=new Date(now.getFullYear(),now.getMonth()-m,1),k=dd.getFullYear()+'-'+('0'+(dd.getMonth()+1)).slice(-2); monthly12.push({month:dd.toLocaleDateString('en-AU',{month:'short',year:'2-digit'}),total:Math.round(monthly[k]||0)});}
+    var topTakenMonth=Object.keys(spendSku).map(function(sk){return {sku:sk,desc:(pMap[sk]&&pMap[sk].desc)||sk,cost:Math.round(spendSku[sk]),price:(pMap[sk]&&pMap[sk].price)||0};}).sort(function(a,b){return b.cost-a.cost;}).slice(0,10);
+    var dsv=0, ds=[];
+    Object.keys(pMap).forEach(function(sk){var p=pMap[sk]; if(p.qty<=0||p.price<=0)return; var lt=lastTaken[sk]; if(!lt||lt<ninety){var v=p.qty*p.price; dsv+=v; ds.push({sku:sk,desc:p.desc,qty:p.qty,value:v,lastUsed:lt?lt.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'2-digit'}):'never'});}});
+    ds.sort(function(a,b){return b.value-a.value;}); ds=ds.slice(0,10);
+    var rfc=0, rfi=[];
+    Object.keys(pMap).forEach(function(sk){var p=pMap[sk]; if(p.qty>p.reorder)return; var u=usage90[sk]||0,oq=Math.max(1,Math.ceil(u*2)),cost=oq*p.price; if(cost>0){rfc+=cost; rfi.push({sku:sk,desc:p.desc,qty:p.qty,orderQty:oq,price:p.price,cost:cost});}});
+    rfi.sort(function(a,b){return b.cost-a.cost;});
+    var yoy=spendLastYr>0?((spendYTD-spendLastYr)/spendLastYr*100):null;
+    cb({stockValue:Math.round(sv),spendMonth:Math.round(spendMonth),spendYTD:Math.round(spendYTD),spendLastYr:Math.round(spendLastYr),dailyAvg:Math.round(spend90/90),yoyChange:yoy,monthly12:monthly12,categoryList:[],expensiveInStock:exp,deadStockValue:Math.round(dsv),deadStockItems:ds,reorderForecastCost:Math.round(rfc),reorderForecastItems:rfi,topTakenMonth:topTakenMonth});
+  }).catch(function(){ cb({stockValue:Math.round(sv),spendMonth:0,spendYTD:0,spendLastYr:0,dailyAvg:0,yoyChange:null,monthly12:[],categoryList:[],expensiveInStock:exp,deadStockValue:0,deadStockItems:[],reorderForecastCost:0,reorderForecastItems:[],topTakenMonth:[]}); });
 }
 /* Realtime: keep parts fresh across every device */
 function startRealtime(){
@@ -1314,6 +1365,7 @@ function pinFail(msg){
 function onLoginOk(m,entered){
   m.pin=entered; // user's own PIN, kept in their session only, to authorise their stock moves
   cu=m;sessionStorage.setItem('hk_u',JSON.stringify(m));sessionStorage.setItem('hk_ud',new Date().toDateString());applyRoleVisibility();
+  try{SBC.from('logins').insert({name:m.name,role:m.role}).then(function(){},function(){});}catch(e){}
   document.getElementById('we').innerText=m.emoji;
   document.getElementById('wn').innerText='Hey, '+m.name.split(' ')[0]+'!';
   document.getElementById('wr').innerText=m.role;
@@ -2500,7 +2552,7 @@ function mRemove(sku){
 /* QR — identical payload + 30x30mm print layout as the old sheet */
 function mQR(sku){
   var p=(parts||[]).find(function(x){return x.sku===sku;}); if(!p) return;
-  var img='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+WEB_APP_URL+'?sku='+sku;
+  var img=qrDataUrl(sku);
   document.getElementById('m-qr-label').innerHTML='<img src="'+img+'"><div class="qd">'+(p.desc||sku)+'</div><div class="qs">'+sku+'</div>';
   document.getElementById('m-qr-printbtn').onclick=function(){ mPrintQR(sku,(p.desc||sku),img); };
   document.getElementById('m-qr').classList.add('show');
@@ -2519,6 +2571,21 @@ function mPrintQR(sku,desc,img){
   w.document.write(h); w.document.close();
 }
 
+/* QR helpers — generated locally so payload is the same ?sku= and a bulk export never depends on a network round-trip */
+function qrDataUrl(sku){ var qr=qrcode(0,'M'); qr.addData(WEB_APP_URL+'?sku='+sku); qr.make(); return qr.createDataURL(6); }
+function mExportAllQR(){
+  var list=parts||[]; if(!list.length){ alert('No parts to export'); return; }
+  var w=window.open('','_blank'); if(!w){ alert('Allow pop-ups to export the PDF.'); return; }
+  var pages=list.map(function(p){ var sd=(p.desc||p.sku); if(sd.length>22) sd=sd.substring(0,20)+'...'; return '<div class="label"><img src="'+qrDataUrl(p.sku)+'"><div class="desc">'+sd+'</div><div class="sku">'+p.sku+'</div></div>'; }).join('');
+  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>HK QR Codes</title><style>'
+    +'@page{size:30mm 30mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,sans-serif;color:#000}'
+    +'.label{width:30mm;height:30mm;padding:1mm;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;page-break-after:always;break-after:page}'
+    +'.label img{width:19mm;height:19mm;display:block}.desc{margin-top:.8mm;font-size:8pt;font-weight:700;line-height:1.1;max-width:28mm}.sku{margin-top:.4mm;font-size:4.5pt;color:#555;letter-spacing:.3px}'
+    +'</style></head><body>'+pages
+    +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);};<\/scr'+'ipt></body></html>';
+  w.document.write(h); w.document.close();
+}
+
 /* Rotating master PIN reveal on the Manager Dashboard */
 var mpinTimer=null;
 function revealMasterPin(){
@@ -2533,7 +2600,6 @@ function revealMasterPin(){
 function showMasterPin(code,secs){
   var body=document.getElementById('mpin-body');
   body.innerHTML='<div class="mpin-code">'+code+'</div><div class="mpin-count" id="mpin-count"></div>'
-    +'<button class="mpin-open" onclick="openMasterFromMD(\''+code+'\')">Open master account &rarr;</button>'
     +'<button class="mpin-hide" onclick="hideMasterPin()">Hide</button>';
   function tick(){
     if(secs<=0){ clearInterval(mpinTimer); revealMasterPin(); return; }
@@ -2546,7 +2612,7 @@ function showMasterPin(code,secs){
 function hideMasterPin(){
   clearInterval(mpinTimer);
   var body=document.getElementById('mpin-body');
-  if(body) body.innerHTML='<button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal &middot; top secret</button>';
+  if(body) body.innerHTML='<button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal master code</button>';
 }
 
 </script>
