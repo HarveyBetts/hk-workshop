@@ -498,6 +498,8 @@
     .m-tool-desc{font-size:13px;color:var(--t2);line-height:1.5;margin-top:6px}
     .m-stat-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--b1);font-size:13px}
     .m-stat-row:last-child{border-bottom:none}
+    .m-lock{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--t2);line-height:1.4;margin:2px 0 4px;cursor:pointer}
+    .m-lock input{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:var(--acc)}
     .m-empty{text-align:center;color:var(--t2);padding:40px 0;font-size:14px}
     /* Master form */
     .m-form{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center}
@@ -925,6 +927,7 @@
       <div class="m-fld"><label>Min Stock</label><input id="m-f-min" inputmode="numeric"></div>
       <div class="m-fld"><label>Qty</label><input id="m-f-qty" inputmode="numeric"></div>
     </div>
+    <label class="m-lock"><input type="checkbox" id="m-f-lock"><span>🔒 Lock this minimum — don't auto-adjust from usage</span></label>
     <div class="m-fld"><label>Location</label><input id="m-f-loc"></div>
     <div class="m-form-msg" id="m-form-msg"></div>
     <div class="m-form-row">
@@ -980,6 +983,7 @@ function mapPart(r){
     price:aud,
     price_eur:(r.price_eur!=null?Number(r.price_eur):null),
     price_aud:(r.price_aud!=null?Number(r.price_aud):null),
+    auto_min:(r.auto_min!==undefined&&r.auto_min!==null?!!r.auto_min:true),
     used90:0, daysLeft:null, recommendedReorder:null, orderQuantity:null
   };
 }
@@ -2679,7 +2683,7 @@ function mRenderList(){
     return '<div class="m-row">'
       +'<div class="m-row-main" onclick="mOpenEdit(\''+p.sku+'\')">'
         +'<div class="m-row-desc">'+(p.desc||p.sku)+'</div>'
-        +'<div class="m-row-sub">SKU '+p.sku+' &middot; qty '+p.qty+' &middot; '+price+'</div>'
+        +'<div class="m-row-sub">SKU '+p.sku+' &middot; qty '+p.qty+' &middot; '+price+(p.auto_min===false?' &middot; 🔒':'')+'</div>'
       +'</div>'
       +'<button class="m-row-btn" onclick="mQR(\''+p.sku+'\')" title="QR code">QR</button>'
       +'<button class="m-row-btn m-row-del" onclick="mRemove(\''+p.sku+'\')" title="Remove">&#128465;</button>'
@@ -2771,6 +2775,7 @@ function mFillForm(p){
   document.getElementById('m-f-min').value=(p&&p.min_stock!=null)?p.min_stock:'';
   document.getElementById('m-f-qty').value=p?p.qty:'';
   document.getElementById('m-f-loc').value=p?(p.loc||''):'';
+  document.getElementById('m-f-lock').checked = p ? (p.auto_min===false) : false;
   mFormMsg(''); mEurHint();
 }
 function mOpenAdd(){
@@ -2799,7 +2804,9 @@ function mSave(){
     price_aud:document.getElementById('m-f-aud').value.trim(),
     min_stock:document.getElementById('m-f-min').value.trim(),
     qty:document.getElementById('m-f-qty').value.trim(),
-    location:document.getElementById('m-f-loc').value.trim() };
+    location:document.getElementById('m-f-loc').value.trim(),
+    lock:document.getElementById('m-f-lock').checked };
+  if(part.lock && part.min_stock===''){ mFormMsg('Enter a minimum to lock it, or untick to auto-adjust.'); return; }
   mFormMsg('Saving...');
   fetch(SB_FN+'master-write',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:(mEditSku?'edit':'add'),part:part})})
     .then(function(r){return r.json();}).then(function(res){
