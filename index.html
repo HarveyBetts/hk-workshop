@@ -140,19 +140,19 @@
     .ts{font-size:clamp(10px,2.4vw,15px);color:rgba(255,255,255,0.65);line-height:1.2;position:relative;z-index:1}
 
     /* Colour palette — one per tab (blues / teals / indigos kept distinct) */
-    .tile.tc      {background:linear-gradient(145deg,#0891B2,#0E5F73);border:1px solid rgba(34,211,238,0.32)}
-    .tile.tse     {background:linear-gradient(145deg,#2563EB,#1E3A8A);border:1px solid rgba(96,165,250,0.42)}
-    .tile.tlo     {background:linear-gradient(145deg,#D97706,#8A4B0A);border:1px solid rgba(251,191,36,0.50)}
-    .tile.tor     {background:linear-gradient(145deg,#059669,#064E3B);border:1px solid rgba(52,211,153,0.38)}
-    .tile.mgr     {background:linear-gradient(145deg,#475569,#1E293B);border:1px solid rgba(148,163,184,0.40)}
-    .tile.fin     {background:linear-gradient(145deg,#DB2777,#831843);border:1px solid rgba(244,114,182,0.42)}
-    .tile.hkai    {background:linear-gradient(145deg,#7C3AED,#5B21B6);border:1px solid rgba(167,139,250,0.50)}
-    .tile.tasks   {background:linear-gradient(145deg,#EA580C,#7C2D12);border:1px solid rgba(251,146,60,0.50)}
-    .tile.chats   {background:linear-gradient(145deg,#C026D3,#6B21A8);border:1px solid rgba(232,121,249,0.50)}
-    .tile.race    {background:linear-gradient(145deg,#DC2626,#7F1D1D);border:1px solid rgba(248,113,113,0.42)}
-    .tile.kartinfo{background:linear-gradient(145deg,#0D9488,#115E59);border:1px solid rgba(45,212,191,0.50)}
-    .tile.beacon  {background:linear-gradient(145deg,#84CC16,#3F6212);border:1px solid rgba(190,242,100,0.55)}
-    .tile.gord    {background:linear-gradient(145deg,#4F46E5,#312E81);border:1px solid rgba(129,140,248,0.48)}
+    .tile.tc      {background:linear-gradient(145deg,#22D3EE,#0E7490);border:1px solid rgba(34,211,238,0.75)}
+    .tile.tse     {background:linear-gradient(145deg,#3B82F6,#1E40AF);border:1px solid rgba(96,165,250,0.75)}
+    .tile.tlo     {background:linear-gradient(145deg,#FB923C,#C2410C);border:1px solid rgba(251,146,60,0.85)}
+    .tile.tor     {background:linear-gradient(145deg,#34D399,#047857);border:1px solid rgba(52,211,153,0.75)}
+    .tile.mgr     {background:linear-gradient(145deg,#FBBF24,#A16207);border:1px solid rgba(250,204,21,0.8)}
+    .tile.fin     {background:linear-gradient(145deg,#F472B6,#BE185D);border:1px solid rgba(244,114,182,0.8)}
+    .tile.hkai    {background:linear-gradient(145deg,#A78BFA,#6D28D9);border:1px solid rgba(167,139,250,0.8)}
+    .tile.tasks   {background:linear-gradient(145deg,#F87171,#B91C1C);border:1px solid rgba(248,113,113,0.8)}
+    .tile.chats   {background:linear-gradient(145deg,#E879F9,#A21CAF);border:1px solid rgba(232,121,249,0.8)}
+    .tile.race    {background:linear-gradient(145deg,#FB7185,#9F1239);border:1px solid rgba(251,113,133,0.8)}
+    .tile.kartinfo{background:linear-gradient(145deg,#2DD4BF,#0F766E);border:1px solid rgba(45,212,191,0.8)}
+    .tile.beacon  {background:linear-gradient(145deg,#A3E635,#4D7C0F);border:1px solid rgba(163,230,53,0.85)}
+    .tile.gord    {background:linear-gradient(145deg,#818CF8,#3730A3);border:1px solid rgba(129,140,248,0.8)}
     /* Bright amber/lime tiles need darker text for contrast */
     .tile.tlo .tl,.tile.tlo .ts,.tile.beacon .tl,.tile.beacon .ts{text-shadow:0 1px 3px rgba(0,0,0,0.55)}
     .tile.tlo .ts,.tile.beacon .ts{color:rgba(255,255,255,0.85)}
@@ -421,6 +421,86 @@
     .tkmsg-ok{background:rgba(0,200,83,0.1);border:1.5px solid rgba(0,200,83,0.35);color:#00C853;padding:10px 12px;border-radius:10px;font-weight:600;text-align:center;font-size:13px}
     .tkmsg-err{background:rgba(255,59,48,0.1);border:1.5px solid rgba(255,59,48,0.35);color:#FF5252;padding:10px 12px;border-radius:10px;font-weight:600;text-align:center;font-size:13px}
     .tkmsg-loading{background:rgba(0,207,255,0.08);border:1.5px solid rgba(0,207,255,0.25);color:#00CFFF;padding:10px 12px;border-radius:10px;font-weight:600;text-align:center;font-size:13px}
+  
+    /* Phase 2 — hover lift on tiles (desktop / hover-capable only) */
+    @media (hover:hover){
+      .tile{transition:transform .15s cubic-bezier(.34,1.4,.5,1),box-shadow .15s ease}
+      .tile:hover{transform:translateY(-3px) scale(1.045);box-shadow:0 12px 32px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.14);z-index:3}
+    }
+    /* Master access link on PIN screen */
+    .master-link{margin-top:16px;background:none;border:none;color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;padding:8px;letter-spacing:.3px}
+    .master-link:active{color:var(--acc)}
+    /* Master gate */
+    .mgate{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px}
+    .mgate.show{display:flex}
+    .mgate-box{background:var(--card);border:1px solid var(--b2);border-radius:20px;padding:26px 22px;width:100%;max-width:340px;text-align:center}
+    .mgate-h{font-size:18px;font-weight:800;margin-bottom:4px}
+    .mgate-sub{font-size:13px;color:var(--t2);margin-bottom:18px}
+    .mgate-input{width:100%;text-align:center;font-size:26px;font-weight:800;letter-spacing:8px;font-family:Monaco,Consolas,monospace;background:var(--card2);border:1.5px solid var(--b2);border-radius:12px;padding:14px 10px;color:var(--acc);-webkit-appearance:none}
+    .mgate-input:focus{outline:none;border-color:var(--acc)}
+    .mgate-msg{min-height:18px;font-size:13px;color:var(--red);margin:12px 0 4px;font-weight:600}
+    .mgate-row{display:flex;gap:10px;margin-top:6px}
+    .mgate-btn{flex:1;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+    .mgate-go{background:var(--grad);color:#fff}
+    .mgate-cancel{background:var(--card2);color:var(--t1);border:1px solid var(--b2)}
+    /* Master overlay */
+    .master{position:fixed;inset:0;z-index:480;background:var(--bg);display:none;flex-direction:column}
+    .master.show{display:flex}
+    .m-hdr{display:flex;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top),16px) 18px 12px;border-bottom:1px solid var(--b1);flex-shrink:0}
+    .m-hdr-t{font-size:16px;font-weight:800;line-height:1.2}
+    .m-hdr-t span{display:block;font-size:10px;color:var(--acc);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:1px}
+    .m-exit{background:var(--card);border:1px solid var(--b2);border-radius:10px;color:var(--t1);font-size:13px;font-weight:600;padding:9px 15px;cursor:pointer}
+    .m-tools{display:flex;gap:10px;padding:12px 18px;flex-shrink:0}
+    .m-search-in{flex:1;background:var(--card);border:1px solid var(--b2);border-radius:10px;padding:11px 14px;color:var(--t1);font-size:14px;-webkit-appearance:none}
+    .m-search-in:focus{outline:none;border-color:var(--acc)}
+    .m-add{background:var(--grad);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;padding:11px 16px;cursor:pointer;white-space:nowrap}
+    .m-list{flex:1;overflow-y:auto;padding:0 18px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
+    .m-row{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--b1);border-radius:12px;padding:11px 12px;margin-bottom:8px}
+    .m-row-main{flex:1;min-width:0;cursor:pointer}
+    .m-row-desc{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .m-row-sub{font-size:11px;color:var(--t2);margin-top:2px}
+    .m-row-btn{background:var(--card2);border:1px solid var(--b2);border-radius:9px;color:var(--t1);font-size:14px;width:38px;height:38px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    .m-row-del{color:var(--red)}
+    .m-empty{text-align:center;color:var(--t2);padding:40px 0;font-size:14px}
+    /* Master form */
+    .m-form{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center}
+    .m-form.show{display:flex}
+    .m-form-box{background:var(--card);border-top-left-radius:22px;border-top-right-radius:22px;border:1px solid var(--b2);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:22px 20px calc(env(safe-area-inset-bottom) + 22px)}
+    @media(min-width:600px){.m-form{align-items:center}.m-form-box{border-radius:22px}}
+    .m-form-title{font-size:18px;font-weight:800;margin-bottom:16px}
+    .m-fld{margin-bottom:13px}
+    .m-fld label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t2);margin-bottom:5px}
+    .m-fld input{width:100%;background:var(--card2);border:1px solid var(--b2);border-radius:10px;padding:12px 14px;color:var(--t1);font-size:15px;-webkit-appearance:none}
+    .m-fld input:focus{outline:none;border-color:var(--acc)}
+    .m-fld input[readonly]{opacity:.55}
+    .m-hint{font-size:11px;color:var(--acc);margin-top:4px;font-weight:600;min-height:13px}
+    .m-form-msg{min-height:18px;font-size:13px;color:var(--red);font-weight:600;margin:4px 0}
+    .m-form-row{display:flex;gap:10px;margin-top:8px}
+    .m-form-btn{flex:1;padding:14px;border:none;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer}
+    .m-save{background:var(--grad);color:#fff}
+    .m-cancel{background:var(--card2);color:var(--t1);border:1px solid var(--b2)}
+    .m-two{display:flex;gap:10px}.m-two .m-fld{flex:1}
+    /* QR modal */
+    .m-qr{position:fixed;inset:0;z-index:540;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:24px}
+    .m-qr.show{display:flex}
+    .m-qr-box{background:var(--card);border:1px solid var(--b2);border-radius:20px;padding:22px;width:100%;max-width:320px;text-align:center}
+    .m-qr-label{background:#fff;width:200px;height:200px;margin:0 auto 6px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
+    .m-qr-label img{width:128px;height:128px;display:block}
+    .m-qr-label .qd{font-size:11px;font-weight:700;color:#000;margin-top:6px;line-height:1.1;max-width:180px}
+    .m-qr-label .qs{font-size:8px;color:#555;margin-top:2px}
+    .m-qr-note{font-size:11px;color:var(--t2);margin-bottom:8px}
+    .m-qr-row{display:flex;gap:10px;margin-top:6px}
+    .m-qr-btn{flex:1;padding:12px;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer}
+    .m-qr-print{background:var(--grad);color:#fff}
+    .m-qr-close{background:var(--card2);color:var(--t1);border:1px solid var(--b2)}
+    /* Master PIN reveal on MD */
+    .mpin-reveal{width:100%;background:linear-gradient(145deg,#1c1c1c,#0e0e0e);border:1px dashed var(--b2);border-radius:12px;color:var(--t2);font-size:14px;font-weight:700;padding:18px;cursor:pointer;letter-spacing:.5px}
+    .mpin-reveal:active{border-color:var(--acc);color:var(--acc)}
+    .mpin-code{font-size:38px;font-weight:900;letter-spacing:9px;font-family:Monaco,Consolas,monospace;color:var(--acc);text-align:center;text-shadow:0 0 22px rgba(0,207,255,.5)}
+    .mpin-count{text-align:center;font-size:12px;color:var(--t2);margin-top:6px}
+    .mpin-open{display:block;width:100%;margin:12px 0 0;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:11px;cursor:pointer}
+    .mpin-hide{display:block;margin:8px auto 0;background:var(--card2);border:1px solid var(--b2);border-radius:9px;color:var(--t1);font-size:12px;font-weight:600;padding:7px 16px;cursor:pointer}
+    .mpin-loading,.mpin-err{text-align:center;color:var(--t2);font-size:13px;padding:10px}
   </style>
 </head>
 <body>
@@ -450,6 +530,7 @@
           <div class="k" onclick="pp('7')">7</div><div class="k" onclick="pp('8')">8</div><div class="k" onclick="pp('9')">9</div>
           <div class="k emp"></div><div class="k" onclick="pp('0')">0</div><div class="k del" onclick="pd2()">⌫</div>
         </div>
+        <button class="master-link" onclick="openMasterGate()">⚙ Master access</button>
       </div>
     </div>
 
@@ -609,6 +690,7 @@
         <div class="mc"><div class="mct">🚨 Racefacer Discrepancies</div><div id="mrf"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct">📦 Racefacer Warehouse Stock</div><div id="mrfw"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct" id="staff-pin-header" style="display:flex;justify-content:space-between;align-items:center"><span>Staff PINs</span><button class="staff-edit-btn" onclick="toggleStaffEdit()">Edit</button></div><div id="mpi"><div class="emp" style="padding:4px 0">Loading...</div></div></div>
+        <div class="mc"><div class="mct">🔐 Master Access Code</div><div id="mpin-body"><button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal · top secret</button></div></div>
       </div>
     </div>
 
@@ -737,6 +819,62 @@
 
   </div>
 </div>
+<!-- ===== Master account (Phase 2) ===== -->
+<div class="mgate" id="mgate">
+  <div class="mgate-box">
+    <div class="mgate-h">Master Access</div>
+    <div class="mgate-sub">Enter the current 6-digit code</div>
+    <input class="mgate-input" id="mgate-input" type="tel" inputmode="numeric" maxlength="6" placeholder="------" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onkeydown="if(event.key==='Enter')submitMasterGate()">
+    <div class="mgate-msg" id="mgate-msg"></div>
+    <div class="mgate-row">
+      <button class="mgate-btn mgate-cancel" onclick="closeMasterGate()">Cancel</button>
+      <button class="mgate-btn mgate-go" onclick="submitMasterGate()">Enter</button>
+    </div>
+  </div>
+</div>
+<div class="master" id="master">
+  <div class="m-hdr">
+    <div class="m-hdr-t">HK Workshop<span>Master · Configure</span></div>
+    <button class="m-exit" onclick="closeMaster()">Exit</button>
+  </div>
+  <div class="m-tools">
+    <input class="m-search-in" id="m-search" placeholder="Search parts..." oninput="mSearch()">
+    <button class="m-add" onclick="mOpenAdd()">+ Add</button>
+  </div>
+  <div class="m-list" id="m-list"></div>
+</div>
+<div class="m-form" id="m-form">
+  <div class="m-form-box">
+    <div class="m-form-title" id="m-form-title">Edit Part</div>
+    <div class="m-fld"><label>SKU (RIMO part number)</label><input id="m-f-sku" inputmode="numeric"></div>
+    <div class="m-fld"><label>Description (full name)</label><input id="m-f-desc"></div>
+    <div class="m-fld"><label>Internal Description</label><input id="m-f-int"></div>
+    <div class="m-two">
+      <div class="m-fld"><label>Price EUR</label><input id="m-f-eur" inputmode="decimal" oninput="mEurHint()"><div class="m-hint" id="m-eur-hint"></div></div>
+      <div class="m-fld"><label>Price AUD (optional)</label><input id="m-f-aud" inputmode="decimal"></div>
+    </div>
+    <div class="m-two">
+      <div class="m-fld"><label>Min Stock</label><input id="m-f-min" inputmode="numeric"></div>
+      <div class="m-fld"><label>Qty</label><input id="m-f-qty" inputmode="numeric"></div>
+    </div>
+    <div class="m-fld"><label>Location</label><input id="m-f-loc"></div>
+    <div class="m-form-msg" id="m-form-msg"></div>
+    <div class="m-form-row">
+      <button class="m-form-btn m-cancel" onclick="mCloseForm()">Cancel</button>
+      <button class="m-form-btn m-save" onclick="mSave()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="m-qr" id="m-qr">
+  <div class="m-qr-box">
+    <div class="m-qr-label" id="m-qr-label"></div>
+    <div class="m-qr-note">Print at 100% scale · exact 30&times;30mm label</div>
+    <div class="m-qr-row">
+      <button class="m-qr-btn m-qr-close" onclick="mCloseQR()">Close</button>
+      <button class="m-qr-btn m-qr-print" id="m-qr-printbtn">Print</button>
+    </div>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ===== HK Workshop — Supabase backend (Phase 1: live core) ===== */
@@ -762,6 +900,9 @@ function mapPart(r){
   var aud=(r.price_eur!=null)?(Number(r.price_eur)*EURAUD):(r.price_aud!=null?Number(r.price_aud):0);
   return {
     sku:String(r.sku),
+    description:(r.description||''),
+    internal_description:(r.internal_description!=null?r.internal_description:null),
+    min_stock:(r.min_stock!=null?Number(r.min_stock):null),
     desc:(r.internal_description&&String(r.internal_description).trim())||r.description||String(r.sku),
     qty:Number(r.qty)||0,
     reorder:(r.min_stock!=null?Number(r.min_stock):5),
@@ -2244,6 +2385,168 @@ function saveStaffPins(){
       if(sb){sb.innerText='Save';sb.disabled=false;}
     }
   });
+}
+
+/* ===== Master account (Phase 2) ===== */
+var WEB_APP_URL='https://script.google.com/macros/s/AKfycbyC_Jj3rkosw79ICRDWme7YHJ8IvMTjD2KMqBkHF7WxfQhJvFqwFZpDydVZxQvSQYPD/exec';
+var masterPin='';   // validated 6-digit code for this master session
+var mEditSku=null;  // sku being edited (null = adding new)
+
+function openMasterGate(){
+  document.getElementById('mgate').classList.add('show');
+  document.getElementById('mgate-input').value='';
+  document.getElementById('mgate-msg').textContent='';
+  setTimeout(function(){try{document.getElementById('mgate-input').focus();}catch(e){}},120);
+}
+function closeMasterGate(){ document.getElementById('mgate').classList.remove('show'); }
+function submitMasterGate(){
+  var code=(document.getElementById('mgate-input').value||'').trim();
+  var msg=document.getElementById('mgate-msg');
+  if(!/^\d{6}$/.test(code)){ msg.textContent='Enter the 6-digit code'; return; }
+  msg.textContent='Checking...';
+  fetch(SB_FN+'master-write',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:code,op:'verify'})})
+    .then(function(r){return r.json();}).then(function(res){
+      if(res&&res.success){ masterPin=code; closeMasterGate(); openMaster(); }
+      else { msg.textContent=(res&&res.message)?res.message:'Invalid or expired code'; }
+    }).catch(function(){ msg.textContent='Connection error'; });
+}
+function openMasterFromMD(code){ masterPin=code; openMaster(); }
+
+function openMaster(){
+  document.getElementById('master').classList.add('show');
+  document.getElementById('m-search').value='';
+  mRenderList();
+  loadParts(function(d){ if(d){parts=d;try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}} mRenderList(); });
+}
+function closeMaster(){ document.getElementById('master').classList.remove('show'); mCloseForm(); mCloseQR(); }
+
+function mRenderList(){
+  var q=(document.getElementById('m-search').value||'').toLowerCase().trim();
+  var list=(parts||[]).filter(function(p){return !q||(p.desc||'').toLowerCase().indexOf(q)>=0||(String(p.sku)||'').toLowerCase().indexOf(q)>=0;});
+  var el=document.getElementById('m-list');
+  if(!list.length){ el.innerHTML='<div class="m-empty">No parts</div>'; return; }
+  el.innerHTML=list.map(function(p){
+    var price=p.price?('$'+Number(p.price).toFixed(2)):'no price';
+    return '<div class="m-row">'
+      +'<div class="m-row-main" onclick="mOpenEdit(\''+p.sku+'\')">'
+        +'<div class="m-row-desc">'+(p.desc||p.sku)+'</div>'
+        +'<div class="m-row-sub">SKU '+p.sku+' &middot; qty '+p.qty+' &middot; '+price+'</div>'
+      +'</div>'
+      +'<button class="m-row-btn" onclick="mQR(\''+p.sku+'\')" title="QR code">QR</button>'
+      +'<button class="m-row-btn m-row-del" onclick="mRemove(\''+p.sku+'\')" title="Remove">&#128465;</button>'
+    +'</div>';
+  }).join('');
+}
+function mSearch(){ mRenderList(); }
+
+function mEurHint(){
+  var v=parseFloat(document.getElementById('m-f-eur').value);
+  document.getElementById('m-eur-hint').textContent=(!isNaN(v)&&v>0)?('\u2248 $'+(v*EURAUD).toFixed(2)+' AUD (live)'):'';
+}
+function mFillForm(p){
+  document.getElementById('m-f-sku').value=p?p.sku:'';
+  document.getElementById('m-f-desc').value=p?(p.description||''):'';
+  document.getElementById('m-f-int').value=p?(p.internal_description||''):'';
+  document.getElementById('m-f-eur').value=(p&&p.price_eur!=null)?p.price_eur:'';
+  document.getElementById('m-f-aud').value=(p&&p.price_aud!=null)?p.price_aud:'';
+  document.getElementById('m-f-min').value=(p&&p.min_stock!=null)?p.min_stock:'';
+  document.getElementById('m-f-qty').value=p?p.qty:'';
+  document.getElementById('m-f-loc').value=p?(p.loc||''):'';
+  mFormMsg(''); mEurHint();
+}
+function mOpenAdd(){
+  mEditSku=null; mFillForm(null);
+  document.getElementById('m-form-title').textContent='Add Part';
+  document.getElementById('m-f-sku').readOnly=false;
+  document.getElementById('m-form').classList.add('show');
+}
+function mOpenEdit(sku){
+  var p=(parts||[]).find(function(x){return x.sku===sku;}); if(!p) return;
+  mEditSku=sku; mFillForm(p);
+  document.getElementById('m-form-title').textContent='Edit Part';
+  document.getElementById('m-f-sku').readOnly=true;
+  document.getElementById('m-form').classList.add('show');
+}
+function mCloseForm(){ document.getElementById('m-form').classList.remove('show'); }
+function mFormMsg(t){ document.getElementById('m-form-msg').textContent=t||''; }
+function mReloadParts(){ loadParts(function(d){ if(d){parts=d;try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}} mRenderList(); }); }
+function mSave(){
+  var sku=(document.getElementById('m-f-sku').value||'').trim();
+  if(!/^\d+$/.test(sku)){ mFormMsg('SKU must be the numeric RIMO part number'); return; }
+  var part={ sku:sku,
+    description:document.getElementById('m-f-desc').value.trim(),
+    internal_description:document.getElementById('m-f-int').value.trim(),
+    price_eur:document.getElementById('m-f-eur').value.trim(),
+    price_aud:document.getElementById('m-f-aud').value.trim(),
+    min_stock:document.getElementById('m-f-min').value.trim(),
+    qty:document.getElementById('m-f-qty').value.trim(),
+    location:document.getElementById('m-f-loc').value.trim() };
+  mFormMsg('Saving...');
+  fetch(SB_FN+'master-write',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:(mEditSku?'edit':'add'),part:part})})
+    .then(function(r){return r.json();}).then(function(res){
+      if(res&&res.success){ mCloseForm(); mReloadParts(); }
+      else { mFormMsg((res&&res.message)?res.message:'Save failed'); if(res&&/expired/i.test(res.message||'')){ closeMaster(); openMasterGate(); } }
+    }).catch(function(){ mFormMsg('Connection error'); });
+}
+function mRemove(sku){
+  if(!confirm('Remove part '+sku+'? This cannot be undone.')) return;
+  fetch(SB_FN+'master-write',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'remove',part:{sku:sku}})})
+    .then(function(r){return r.json();}).then(function(res){
+      if(res&&res.success){ mReloadParts(); }
+      else { alert((res&&res.message)?res.message:'Remove failed'); if(res&&/expired/i.test(res.message||'')){ closeMaster(); openMasterGate(); } }
+    }).catch(function(){ alert('Connection error'); });
+}
+
+/* QR — identical payload + 30x30mm print layout as the old sheet */
+function mQR(sku){
+  var p=(parts||[]).find(function(x){return x.sku===sku;}); if(!p) return;
+  var img='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+WEB_APP_URL+'?sku='+sku;
+  document.getElementById('m-qr-label').innerHTML='<img src="'+img+'"><div class="qd">'+(p.desc||sku)+'</div><div class="qs">'+sku+'</div>';
+  document.getElementById('m-qr-printbtn').onclick=function(){ mPrintQR(sku,(p.desc||sku),img); };
+  document.getElementById('m-qr').classList.add('show');
+}
+function mCloseQR(){ document.getElementById('m-qr').classList.remove('show'); }
+function mPrintQR(sku,desc,img){
+  var w=window.open('','_blank');
+  if(!w){ alert('Allow pop-ups to print the label.'); return; }
+  var shortDesc=desc.length>22?desc.substring(0,20)+'...':desc;
+  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+desc+' QR</title><style>'
+    +'@page{size:30mm 30mm;margin:0}*{box-sizing:border-box}html,body{width:30mm;height:30mm;margin:0;padding:0;font-family:Arial,sans-serif;color:#000}'
+    +'.label{width:30mm;height:30mm;padding:1mm;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}'
+    +'.label img{width:19mm;height:19mm;display:block}.desc{margin-top:.8mm;font-size:8pt;font-weight:700;line-height:1.1;max-width:28mm}.sku{margin-top:.4mm;font-size:4.5pt;color:#555;letter-spacing:.3px}'
+    +'</style></head><body><div class="label"><img src="'+img+'"><div class="desc">'+shortDesc+'</div><div class="sku">'+sku+'</div></div>'
+    +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},400);};<\/scr'+'ipt></body></html>';
+  w.document.write(h); w.document.close();
+}
+
+/* Rotating master PIN reveal on the Manager Dashboard */
+var mpinTimer=null;
+function revealMasterPin(){
+  var body=document.getElementById('mpin-body');
+  body.innerHTML='<div class="mpin-loading">Revealing...</div>';
+  fetch(SB_FN+'master-pin',{method:'POST',headers:HDRS,body:JSON.stringify({pin:(cu&&cu.pin)||''})})
+    .then(function(r){return r.json();}).then(function(res){
+      if(res&&res.success){ showMasterPin(res.code,res.expiresInSec); }
+      else { body.innerHTML='<div class="mpin-err">Not available for this account</div>'; }
+    }).catch(function(){ body.innerHTML='<div class="mpin-err">Connection error</div>'; });
+}
+function showMasterPin(code,secs){
+  var body=document.getElementById('mpin-body');
+  body.innerHTML='<div class="mpin-code">'+code+'</div><div class="mpin-count" id="mpin-count"></div>'
+    +'<button class="mpin-open" onclick="openMasterFromMD(\''+code+'\')">Open master account &rarr;</button>'
+    +'<button class="mpin-hide" onclick="hideMasterPin()">Hide</button>';
+  function tick(){
+    if(secs<=0){ clearInterval(mpinTimer); revealMasterPin(); return; }
+    var mm=Math.floor(secs/60),ss=secs%60,c=document.getElementById('mpin-count');
+    if(c) c.textContent='New code in '+mm+':'+(ss<10?'0':'')+ss;
+    secs--;
+  }
+  tick(); clearInterval(mpinTimer); mpinTimer=setInterval(tick,1000);
+}
+function hideMasterPin(){
+  clearInterval(mpinTimer);
+  var body=document.getElementById('mpin-body');
+  if(body) body.innerHTML='<button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal &middot; top secret</button>';
 }
 
 </script>
