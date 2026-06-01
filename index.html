@@ -575,7 +575,34 @@
     .mpin-open{display:block;width:100%;margin:12px 0 0;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:11px;cursor:pointer}
     .mpin-hide{display:block;margin:8px auto 0;background:var(--card2);border:1px solid var(--b2);border-radius:9px;color:var(--t1);font-size:12px;font-weight:600;padding:7px 16px;cursor:pointer}
     .mpin-loading,.mpin-err{text-align:center;color:var(--t2);font-size:13px;padding:10px}
-  </style>
+  
+/* ===== Phase 2 multi-site ===== */
+.sitepill{display:none;align-items:center;gap:7px;margin-left:auto;margin-right:10px;padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:800;font-size:12px;letter-spacing:.04em;color:var(--site,#00CFFF);transition:transform .15s;text-transform:uppercase;white-space:nowrap;}
+.sitepill:active{transform:scale(.94);}
+.sitepill .sp-dot{width:8px;height:8px;border-radius:50%;background:var(--site,#00CFFF);}
+.sitechoose{position:absolute;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 100% at 50% 0%,#0b1722 0%,#05080c 60%,#000 100%);opacity:0;transition:opacity .36s ease;overflow:hidden;}
+.sitechoose.in{opacity:1;} .sitechoose.out{opacity:0;}
+.sitechoose .sc-glow{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(0,207,255,.16),transparent 65%);filter:blur(10px);top:42%;left:50%;transform:translate(-50%,-50%);animation:scpulse 5s ease-in-out infinite;}
+@keyframes scpulse{0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(1);}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.1);}}
+.sc-inner{position:relative;z-index:2;width:100%;max-width:380px;padding:0 26px;text-align:center;}
+.sc-h{font-size:28px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.sc-p{font-size:14px;color:#8aa3b0;margin-top:6px;margin-bottom:26px;}
+.sc-grid{display:flex;flex-direction:column;gap:14px;}
+.site-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:18px 20px;border-radius:18px;cursor:pointer;border:1.5px solid rgba(255,255,255,.14);background:#0a0f15;color:#fff;text-align:left;font-family:inherit;opacity:0;transform:translateY(14px);animation:sccard .5s cubic-bezier(.2,.8,.2,1) forwards;transition:transform .15s;overflow:hidden;}
+.site-card:nth-child(1){animation-delay:.05s}.site-card:nth-child(2){animation-delay:.13s}.site-card:nth-child(3){animation-delay:.21s}.site-card:nth-child(4){animation-delay:.29s}
+@keyframes sccard{to{opacity:1;transform:none;}}
+.site-card:active{transform:scale(.98);}
+.site-card .sc-dot{position:absolute;top:18px;right:18px;width:11px;height:11px;border-radius:50%;}
+.site-card .sc-name{font-size:21px;font-weight:800;letter-spacing:-.01em;}
+.site-card .sc-sub{font-size:12.5px;color:#9bb0bf;font-weight:600;}
+.site-card.locked{opacity:.5;}
+.site-card.locked .sc-name{color:#8a93a0;}
+.site-card.shake{animation:scshake .4s;}
+@keyframes scshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.sc-msg{min-height:18px;margin-top:16px;font-size:13px;font-weight:700;color:#FF8A3D;opacity:0;transition:opacity .2s;}
+.sc-msg.show{opacity:1;}
+.sc-cancel{margin-top:22px;background:none;border:none;color:#8aa3b0;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;padding:8px;}
+</style>
 </head>
 <body>
 <div id="splash"><div class="sp-stage"><div class="sp-glow"></div><svg class="sp-circle" viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="spgrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#E040FB"/><stop offset="100%" stop-color="#00CFFF"/></linearGradient></defs><circle cx="100" cy="100" r="92" fill="none" stroke="url(#spgrad)" stroke-width="2.5" stroke-linecap="round"/></svg><div class="sp-logo-wrap"><img class="sp-logo" src="icon-192.png" alt="HK"><span class="sp-shine"></span></div></div><div class="sp-text"><div class="sp-rule"></div><div class="sp-name">Workshop</div><div class="sp-sub">Hyper Karting</div></div></div>
@@ -586,6 +613,7 @@
       <img class="hk-icon" src="icon-192.png" alt="HK">
       <div><div class="hname">Workshop</div><div class="hsub">Hyper Karting</div></div>
     </div>
+    <div class="sitepill" id="sitePill" onclick="onSitePill()" style="display:none"><span class="sp-dot"></span><span id="sitePillName">Sydney</span></div>
     <div class="uchip" id="uchip" onclick="logout()">
       <span class="ue" id="ue">👋</span><span class="un" id="un">Name</span><span class="uo">logout</span>
     </div>
@@ -999,6 +1027,83 @@ var SB_FN=SB_URL+'/functions/v1/';
 var HDRS={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 var SBC=window.supabase.createClient(SB_URL,SB_KEY);
 
+/* ===== Phase 2: multi-site (Sydney live + Melbourne/others) ===== */
+var currentSite=sessionStorage.getItem('hk_site')||'sydney';
+var allSites=[], mySites=[];
+function _rgba(hex,a){hex=String(hex||'#00CFFF').replace('#','');if(hex.length===3)hex=hex.replace(/(.)/g,'$1$1');var n=parseInt(hex,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+function siteById(id){for(var i=0;i<allSites.length;i++)if(allSites[i].id===id)return allSites[i];return null;}
+function siteLabel(id){var s=siteById(id);return s?s.label:(id?id.charAt(0).toUpperCase()+id.slice(1):'Site');}
+function siteAccent(id){var s=siteById(id);return (s&&s.accent)||'#00CFFF';}
+function loadSites(cb){
+  var qs=[SBC.from('sites').select('*').eq('active',true).order('position')];
+  qs.push(cu?SBC.from('account_sites').select('site').eq('staff_name',cu.name):Promise.resolve({data:[]}));
+  Promise.all(qs).then(function(rs){
+    allSites=((rs[0]&&rs[0].data)||[]).map(function(r){return {id:r.id,label:r.label,accent:r.accent,position:r.position};});
+    if(!allSites.length) allSites=[{id:'sydney',label:'Sydney',accent:'#00CFFF',position:1}];
+    mySites=((rs[1]&&rs[1].data)||[]).map(function(r){return r.site;});
+    if(!mySites.length) mySites=['sydney'];
+    if(cb)cb();
+  }).catch(function(){allSites=[{id:'sydney',label:'Sydney',accent:'#00CFFF',position:1}];mySites=['sydney'];if(cb)cb();});
+}
+function applySiteAccent(id){
+  var ac=siteAccent(currentSite);
+  try{document.documentElement.style.setProperty('--site',ac);}catch(e){}
+  var hd=document.getElementById('hdr'); if(hd) hd.style.borderBottom='2px solid '+_rgba(ac,.40);
+  var pill=document.getElementById('sitePill'); if(!pill) return;
+  var show=!!cu&&id!=='pin'&&id!=='welcome';
+  pill.style.display=show?'inline-flex':'none';
+  pill.style.color=ac; pill.style.background=_rgba(ac,.13); pill.style.border='1px solid '+_rgba(ac,.45);
+  var dot=pill.querySelector('.sp-dot'); if(dot){dot.style.background=ac;dot.style.boxShadow='0 0 8px '+ac;}
+  var nm=document.getElementById('sitePillName'); if(nm) nm.innerText=siteLabel(currentSite);
+}
+function onSitePill(){ if(!cu) return; openSiteChooser(true,null); }
+function openSiteChooser(reopen,done){
+  function build(){
+    var ov=document.getElementById('sitechoose'); if(ov) ov.remove();
+    ov=document.createElement('div'); ov.id='sitechoose'; ov.className='sitechoose';
+    var cards=allSites.map(function(s){
+      var ok=mySites.indexOf(s.id)>=0;
+      return '<button class="site-card'+(ok?'':' locked')+'" data-site="'+s.id+'" data-ok="'+(ok?1:0)+'" style="--ac:'+s.accent+';background:'+_rgba(s.accent,ok?.10:.0)+';border-color:'+_rgba(s.accent,ok?.55:.0)+'">'+
+        '<span class="sc-dot" style="background:'+(ok?s.accent:'#556')+';box-shadow:'+(ok?'0 0 12px '+s.accent:'none')+'"></span>'+
+        '<span class="sc-name">'+s.label+'</span>'+
+        '<span class="sc-sub">'+(ok?'Tap to enter':'No access')+'</span>'+
+      '</button>';
+    }).join('');
+    ov.innerHTML='<div class="sc-glow"></div><div class="sc-inner">'+
+      '<div class="sc-h">Which site?</div><div class="sc-p">Choose where you\u2019re working today</div>'+
+      '<div class="sc-grid">'+cards+'</div>'+
+      '<div class="sc-msg" id="scMsg">&nbsp;</div>'+
+      (reopen?'<button class="sc-cancel" id="scCancel">Stay on '+siteLabel(currentSite)+'</button>':'')+
+    '</div>';
+    document.getElementById('app').appendChild(ov);
+    void ov.offsetWidth; ov.classList.add('in');
+    Array.prototype.forEach.call(ov.querySelectorAll('.site-card'),function(b){
+      b.onclick=function(){
+        if(b.getAttribute('data-ok')!=='1'){
+          var sid=b.getAttribute('data-site'), s=siteById(sid);
+          var msg=document.getElementById('scMsg'); if(msg){msg.innerText='You don\u2019t have access to the '+((s&&s.label)||'that')+' site.';msg.classList.add('show');}
+          b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); return;
+        }
+        var sid=b.getAttribute('data-site');
+        currentSite=sid; try{sessionStorage.setItem('hk_site',sid);}catch(e){}
+        applySiteAccent(stk&&stk.length?stk[stk.length-1]:'home');
+        ov.classList.add('out'); setTimeout(function(){if(ov&&ov.parentNode)ov.parentNode.removeChild(ov);},380);
+        loadParts(function(d){ if(d){parts=d;try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){}} if(reopen) refreshAllViews(); });
+        if(done) done();
+      };
+    });
+    var cn=document.getElementById('scCancel'); if(cn) cn.onclick=function(){ov.classList.add('out');setTimeout(function(){if(ov&&ov.parentNode)ov.parentNode.removeChild(ov);},380);};
+  }
+  if(!allSites.length) loadSites(build); else build();
+}
+function refreshAllViews(){
+  try{var cur=stk&&stk.length?stk[stk.length-1]:null;
+    if(cur==='search'&&typeof rS==='function') rS(document.getElementById('si')?document.getElementById('si').value.toLowerCase():'');
+    if(cur==='lowstock'&&typeof rL==='function') rL();
+    if(cur==='home'&&typeof updateUI==='function') updateUI('home');
+  }catch(e){}
+}
+
 /* EUR->AUD live rate (ECB via frankfurter.app), cached 6h */
 var EURAUD=Number(sessionStorage.getItem('hk_euraud'))||1.62;
 function refreshRate(){
@@ -1030,9 +1135,13 @@ function mapPart(r){
   };
 }
 function loadParts(cb){
-  Promise.all([SBC.from('parts').select('*'), SBC.from('logs').select('action,sku,qty,ts')]).then(function(rs){
-    var pres=rs[0], lres=rs[1];
+  var site=currentSite||'sydney';
+  var qs=[SBC.from('parts').select('*'), SBC.from('logs').select('action,sku,qty,ts,site').eq('site',site)];
+  if(site!=='sydney') qs.push(SBC.from('stock').select('sku,qty,min_stock,location').eq('site',site));
+  Promise.all(qs).then(function(rs){
+    var pres=rs[0], lres=rs[1], sres=(site!=='sydney')?rs[2]:null;
     if(pres.error||!pres.data){ if(cb)cb(null); return; }
+    var smap={}; if(sres&&sres.data){ sres.data.forEach(function(s){ smap[String(s.sku)]={qty:Number(s.qty)||0,min_stock:(s.min_stock!=null?Number(s.min_stock):null),location:s.location||''}; }); }
     /* 90-day TAKEN usage per SKU drives the reorder maths.
        RIMO: orders placed every 6 months, ~3-month shipping ->
          min to always carry (reorder point) = ceil(90d usage x 1.3)   (covers the 3-month lead + 30% buffer)
@@ -1045,6 +1154,7 @@ function loadParts(cb){
       var sk=String(l.sku||''); usage90[sk]=(usage90[sk]||0)+(Number(l.qty)||0); scans90[sk]=(scans90[sk]||0)+1;
     });
     var arr=pres.data.map(function(r){
+      if(sres){ var sm=smap[String(r.sku)]||{qty:0,min_stock:null,location:''}; r.qty=sm.qty; r.min_stock=sm.min_stock; r.location=sm.location; }
       var pt=mapPart(r), u=usage90[pt.sku]||0;
       pt.scans90=scans90[pt.sku]||0;
       if(u>0){ pt.used90=u; var rate=u/90; pt.daysLeft=rate>0?Math.floor(pt.qty/rate):null; pt.recommendedReorder=Math.ceil(u*1.3); pt.orderQuantity=Math.ceil(u*2); }
@@ -1055,7 +1165,7 @@ function loadParts(cb){
 }
 /* take / restock via the stock-move Edge Function (verifies the staff PIN server-side) */
 function stockMove(sku,qty,type,cb){
-  fetch(SB_FN+'stock-move',{method:'POST',headers:HDRS,body:JSON.stringify({pin:(cu&&cu.pin)||'',sku:sku,qty:qty,type:type})})
+  fetch(SB_FN+'stock-move',{method:'POST',headers:HDRS,body:JSON.stringify({pin:(cu&&cu.pin)||'',sku:sku,qty:qty,type:type,site:(currentSite||'sydney')})})
     .then(function(r){return r.json();}).then(cb).catch(function(){cb({success:false,message:'Connection error - please try again'});});
 }
 /* Manager Dashboard — live from the logs + logins tables */
@@ -1118,10 +1228,10 @@ function sbFinanceData(cb){
 }
 /* Realtime: keep parts fresh across every device */
 function startRealtime(){
+  function _reload(){ loadParts(function(d){ if(d){parts=d;try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){} var cur=(typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null; if(cur&&typeof refreshParts==='function'){try{refreshParts(cur,true);}catch(e){}} }}); }
   try{
-    SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){
-      loadParts(function(d){ if(d){parts=d;try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){} var cur=(typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null; if(cur&&typeof refreshParts==='function'){try{refreshParts(cur,true);}catch(e){}} }});
-    }).subscribe();
+    SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _reload(); }).subscribe();
+    SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _reload(); }).subscribe();
   }catch(e){}
 }
 startRealtime();
@@ -1161,7 +1271,7 @@ var stk=[];
   fetchStaff(null);
   if(u&&ud===new Date().toDateString()){
     try{
-      cu=JSON.parse(u);applyRoleVisibility();stk=['home'];showRoot('home');playSplash(false);
+      cu=JSON.parse(u);applyRoleVisibility();stk=['home'];showRoot('home');playSplash(false);loadSites(function(){applySiteAccent('home');});
       // Preload parts from sessionStorage cache, then refresh in background.
       // Ensures scanning is INSTANT — no network wait on first scan after app open.
       var pc=sessionStorage.getItem('hk_p');
@@ -1456,6 +1566,7 @@ function updateUI(id){
   var chip=document.getElementById('uchip');
   if(cu&&id!=='pin'&&id!=='welcome'){chip.style.display='flex';document.getElementById('ue').innerText=cu.emoji;document.getElementById('un').innerText=cu.name.split(' ')[0];}
   else chip.style.display='none';
+  applySiteAccent(id);
   if(id==='order'&&cu){var od=document.getElementById('ondisp');if(od)od.innerText=cu.emoji+' '+cu.name;}
   if(id==='home'){sizeTiles();if(!homeAnimated){homeAnimated=true;animTiles();}}
   // sz() removed from nav path — only runs on resize/orientation now (was causing layout thrash on every transition)
@@ -1524,6 +1635,7 @@ function onLoginOk(m,entered){
   document.getElementById('wn').innerText='Hey, '+m.name.split(' ')[0]+'!';
   document.getElementById('wr').innerText=m.role;
 
+  function _enterHomeAfterSite(){
   var pinEl=s('pin'),welEl=s('welcome'),homeEl=s('home');
   welEl.style.transition='none';welEl.style.transform='translateX(100%)';welEl.classList.remove('active','behind');
   void welEl.offsetWidth;
@@ -1551,6 +1663,8 @@ function onLoginOk(m,entered){
       lb.style.display='none';updateUI('home');
     },440);
   },2500);
+  }
+  loadSites(function(){ openSiteChooser(false,_enterHomeAfterSite); });
 }
 function goHome(){
   // Don't do anything if not logged in, already on home, or on pin/welcome screens
@@ -2906,7 +3020,7 @@ function mSave(){
     min_stock:document.getElementById('m-f-min').value.trim(),
     qty:document.getElementById('m-f-qty').value.trim(),
     location:document.getElementById('m-f-loc').value.trim(),
-    lock:document.getElementById('m-f-lock').checked };
+    lock:document.getElementById('m-f-lock').checked, site:(currentSite||'sydney') };
   if(part.lock && part.min_stock===''){ mFormMsg('Enter a minimum to lock it, or untick to auto-adjust.'); return; }
   mFormMsg('Saving...');
   fetch(SB_FN+'master-write',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:(mEditSku?'edit':'add'),part:part})})
