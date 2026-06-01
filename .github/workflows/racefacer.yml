@@ -1,0 +1,32 @@
+# .github/workflows/racefacer.yml
+# Runs the RaceFacer sync + end-of-day reconcile on a schedule.
+# Put racefacer-sync.js, racefacer-parse.js, racefacer-reconcile.js in a /racefacer folder of the repo.
+
+name: RaceFacer nightly sync
+
+on:
+  schedule:
+    - cron: "0 13 * * *"      # 13:00 UTC ≈ 11pm Sydney (AEST). Adjust to taste; GitHub cron is UTC.
+  workflow_dispatch: {}        # lets you run it on-demand from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Install deps
+        working-directory: racefacer
+        run: npm install cheerio undici
+      - name: Run sync + reconcile
+        working-directory: racefacer
+        env:
+          RF_BASE: https://103.166.146.163
+          RF_USER: ${{ secrets.RF_USER }}
+          RF_PASS: ${{ secrets.RF_PASS }}
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
+          RF_KART_IDS: ${{ secrets.RF_KART_IDS }}   # optional but recommended (see setup notes)
+          SITE: sydney
+        run: node racefacer-sync.js
