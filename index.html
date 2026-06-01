@@ -681,8 +681,10 @@
 .train-banner .tb-exit{background:rgba(0,0,0,.22);color:#000;border-radius:999px;padding:3px 11px;font-size:11px;cursor:pointer;letter-spacing:.05em}
 .train-tag{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;color:#caa400;background:rgba(255,214,0,.14);border:1px solid rgba(255,214,0,.4);border-radius:7px;padding:3px 9px;letter-spacing:.02em}
 #tut-wrap{position:absolute;inset:0;z-index:140;pointer-events:auto}
-#tut-dim{position:fixed;border-radius:20px;box-shadow:0 0 0 9999px rgba(2,5,9,.82);border:2px solid var(--site,#00CFFF);transition:all .3s cubic-bezier(.3,.8,.3,1);pointer-events:none}
-#tut-card{position:fixed;width:300px;max-width:calc(100vw - 24px);background:#0c1218;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.6);z-index:141}
+.tut-mask{position:fixed;background:rgba(2,5,9,.82);pointer-events:auto;z-index:1}
+#tut-ring{position:fixed;border:2px solid var(--site,#00CFFF);border-radius:16px;box-shadow:0 0 0 2px rgba(0,207,255,.22),0 0 26px var(--site,#00CFFF);pointer-events:none;transition:all .28s cubic-bezier(.3,.8,.3,1);display:none;z-index:2}
+#tut-card{position:fixed;width:300px;max-width:calc(100vw - 24px);background:#0c1218;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.6);z-index:3;transition:top .28s ease,left .28s ease}
+.tut-hint{font-size:12.5px;font-weight:700;color:var(--site,#00CFFF);background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:11px;padding:9px 11px;margin:14px 0 12px;text-align:center}
 .tut-emoji{font-size:30px;line-height:1}
 .tut-title{font-size:19px;font-weight:800;color:#fff;margin-top:8px}
 .tut-body{font-size:13.5px;color:#aebcc8;line-height:1.5;margin-top:6px}
@@ -1304,59 +1306,127 @@ function loadTutorialCfg(cb){
     },function(){ if(cb)cb(); });
   }catch(e){ if(cb)cb(); }
 }
+function tutOpenTakeDemo(){
+  var sku='1002', p=(parts||[]).find(function(x){return x.sku===sku;});
+  if(!p && parts && parts.length){ p=parts[0]; sku=p.sku; }
+  if(p){ currentTakeSku=sku;
+    document.getElementById('tkDesc').innerText=p.desc;
+    document.getElementById('tkSku').innerText=p.sku;
+    document.getElementById('tkMeta').innerHTML=sdot(p);
+    var tkDl=document.getElementById('tkDl'); if(tkDl)tkDl.innerHTML=daysLeftPill(p);
+    if(p.loc){document.getElementById('tkLoc').innerText=p.loc;document.getElementById('tkLocPill').style.display='';}else{document.getElementById('tkLocPill').style.display='none';}
+    document.getElementById('tkName').innerText=cu?cu.name:'';
+    document.getElementById('tkInput').value='1';
+    document.getElementById('tkMsg').innerHTML='';
+    document.getElementById('takeBtn').disabled=false; document.getElementById('restockBtn').disabled=false;
+  }
+  showRoot('take');
+}
+var TUT_CLEAN=null;
+function _nav(tab,loader){ return function(){ try{ showRoot(tab); if(loader) loader(); }catch(e){} }; }
 function tutSteps(){
+  var scanStep = TRAINING
+    ? {tab:'take', reqTile:'#tscan', enter:tutOpenTakeDemo, wait:120, emoji:'\ud83d\udcf7', title:'Scan \u2192 Take', body:'After you scan a part\u2019s QR you land here. Tap <b>Take</b> to remove one from stock \u2014 this is training, so it won\u2019t touch real stock.', spot:'#takeBtn', gate:{sel:'#takeBtn',ev:'click',hint:'Tap \u201cTake\u201d to continue',delay:1500}}
+    : {tab:'scan', reqTile:'#tscan', enter:_nav('scan',null), wait:200, emoji:'\ud83d\udcf7', title:'Scan QR', body:'Point the camera at a part\u2019s QR label to take or restock it. This is how stock moves day to day.', spot:'#s-scan .scanf', gate:{ev:'next'}};
   return [
-    {sel:'#tscan',emoji:'\ud83d\udcf7',title:'Scan QR',body:'Tap here to scan a part\u2019s QR label, then take or restock it. This is how stock moves day to day.'},
-    {sel:'.tile.tse',emoji:'\ud83d\udd0d',title:'Search',body:'Find any part by name or SKU \u2014 check how many are in stock and where it lives.'},
-    {sel:'.tile.tlo',emoji:'\u26a0\ufe0f',title:'Low Stock',body:'Everything running low or out, sorted by urgency. Check this before ordering.'},
-    {sel:'#tord',emoji:'\ud83d\udccb',title:'Request Order',body:'Flag a part you think needs ordering \u2014 it goes to the managers to action.'},
-    {sel:'#mgrt',emoji:'\u2b50',title:'Manager Dashboard',body:'Live activity, who\u2019s logged in, and stock predictions. Managers only.'},
-    {sel:'#wfin',emoji:'\ud83d\udcb0',title:'Finance',body:'Stock value, spend and dead stock for this site. Managers only.'},
-    {sel:'#wgord',emoji:'\ud83d\udce6',title:'Generate Order',body:'Build a RIMO order \u2014 Sydney, Melbourne or combined \u2014 from real usage. Managers only.'},
-    {sel:null,emoji:'\ud83c\udf89',title:'That\u2019s the tour!',body:'The other tiles are coming soon. Jump in whenever you\u2019re ready.'}
+    {tab:null, emoji:'\ud83d\udc4b', title:'Quick tour', body:'I\u2019ll open every tab and show you what it does. Do the highlighted step to move along \u2014 you can end the tour any time.', spot:null, gate:{ev:'next'}},
+    scanStep,
+    {tab:'search', reqTile:'.tile.tse', enter:_nav('search',function(){lp('search');}), wait:120, emoji:'\ud83d\udd0d', title:'Search', body:'Find any part by name or SKU, and see how many are in stock and where it lives. <b>Type a letter</b> to try it.', spot:'#si', gate:{sel:'#si',ev:'input',hint:'Type in the search box to continue',delay:700}},
+    {tab:'lowstock', reqTile:'.tile.tlo', enter:_nav('lowstock',function(){lp('lowstock');}), wait:120, emoji:'\u26a0\ufe0f', title:'Low Stock', body:'Everything running low or out, sorted by urgency. Check here before placing an order.', spot:'#s-lowstock .sb', gate:{ev:'next'}},
+    {tab:'order', reqTile:'#tord', enter:_nav('order',function(){iord();}), wait:120, emoji:'\ud83d\udccb', title:'Request Order', body:'Flag a part for the managers to order. <b>Start typing</b> a part name to find it.', spot:'#os', gate:{sel:'#os',ev:'input',hint:'Type a part name to continue',delay:700}},
+    {tab:'manager', reqTile:'#mgrt', enter:_nav('manager',function(){loadMgr();}), wait:300, emoji:'\u2b50', title:'Manager Dashboard', body:'Live activity, who\u2019s logged in today, and which parts are predicted to run out. Managers only.', spot:'#s-manager .sb', gate:{ev:'next'}},
+    {tab:'finance', reqTile:'#wfin', enter:_nav('finance',function(){loadFin();}), wait:300, emoji:'\ud83d\udcb0', title:'Finance', body:'Stock value, monthly spend and dead stock for this site. Managers only.', spot:'#s-finance .sb', gate:{ev:'next'}},
+    {tab:'genorder', reqTile:'#wgord', enter:_nav('genorder',function(){loadGenOrder();}), wait:300, emoji:'\ud83d\udce6', title:'Generate Order', body:'Build a RIMO order from real usage. <b>Tap a tab</b> \u2014 Sydney, Melbourne or Combined \u2014 to switch which site you\u2019re ordering for.', spot:'#go-scope', gate:{sel:'#go-scope .go-seg',ev:'click',hint:'Tap a site tab to continue',delay:500}},
+    {tab:'hkai', reqTile:'#whkai', enter:_nav('hkai',null), wait:120, emoji:'\ud83e\udd16', title:'HK AI', body:'Coming soon \u2014 ask questions about stock, usage and ordering in plain English.', spot:null, gate:{ev:'next'}},
+    {tab:'tasks', reqTile:'#wtasks', enter:_nav('tasks',null), wait:120, emoji:'\u2705', title:'Tasks', body:'Coming soon \u2014 assign and track workshop jobs.', spot:null, gate:{ev:'next'}},
+    {tab:'chats', reqTile:'#wchats', enter:_nav('chats',null), wait:120, emoji:'\ud83d\udcac', title:'Chats', body:'Coming soon \u2014 message the team without leaving the app.', spot:null, gate:{ev:'next'}},
+    {tab:'race', reqTile:'#wrace', enter:_nav('race',null), wait:120, emoji:'\ud83c\udfce\ufe0f', title:'Racefacer', body:'Coming soon \u2014 live timing and session data.', spot:null, gate:{ev:'next'}},
+    {tab:'kartinfo', reqTile:'#wkart', enter:_nav('kartinfo',function(){ if(typeof loadKartInfo==='function') loadKartInfo(); }), wait:200, emoji:'\ud83c\udfc1', title:'Kart Info', body:'Specs, repairs and history for every kart in the fleet.', spot:'#s-kartinfo .sb', gate:{ev:'next'}},
+    {tab:'beacons', reqTile:'#wbeacon', enter:_nav('beacons',null), wait:120, emoji:'\ud83d\udce1', title:'Beacons', body:'Coming soon \u2014 track timing beacons and their batteries.', spot:null, gate:{ev:'next'}},
+    {tab:null, emoji:'\ud83c\udf89', title:'That\u2019s the tour!', body:'You\u2019ve seen every tab. Jump in whenever you\u2019re ready \u2014 and you can run this tour again from Training mode.', spot:null, gate:{ev:'next'}}
   ];
 }
 function ensureTutDom(){
   if(document.getElementById('tut-wrap')) return;
   var w=document.createElement('div'); w.id='tut-wrap'; w.style.display='none';
-  w.innerHTML='<div id="tut-dim"></div><div id="tut-card"></div>';
+  w.innerHTML='<div class="tut-mask" id="tut-mt"></div><div class="tut-mask" id="tut-mb"></div><div class="tut-mask" id="tut-ml"></div><div class="tut-mask" id="tut-mr"></div><div id="tut-ring"></div><div id="tut-card"></div>';
   document.getElementById('app').appendChild(w);
+}
+function tutFilter(steps){
+  return steps.filter(function(s){
+    if(!s.reqTile) return true;
+    var e=document.querySelector(s.reqTile);
+    return e && e.offsetParent!==null;
+  });
 }
 function startTutorial(steps,onDone){
   ensureTutDom();
-  TUT_ACTIVE=(steps||[]).filter(function(s){ if(!s.sel) return true; var e=document.querySelector(s.sel); return e&&e.offsetParent!==null; });
+  TUT_ACTIVE=tutFilter(steps||[]);
   if(!TUT_ACTIVE.length){ if(onDone)onDone(false); return; }
   TUT_ONDONE=onDone||null; document.getElementById('tut-wrap').style.display='block'; tutShow(0);
 }
-function tutShow(i){
-  if(!TUT_ACTIVE){ return; }
-  if(i<0) i=0; if(i>=TUT_ACTIVE.length){ tutEnd(true); return; }
-  TUT_I=i; var step=TUT_ACTIVE[i];
-  var dim=document.getElementById('tut-dim'), card=document.getElementById('tut-card');
-  var el=step.sel?document.querySelector(step.sel):null;
-  if(el){ var r=el.getBoundingClientRect(), pad=8;
-    dim.style.opacity='1'; dim.style.left=(r.left-pad)+'px'; dim.style.top=(r.top-pad)+'px'; dim.style.width=(r.width+pad*2)+'px'; dim.style.height=(r.height+pad*2)+'px';
-  } else { dim.style.opacity='0'; dim.style.left='50%'; dim.style.top='50%'; dim.style.width='0px'; dim.style.height='0px'; }
-  var dots=TUT_ACTIVE.map(function(_x,k){return '<span class="tut-dot'+(k===i?' on':'')+'"></span>';}).join('');
-  var last=(i===TUT_ACTIVE.length-1);
-  card.innerHTML='<div class="tut-emoji">'+(step.emoji||'\ud83d\udc4b')+'</div>'+
-    '<div class="tut-title">'+step.title+'</div>'+
-    '<div class="tut-body">'+step.body+'</div>'+
-    '<div class="tut-dots">'+dots+'</div>'+
-    '<div class="tut-row">'+(i>0?'<button class="tut-btn ghost" onclick="tutBack()">Back</button>':'<button class="tut-btn ghost" onclick="tutEnd(false)">Skip</button>')+
-    '<button class="tut-btn go" onclick="tutNext()">'+(last?'Done':'Next')+'</button></div>';
-  card.style.display='block';
-  var cr=card.getBoundingClientRect(), vw=window.innerWidth, vh=window.innerHeight, top, left;
-  if(el){ var r2=el.getBoundingClientRect();
-    top=(r2.top>vh*0.5)?(r2.top-cr.height-16):(r2.bottom+16);
-    left=Math.min(Math.max(12,r2.left+r2.width/2-cr.width/2),vw-cr.width-12);
-    top=Math.min(Math.max(12,top),vh-cr.height-12);
-  } else { top=vh/2-cr.height/2; left=vw/2-cr.width/2; }
-  card.style.top=top+'px'; card.style.left=left+'px';
+function tutPlace(el){
+  var mt=document.getElementById('tut-mt'),mb=document.getElementById('tut-mb'),ml=document.getElementById('tut-ml'),mr=document.getElementById('tut-mr'),ring=document.getElementById('tut-ring');
+  var vw=window.innerWidth, vh=window.innerHeight, pad=8;
+  function px(e,o){ for(var k in o) e.style[k]=o[k]+'px'; }
+  if(el && el.getBoundingClientRect){
+    var r=el.getBoundingClientRect();
+    var L=Math.max(0,r.left-pad),T=Math.max(0,r.top-pad),R=Math.min(vw,r.right+pad),B=Math.min(vh,r.bottom+pad);
+    px(mt,{left:0,top:0,width:vw,height:T}); px(mb,{left:0,top:B,width:vw,height:Math.max(0,vh-B)});
+    px(ml,{left:0,top:T,width:L,height:Math.max(0,B-T)}); px(mr,{left:R,top:T,width:Math.max(0,vw-R),height:Math.max(0,B-T)});
+    px(ring,{left:L,top:T,width:Math.max(0,R-L),height:Math.max(0,B-T)}); ring.style.display='block';
+  } else {
+    px(mt,{left:0,top:0,width:vw,height:vh}); px(mb,{left:0,top:0,width:0,height:0}); px(ml,{left:0,top:0,width:0,height:0}); px(mr,{left:0,top:0,width:0,height:0});
+    ring.style.display='none';
+  }
 }
-function tutNext(){ if(!TUT_ACTIVE)return; if(TUT_I>=TUT_ACTIVE.length-1) tutEnd(true); else tutShow(TUT_I+1); }
+function tutShow(i){
+  if(TUT_CLEAN){ try{TUT_CLEAN();}catch(e){} TUT_CLEAN=null; }
+  if(!TUT_ACTIVE) return;
+  if(i>=TUT_ACTIVE.length){ tutEnd(true); return; }
+  if(i<0) i=0;
+  TUT_I=i; var step=TUT_ACTIVE[i];
+  if(step.enter){ try{step.enter();}catch(e){} }
+  var delay=step.enter?(step.wait||300):0;
+  setTimeout(function(){
+    var el=step.spot?document.querySelector(step.spot):null;
+    tutPlace(el);
+    var card=document.getElementById('tut-card');
+    var dots=TUT_ACTIVE.map(function(_x,k){return '<span class="tut-dot'+(k===i?' on':'')+'"></span>';}).join('');
+    var last=(i===TUT_ACTIVE.length-1);
+    var action=step.gate&&step.gate.ev!=='next';
+    var foot=action
+      ? '<div class="tut-hint">'+(step.gate.hint||'Do the highlighted step')+'</div><div class="tut-row"><button class="tut-btn ghost" onclick="tutEnd(false)">End tour</button><button class="tut-btn ghost" onclick="tutNext()">Skip \u203a</button></div>'
+      : '<div class="tut-row"><button class="tut-btn ghost" onclick="'+(i>0?'tutBack()':'tutEnd(false)')+'">'+(i>0?'Back':'Skip')+'</button><button class="tut-btn go" onclick="tutNext()">'+(last?'Done':'Next \u203a')+'</button></div>';
+    card.innerHTML='<div class="tut-emoji">'+(step.emoji||'\ud83d\udc4b')+'</div><div class="tut-title">'+step.title+'</div><div class="tut-body">'+step.body+'</div><div class="tut-dots">'+dots+'</div>'+foot;
+    card.style.display='block';
+    var cr=card.getBoundingClientRect(), vw=window.innerWidth, vh=window.innerHeight, top, left;
+    if(el){ var r2=el.getBoundingClientRect();
+      top=(r2.top>vh*0.5)?(r2.top-cr.height-16):(r2.bottom+16);
+      left=Math.min(Math.max(12,r2.left+r2.width/2-cr.width/2),vw-cr.width-12);
+      top=Math.min(Math.max(12,top),vh-cr.height-12);
+    } else { top=vh/2-cr.height/2; left=vw/2-cr.width/2; }
+    card.style.top=top+'px'; card.style.left=left+'px';
+    if(action){
+      var g=document.querySelector(step.gate.sel);
+      if(g){
+        var handler=function(){ if(step.gate.ev==='input' && (g.value||'').length<1) return; if(TUT_CLEAN){TUT_CLEAN();TUT_CLEAN=null;} setTimeout(tutNext,step.gate.delay||300); };
+        g.addEventListener(step.gate.ev,handler);
+        TUT_CLEAN=function(){ g.removeEventListener(step.gate.ev,handler); };
+      }
+    }
+  },delay);
+}
+function tutNext(){ if(!TUT_ACTIVE)return; tutShow(TUT_I+1); }
 function tutBack(){ if(!TUT_ACTIVE)return; tutShow(Math.max(0,TUT_I-1)); }
-function tutEnd(done){ var w=document.getElementById('tut-wrap'); if(w)w.style.display='none'; var cb=TUT_ONDONE; TUT_ACTIVE=null; TUT_ONDONE=null; if(cb)cb(!!done); }
+function tutEnd(done){
+  if(TUT_CLEAN){ try{TUT_CLEAN();}catch(e){} TUT_CLEAN=null; }
+  var w=document.getElementById('tut-wrap'); if(w)w.style.display='none';
+  var cb=TUT_ONDONE; TUT_ACTIVE=null; TUT_ONDONE=null;
+  try{ showRoot('home'); stk=['home']; }catch(e){}
+  if(cb)cb(!!done);
+}
+
 function tutPrompt(opts){
   ensureTutDom();
   var w=document.getElementById('tut-wrap'); w.style.display='block';
