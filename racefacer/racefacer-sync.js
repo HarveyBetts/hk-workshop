@@ -159,9 +159,13 @@ async function syncKart(id) {
 
   const parts = parseParts(await rfJson(`/ajax/garage/kart-parts?id=${id}`));
   await sb(`rf_parts_history?rf_kart_id=eq.${id}`, { method: 'DELETE' });
-  if (parts.length) await sb('rf_parts_history', { method: 'POST', body: parts.map((p) => ({
-    rf_kart_id: id, date: dmy(p.date), part_name: p.part, hours_since: p.hoursSinceRepair, km_since: p.kmSinceRepair,
-  })) });
+  const phSeen = new Set(), phRows = [];
+  parts.forEach((p) => {
+    const row = { rf_kart_id: id, date: dmy(p.date), part_name: p.part, hours_since: p.hoursSinceRepair, km_since: p.kmSinceRepair };
+    const k = `${row.date}|${row.part_name}|${row.km_since}`;      // matches the table's unique key
+    if (!phSeen.has(k)) { phSeen.add(k); phRows.push(row); }
+  });
+  if (phRows.length) await sb('rf_parts_history', { method: 'POST', body: phRows });
 
   return { id, name: details.name, type: details.type, label: kartLabel(details.type, details.name), repairs };
 }
