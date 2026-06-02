@@ -132,10 +132,15 @@ async function sb(path, { method = 'GET', body, prefer } = {}) {
 }
 const dmy = (d) => { const [a, b, c] = (d || '').split('.'); return c ? `${c}-${b}-${a}` : null; };
 
+// A real kart's name is just its number — 1 to 3 digits (e.g. 1, 18, 104).
+// Anything else ("George", "Late 2", "Archived 3", test entries) is not real fleet.
+const KEEP_NAME = /^\d{1,3}$/;
+
 async function syncKart(id) {
   const dj = await rfJson(`/ajax/garage/kart-details?id=${id}`);
   if (!dj || dj.success === false || !dj.kart) return null;
   const details = parseKartDetails(dj);
+  if (!KEEP_NAME.test((details.name || '').trim())) return { id, skipped: true };   // non-numeric name (George/Late/etc.) — not real fleet
   await sb('rf_karts?on_conflict=rf_id', { method: 'POST', prefer: 'resolution=merge-duplicates', body: [{
     rf_id: id, name: details.name, kart_id_label: details.kartIdLabel, type: details.type,
     label: kartLabel(details.type, details.name),
@@ -219,9 +224,15 @@ async function main() {
   await probe();                       // <-- prints exactly what RaceFacer replies; remove once working
   const ids = await enumerateKarts();
   console.log(`Syncing ${ids.length} karts...`);
-  const perKart = [];
-  for (const id of ids) { try { const k = await syncKart(id); if (k) perKart.push(k); } catch (e) { console.error(`kart ${id}: ${e.message}`); } await sleep(150); }
-  const pruned = await pruneStale(ids);
+  const perKart = [], skipIds = new Set();
+  for (const id of ids) {
+    try { const k = await syncKart(id); if (k && k.skipped) skipIds.add(id); else if (k) perKart.push(k); }
+    catch (e) { console.error(`kart ${id}: ${e.message}`); }
+    await sleep(150);
+  }
+  if (skipIds.size) console.log(`[skip] ${skipIds.size} non-numeric-named karts (George/Late/test) excluded.`);
+  const keepIds = ids.filter((id) => !skipIds.has(id));   // real karts only (incl. ones that transiently failed)
+  const pruned = await pruneStale(keepIds);
   if (pruned) console.log(`[prune] removed ${pruned} stale/ghost karts no longer listed under any type.`);
   const aliases = await refreshAliases(perKart.flatMap((k) => k.repairs.flatMap((r) => (r.parts || []).map((p) => p.name))));
   const n = await reconcileToday(perKart, aliases);
