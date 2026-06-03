@@ -207,6 +207,7 @@
     .tile.tor     {background:linear-gradient(145deg,#059669,#064E3B);border:1px solid rgba(52,211,153,0.38)}
     .tile.mgr     {background:linear-gradient(145deg,#475569,#1E293B);border:1px solid rgba(148,163,184,0.40)}
     .tile.fin     {background:linear-gradient(145deg,#DB2777,#831843);border:1px solid rgba(244,114,182,0.42)}
+    .tile.kidh    {background:linear-gradient(145deg,#E11D48,#5B0A1E);border:1px solid rgba(251,113,133,0.5)}
     .tile.hkai    {background:linear-gradient(145deg,#7C3AED,#5B21B6);border:1px solid rgba(167,139,250,0.50)}
     .tile.tasks   {background:linear-gradient(145deg,#EA580C,#7C2D12);border:1px solid rgba(251,146,60,0.50)}
     .tile.chats   {background:linear-gradient(145deg,#C026D3,#6B21A8);border:1px solid rgba(232,121,249,0.50)}
@@ -1020,10 +1021,10 @@
           <div class="pgtitle">Kart Info</div>
           <div class="ki-sub" id="ki-site-sub"></div>
           <div class="ki-tiles">
-            <div class="tile kartinfo ki-hero" onclick="kiOpenKarts()"><div class="ti">🏁</div><div class="tl">Karts</div><div class="ts">Fleet · stats · repairs</div></div>
+            <div class="tile kartinfo ki-hero" onclick="kiOpenKarts()"><div class="ti">🏎️</div><div class="tl">Karts</div><div class="ts">Fleet · stats · repairs</div></div>
             <div class="tile tasks" onclick="kiOpenRef('wiring')"><div class="ti">🔌</div><div class="tl">Wiring</div><div class="ts">Loom reference</div></div>
             <div class="tile tse" onclick="kiOpenRef('cpu')"><div class="ti">📶</div><div class="tl">CPU / WiFi</div><div class="ts">Connectivity</div></div>
-            <div class="tile beacon" onclick="kiOpenRef('beacons')"><div class="ti">📡</div><div class="tl">Dehaardt</div><div class="ts">Timing &amp; track</div></div>
+            <div class="tile kidh" onclick="kiOpenRef('beacons')"><div class="ti">🏁</div><div class="tl">Dehaardt</div><div class="ts">Timing &amp; track</div></div>
             <div class="tile hkai" onclick="kiOpenRef('help')"><div class="ti">🛟</div><div class="tl">Help</div><div class="ts">Common fixes</div></div>
           </div>
         </div>
@@ -1283,7 +1284,8 @@ function loadSites(cb){
     allSites=((rs[0]&&rs[0].data)||[]).map(function(r){return {id:r.id,label:r.label,accent:r.accent,position:r.position};});
     if(!allSites.length) allSites=[{id:'sydney',label:'Sydney',accent:'#00CFFF',position:1}];
     mySites=((rs[1]&&rs[1].data)||[]).map(function(r){return r.site;});
-    if(!mySites.length) mySites=['sydney'];
+    if(cu && _isMgr(cu.role)){ mySites=allSites.map(function(s){return s.id;}); }   // managers get all sites
+    else if(!mySites.length) mySites=['sydney'];
     if(cb)cb();
   }).catch(function(){allSites=[{id:'sydney',label:'Sydney',accent:'#00CFFF',position:1}];mySites=['sydney'];if(cb)cb();});
 }
