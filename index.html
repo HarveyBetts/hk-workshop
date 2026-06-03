@@ -495,8 +495,6 @@
     .kd-tabs::-webkit-scrollbar{display:none}
     .kd-tab{font-size:13px;font-weight:700;padding:8px 14px;border-radius:10px;background:var(--card);border:1px solid var(--b1);color:var(--t2);white-space:nowrap;cursor:pointer;flex-shrink:0;transition:background .12s,color .12s,border-color .12s}
     .kd-tab.active{background:rgba(45,212,191,.14);color:#2DD4BF;border-color:rgba(45,212,191,.5)}
-    .kd-toolbar{display:flex;justify-content:flex-end;margin-bottom:10px}
-    .kd-newrep{font-size:12px;font-weight:700;padding:8px 13px;border-radius:9px;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);color:#22C55E;cursor:pointer}
     .kd-note-inline{margin-top:10px;font-size:12px;color:var(--t2);background:var(--card);border:1px solid var(--b1);border-radius:10px;padding:11px 13px;line-height:1.5}
     .rep-tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--b1);border-radius:14px}
     .rep-table{width:100%;border-collapse:collapse;min-width:560px;font-size:13px}
@@ -3159,12 +3157,33 @@ function mapRfKart(r){
     mileage:Number(r.total_km)||0, laps:Number(r.total_laps)||0, hours:Number(r.total_hours)||0,
     cost:(parseFloat(String(r.total_cost||'').replace(/[^0-9.]/g,''))||0), startDate:'-' };
 }
+// Paginated read — Supabase/PostgREST caps a single response at ~1000 rows,
+// so we page through with .range() until a short page comes back (otherwise
+// karts whose repair rows fall past row 1000 show no history).
+function sbFetchAll(table, cols, eqCol, eqVal, orderCol){
+  var PAGE=1000;
+  return new Promise(function(resolve){
+    var all=[];
+    function step(from){
+      var q=SBC.from(table).select(cols);
+      if(eqCol) q=q.eq(eqCol, eqVal);
+      if(orderCol) q=q.order(orderCol,{ascending:true});
+      q.range(from, from+PAGE-1).then(function(res){
+        var data=(res&&res.data)||[];
+        all=all.concat(data);
+        if(data.length===PAGE) step(from+PAGE);
+        else resolve({data:all, error:(res&&res.error)||null});
+      }, function(err){ resolve({data:all, error:err}); });
+    }
+    step(0);
+  });
+}
 function loadRfKarts(cb){
   var site=currentSite||'sydney';
   Promise.all([
-    SBC.from('rf_karts').select('*').eq('site',site),
-    SBC.from('rf_repairs').select('id,rf_kart_id,description,date_discovered,date_repaired,mileage,cost,mechanic,notes'),
-    SBC.from('rf_repair_parts').select('repair_id,part_name,qty,price')
+    sbFetchAll('rf_karts','*','site',site,'rf_id'),
+    sbFetchAll('rf_repairs','id,rf_kart_id,description,date_discovered,date_repaired,mileage,cost,mechanic,notes',null,null,'id'),
+    sbFetchAll('rf_repair_parts','repair_id,part_name,qty,price',null,null,'repair_id')
   ]).then(function(rs){
     var krows=(rs[0]&&rs[0].data)||[], rrows=(rs[1]&&rs[1].data)||[], prows=(rs[2]&&rs[2].data)||[];
     if(krows.length){
@@ -3371,9 +3390,7 @@ function _money(v){ if(v==null||v==='') return '\u2014'; var s=String(v); return
 
 function repTableHTML(){
   var reps=KD_REPAIRS;
-  var toolbar='<div class="kd-toolbar"><button class="kd-newrep" onclick="kdNewRepair()">+ New repair</button></div>';
-  var note='<div class="kd-note-inline" id="kd-newrep-note" style="display:none"></div>';
-  if(!reps.length) return toolbar+'<div class="rep-empty">No repairs recorded for this kart in the selected period.</div>'+note;
+  if(!reps.length) return '<div class="rep-empty">No repairs recorded for this kart in the selected period.</div>';
   var rows=reps.map(function(r,i){
     var costTxt=r.cost?'<span class="rep-cost">$'+r.cost.toFixed(2)+'</span>':'<span class="rep-mono">\u2014</span>';
     var head='<tr class="rep-row" id="reprow-'+i+'" onclick="toggleRep('+i+')">'
@@ -3399,10 +3416,9 @@ function repTableHTML(){
     var detail='<tr class="rep-detail" id="repdet-'+i+'" style="display:none"><td colspan="7"><div class="rep-detbox">'+noteHTML+partsHTML+'</div></td></tr>';
     return head+detail;
   }).join('');
-  return toolbar
-    +'<div class="rep-tablewrap"><table class="rep-table"><thead><tr>'
+  return '<div class="rep-tablewrap"><table class="rep-table"><thead><tr>'
     +'<th>Repair</th><th>Date discovered</th><th>Date repaired</th><th>Mileage</th><th>Cost</th><th>User</th><th></th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></div>'+note;
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function toggleRep(i){
@@ -3412,12 +3428,6 @@ function toggleRep(i){
   det.style.display=open?'none':'table-row';
   if(row) row.classList.toggle('open',!open);
   if(btn) btn.innerText=open?'+':'\u2013';
-}
-
-function kdNewRepair(){
-  var n=document.getElementById('kd-newrep-note'); if(!n) return;
-  n.style.display='block';
-  n.innerHTML='Repairs are logged in <b>RaceFacer</b> and sync into the Workshop automatically. In-app repair logging is coming soon.';
 }
 
 function partsTabHTML(){
