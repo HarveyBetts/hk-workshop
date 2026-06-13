@@ -130,4 +130,34 @@ function parseKartNotes(json) {
   return out;
 }
 
-module.exports = { parseKartDetails, parseRepairs, parseParts, parseKartNotes, analysePartWear };
+// Parse a garage LIST page (one per kart type) and pull each kart's id, number and status
+// straight from the status icon — far cheaper than fetching every kart's detail endpoint.
+// A block looks like:
+//   <span class="pointer kart-detail-block" v-on:click="select_kart(47)"> ...
+//     <i class="... red fa-exclamation-circle" title="The kart is damaged."></i> ...
+//     Name: <span class="bold">19</span> ...  data-kart_id="47" ...
+//   </span>
+function parseGarageStatuses(html) {
+  const $ = cheerio.load(html || '');
+  const out = [];
+  $('.kart-detail-block').each((_, el) => {
+    const $el = $(el);
+    const outer = $.html(el) || '';                       // robust id read (Vue's v-on:click attr can be awkward via attr())
+    let rfId = (outer.match(/select_kart\w*\((\d+)/) || [])[1] || (outer.match(/data-kart_id="(\d+)"/) || [])[1];
+    rfId = rfId ? Number(rfId) : null;
+    let name = null;                                       // the kart number is the numeric bold span
+    $el.find('span.bold').each((__, b) => { const t = txt($(b).text()); if (/^\d{1,3}$/.test(t)) name = t; });
+    const $i = $el.find('i[title]').first();               // the status icon carries class + a human title
+    const cls = ($i.attr('class') || '').toLowerCase();
+    const title = ($i.attr('title') || '').toLowerCase();
+    let statusCode = null;
+    if (/damag/.test(title) || /\bred\b/.test(cls)) statusCode = 2;                                                 // DAMAGED
+    else if (/mainten|service|repair/.test(title) || /\b(yellow|orange|amber|warning)\b/.test(cls)) statusCode = 3; // FOR MAINTENANCE
+    else if (/\bok\b|good|working|available|fine|operational|ready|active/.test(title) || /\bgreen\b/.test(cls)) statusCode = 1; // OK
+    const status = statusCode === 2 ? 'DAMAGED' : statusCode === 3 ? 'FOR MAINTENANCE' : statusCode === 1 ? 'OK' : null;
+    if (rfId) out.push({ rfId, name, statusCode, status });
+  });
+  return out;
+}
+
+module.exports = { parseKartDetails, parseRepairs, parseParts, parseKartNotes, parseGarageStatuses, analysePartWear };
