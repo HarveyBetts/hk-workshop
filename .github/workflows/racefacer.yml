@@ -26,8 +26,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install the one library it needs
-        run: npm install undici
+      - name: Install the libraries it needs
+        run: npm install undici cheerio
 
       - name: Sync on a loop (Sydney)
         env:
