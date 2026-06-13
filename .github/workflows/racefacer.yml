@@ -1,10 +1,10 @@
 name: RaceFacer sync
 
-# Runs the sync automatically every 0.25 minutes (GitHub's fastest),
+# Runs the sync automatically every 1 minute (GitHub's fastest),
 # and also gives you a "Run workflow" button to test it by hand.
 on:
   schedule:
-    - cron: '*/0.25 * * * *'
+    - cron: '*/1 * * * *'
   workflow_dispatch: {}
 
 jobs:
