@@ -39,7 +39,7 @@ jobs:
           SB_URL: ${{ secrets.SB_URL }}
           SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
           SITE: sydney
-          GAP_SECONDS: '10'          # <-- gap between cycles. Lower = faster status, more load. Raise to 20/30 if RaceFacer gets slow.
+          GAP_SECONDS: '5'           # <-- gap between cycles. Fast pass now reads ~5 list pages, so this can be low. Raise if RaceFacer gets slow.
           HEAVY_INTERVAL_SEC: '300'  # <-- full sync (repairs/parts/notes) runs at most this often. 300 = every 5 min.
         run: |
           # Keep refreshing status for ~29 min, but only let the heavier FULL sync (which
