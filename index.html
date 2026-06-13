@@ -528,6 +528,9 @@
     .kn-star{color:#FFD600;margin-right:8px}
     .kn-note{color:var(--t1);font-weight:600;max-width:440px;line-height:1.45}
     .kn-open-tag{display:inline-block;background:rgba(245,158,11,.16);color:#F59E0B;font-weight:700;font-size:11px;padding:2px 9px;border-radius:999px}
+    .kn-more{cursor:pointer}
+    .kn-more td{color:var(--kacc,#00CFFF);font-weight:700;font-size:12px}
+    .kn-more:hover td{text-decoration:underline}
     /* Wiring diagram pane */
     .wiring-card{background:var(--card);border:1px solid var(--b1);border-radius:12px;padding:clamp(14px,3vw,18px);margin-bottom:14px}
     .wiring-card h4{font-size:13px;font-weight:700;color:#F59E0B;margin:0 0 10px;text-transform:uppercase;letter-spacing:1px}
@@ -3505,9 +3508,11 @@ function kartOpenNotesHTML(rfId){
   var notes=(rfId!=null&&RF_NOTES_BY_ID[rfId])||[];
   var open=notes.filter(function(n){return n.open;});
   if(!open.length) return '';
-  var rows=open.map(function(n){
+  var CAP=6, shown=open.slice(0,CAP), extra=open.length-shown.length;
+  var rows=shown.map(function(n){
     return '<tr><td class="kn-date">'+fmtNoteDate(n.createdIso)+'</td><td class="kn-title"><span class="kn-star">\u2605</span>'+kEsc(n.note)+'</td></tr>';
   }).join('');
+  if(extra>0) rows+='<tr class="kn-more" onclick="ktTab(\'Kart Notes\')"><td></td><td>+ '+extra+' more open '+(extra===1?'note':'notes')+' \u2014 view all in Kart Notes</td></tr>';
   return '<div class="kn-open"><table class="kn-opentable"><thead><tr><th>Date</th><th>Title</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
