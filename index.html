@@ -368,6 +368,7 @@
     /* ===== Kart Info overhaul (3-level: types -> grid -> detail) ===== */
     :root{ --kacc:#2DD4BF; }   /* Kart Info teal accent (matches the home tile) */
     .ki-sub{font-size:13px;color:var(--t2);margin:-6px 0 16px}
+    #ki-karts-sub{margin-top:8px}
     .ki-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--kacc);font-size:14px;font-weight:700;cursor:pointer;padding:6px 0 12px;font-family:inherit}
     .ki-back:active{opacity:.6}
     /* Level 1 — type cards */
@@ -879,7 +880,7 @@
     @keyframes bcnpulse{0%,100%{transform:scale(.8);opacity:.5;box-shadow:0 0 6px 1px rgba(255,59,48,.45)}50%{transform:scale(1.16);opacity:1;box-shadow:0 0 16px 5px rgba(255,59,48,.85)}}
     .bcnsite{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--b2);color:var(--t2)}
     .bcnhint{color:var(--t2);font-size:12.5px;margin-bottom:14px}
-    .bcnmap{border:1px solid var(--b1);background:radial-gradient(120% 90% at 50% -10%, var(--acc2), transparent 60%), var(--card);border-radius:18px;padding:10px;overflow:hidden}
+    .bcnmap{flex:1 1 440px;min-width:0;position:relative;border-radius:18px;padding:12px;overflow:hidden;background:radial-gradient(120% 80% at 50% -8%, rgba(0,207,255,.10), transparent 55%), radial-gradient(85% 85% at 94% 114%, rgba(224,64,251,.10), transparent 55%), var(--card);box-shadow:0 0 0 1px rgba(0,207,255,.15), 0 24px 60px rgba(0,0,0,.5), inset 0 0 70px rgba(0,207,255,.045)}
     .bcnstage{position:relative;width:100%;aspect-ratio:1000/660}
     .bcnstage svg{position:absolute;inset:0;width:100%;height:100%}
     .bcn-flow{stroke-dasharray:2 16;animation:bcnflow 7s linear infinite}
@@ -945,6 +946,29 @@
     .bcnfnact{font-size:14px;color:var(--t1);line-height:1.4}
     .bcnfnempty{text-align:center;color:var(--t2);padding:26px;font-size:13px}
     .bcnfnnote{padding:12px 8px 0;color:var(--t2);font-size:11.5px;text-align:center;line-height:1.5}
+  
+    /* beacons: premium layout */
+    .bcnpage{max-width:1060px;margin:0 auto}
+    .bcnbody{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-top:2px}
+    .bcnmap:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background-image:radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1.5px);background-size:24px 24px}
+    .bcnmap:after{content:"";position:absolute;inset:9px;pointer-events:none;border-radius:12px;opacity:.5;background:linear-gradient(var(--acc),var(--acc)) left top,linear-gradient(var(--acc),var(--acc)) left top,linear-gradient(var(--acc),var(--acc)) right top,linear-gradient(var(--acc),var(--acc)) right top,linear-gradient(var(--acc),var(--acc)) left bottom,linear-gradient(var(--acc),var(--acc)) left bottom,linear-gradient(var(--acc),var(--acc)) right bottom,linear-gradient(var(--acc),var(--acc)) right bottom;background-repeat:no-repeat;background-size:16px 2px,2px 16px,16px 2px,2px 16px,16px 2px,2px 16px,16px 2px,2px 16px}
+    .bcnstage{z-index:1}
+    .bcnside{flex:0 0 300px;border:1px solid var(--b1);background:var(--card);border-radius:16px;padding:13px;align-self:flex-start}
+    .bcnsidetitle{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--t2);margin:2px 4px 11px}
+    .bcnsidelist{display:flex;flex-direction:column;gap:7px}
+    .bcncard{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--card2);border:1px solid var(--b1);border-radius:11px;padding:10px 11px;cursor:pointer;transition:.14s;font-family:inherit}
+    .bcncard:hover{border-color:var(--b2);transform:translateX(2px)}
+    .bcncard.on{border-color:var(--bc);box-shadow:0 0 0 1px var(--bc), 0 6px 18px -6px var(--bc)}
+    .bcncardsw{flex:0 0 auto;width:15px;height:15px;border-radius:4px;background:color-mix(in srgb,var(--bc) 34%,transparent);border:2px solid var(--bc);box-shadow:0 0 8px 0 var(--bc);animation:bcnflash 2.6s ease-in-out infinite}
+    .bcncardtx{display:flex;flex-direction:column;min-width:0;flex:1}
+    .bcncardname{font-size:13.5px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bcncardmeta{font-size:11px;color:var(--t2);font-variant-numeric:tabular-nums;margin-top:2px}
+    .bcnpt.ping{animation:bcnflash 2.6s ease-in-out infinite, bcnping .55s ease-out 2}
+    @keyframes bcnping{0%{box-shadow:0 0 0 0 var(--bc)}100%{box-shadow:0 0 0 15px transparent}}
+    .bcnpop.below{transform:translate(-50%,18px);animation:bcnpopindown .14s ease}
+    @keyframes bcnpopindown{from{opacity:0;transform:translate(-50%,10px)}}
+    .bcnpop.below:after{top:-7px;bottom:auto;border-right:none;border-bottom:none;border-left:1px solid var(--b2);border-top:1px solid var(--b2)}
+    @media(max-width:700px){ .bcnside{flex:1 1 100%} .bcnmap{flex:1 1 100%} }
   </style>
 </head>
 <body>
@@ -1181,6 +1205,7 @@
         <button class="back" onclick="back()"> Back</button>
       </div>
       <div class="sb">
+        <div class="bcnpage">
         <div class="bcnhead">
           <button class="bcnmenu" id="bcnMenu" onclick="openBeaconDrawer()" aria-label="Switch track"><span></span><span></span><span></span></button>
           <div class="bcnht">
@@ -1192,12 +1217,19 @@
           </div>
         </div>
         <div class="bcnhint">Tap a beacon for its sector (S/N) and function (F/N).</div>
-        <div class="bcnmap"><div id="bcnHost"></div></div>
+        <div class="bcnbody">
+          <div class="bcnmap"><div id="bcnHost"></div></div>
+          <aside class="bcnside" id="bcnSide">
+            <div class="bcnsidetitle">Beacons on this track</div>
+            <div class="bcnsidelist" id="bcnSideList"></div>
+          </aside>
+        </div>
         <div class="bcnleg">
           <span class="bcnlg"><i style="background:#00C853"></i> Finish / go</span>
           <span class="bcnlg"><i style="background:#FFD600"></i> Slow zone</span>
           <span class="bcnlg"><i style="background:#00CFFF"></i> Caution</span>
           <span class="bcnlg"><span class="bcndot" style="position:static;width:9px;height:9px"></span> Live track from RaceFacer</span>
+        </div>
         </div>
       </div>
       <div class="bcnscrim" id="bcnScrim" onclick="closeBeaconDrawer()"></div>
@@ -1987,7 +2019,7 @@ function startRealtime(){
     // RaceFacer tables -> refresh whatever RF view is open, live.
     function _curScr(){ return (typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null; }
     SBC.channel('rfk-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} }).subscribe();
-    SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} }).subscribe();
+    SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} if(_curScr()==='manager'&&typeof renderMechToday==='function'){try{renderMechToday();}catch(e){}} }).subscribe();
     SBC.channel('rfd-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_discrepancies'},function(){ if(_curScr()==='manager'&&typeof loadMgr==='function'){try{loadMgr();}catch(e){}} if(typeof refreshRfBadge==='function'){try{refreshRfBadge();}catch(e){}} }).subscribe();
   }catch(e){}
 }
@@ -3604,20 +3636,31 @@ var BCN_MAP_SVG='<svg viewBox="0 0 1000 660" xmlns="http://www.w3.org/2000/svg" 
  +'<path d="M150 200 C150 150 250 130 380 140 C520 152 560 120 680 120 C820 120 884 200 872 300 C862 380 902 446 840 502 C780 560 650 540 540 520 C430 500 360 562 260 540 C170 524 120 460 140 380 C152 320 150 260 150 200 Z" fill="none" stroke="#0a0f18" stroke-width="20" stroke-linejoin="round"/>'
  +'<path class="bcn-flow" d="M150 200 C150 150 250 130 380 140 C520 152 560 120 680 120 C820 120 884 200 872 300 C862 380 902 446 840 502 C780 560 650 540 540 520 C430 500 360 562 260 540 C170 524 120 460 140 380 C152 320 150 260 150 200 Z" fill="none" stroke="#00CFFF" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/></svg>';
 var bcnPop=null;
+function beaconTracksForSite(){ var site=(typeof currentSite!=='undefined'&&currentSite)||'sydney'; return BEACON_TRACKS.filter(function(t){return t.site===site;}); }
 function loadBeacons(){
-  var t=BEACON_TRACKS.find(function(x){return x.live;})||BEACON_TRACKS[0];
-  if(!t){ return; }
-  renderBeacons(t); buildBeaconList(t.id);
+  var list=beaconTracksForSite();
+  var t=list.find(function(x){return x.live;})||list[0]||null;
+  renderBeacons(t); buildBeaconList(t?t.id:null);
 }
 function renderBeacons(t){
-  var nm=document.getElementById('bcnTrk'); if(nm) nm.textContent=t.name;
-  var site=document.getElementById('bcnSite');
+  var nm=document.getElementById('bcnTrk'), site=document.getElementById('bcnSite'), live=document.getElementById('bcnLive');
+  var host=document.getElementById('bcnHost'), side=document.getElementById('bcnSide'), sideList=document.getElementById('bcnSideList');
+  closeBeaconPop();
+  if(!t){
+    if(nm) nm.textContent='No track';
+    if(site){ site.textContent=(typeof siteLabel==='function'?siteLabel(currentSite):'\u2014'); site.style.color=''; site.style.borderColor=''; }
+    if(live) live.style.display='none';
+    if(side) side.style.display='none';
+    if(host) host.innerHTML='<div class="bcnempty"><div><div class="big">No track layouts for this site</div>Add one in Master Access \u2192 Beacons.</div></div>';
+    return;
+  }
+  if(nm) nm.textContent=t.name;
   if(site){ site.textContent=(typeof siteLabel==='function'?siteLabel(t.site):t.site);
     var ac=(typeof siteAccent==='function'?siteAccent(t.site):'#00CFFF'); site.style.color=ac; site.style.borderColor=ac; }
-  var live=document.getElementById('bcnLive'); if(live) live.style.display=t.live?'':'none';
-  var host=document.getElementById('bcnHost'); if(!host) return;
-  closeBeaconPop();
+  if(live) live.style.display=t.live?'':'none';
+  if(!host) return;
   if(!t.map){
+    if(side) side.style.display='none';
     host.innerHTML='<div class="bcnempty"><div><div class="big">No track map available</div>'
       +'This layout hasn\'t been drawn yet \u2014 add it in Master Access \u2192 Beacons.</div></div>';
     return;
@@ -3631,11 +3674,29 @@ function renderBeacons(t){
   host.querySelectorAll('.bcnpt').forEach(function(el){
     el.addEventListener('click',function(e){ e.stopPropagation(); showBeaconPop(t.beacons[+el.dataset.i], el); });
   });
+  // side beacon list (tap to highlight on the map)
+  if(side) side.style.display=t.beacons.length?'':'none';
+  if(sideList){
+    sideList.innerHTML=t.beacons.map(function(b,i){
+      return '<button class="bcncard" data-i="'+i+'" style="--bc:'+b.color+'">'
+        +'<span class="bcncardsw"></span>'
+        +'<span class="bcncardtx"><span class="bcncardname">'+b.name+'</span>'
+        +'<span class="bcncardmeta">S/N '+b.sn+'  \u00b7  F/N '+b.fn+'</span></span></button>';
+    }).join('');
+    sideList.querySelectorAll('.bcncard').forEach(function(el){
+      el.addEventListener('click',function(e){ e.stopPropagation();
+        var i=+el.dataset.i, pt=host.querySelectorAll('.bcnpt')[i];
+        sideList.querySelectorAll('.bcncard').forEach(function(c){c.classList.remove('on');}); el.classList.add('on');
+        if(pt){ showBeaconPop(t.beacons[i], pt); pt.classList.add('ping'); setTimeout(function(){pt.classList.remove('ping');},1200); }
+      });
+    });
+  }
 }
 function showBeaconPop(b,el){
   closeBeaconPop();
   var stage=document.querySelector('#s-beacons .bcnstage'); if(!stage) return;
-  var p=document.createElement('div'); p.className='bcnpop'; p.style.left=el.style.left; p.style.top=el.style.top;
+  var below=(parseFloat(el.style.top)||0) < 42;   // near the top edge -> drop the card below the beacon
+  var p=document.createElement('div'); p.className='bcnpop'+(below?' below':''); p.style.left=el.style.left; p.style.top=el.style.top;
   p.innerHTML='<div class="pn"><span class="sw" style="background:'+b.color+'"></span>'+b.name+'</div>'
     +'<div class="row"><div class="tag"><div class="k">Sector S/N</div><div class="v">'+b.sn+'</div></div>'
     +'<div class="tag"><div class="k">Function F/N</div><div class="v">'+b.fn+'</div></div></div>';
@@ -3646,7 +3707,9 @@ function openBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=docume
 function closeBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=document.getElementById('bcnScrim'); if(d)d.classList.remove('on'); if(s)s.classList.remove('on'); }
 function buildBeaconList(curId){
   var dl=document.getElementById('bcnDlist'); if(!dl) return;
-  dl.innerHTML=BEACON_TRACKS.map(function(t){
+  var tracks=beaconTracksForSite();
+  if(!tracks.length){ dl.innerHTML='<div class="bcnempty" style="aspect-ratio:auto;padding:24px 14px">No track layouts assigned to this site yet.</div>'; return; }
+  dl.innerHTML=tracks.map(function(t){
     var lbl=(typeof siteLabel==='function'?siteLabel(t.site):t.site);
     return '<button class="bcnti'+(t.id===curId?' cur':'')+'" data-id="'+t.id+'">'
       +'<span><span class="nm">'+t.name+'</span><span class="meta">'
