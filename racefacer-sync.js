@@ -98,10 +98,17 @@ async function probe() {
   try {
     const a = await rf('/en/administration');
     console.log('[probe] /en/administration -> status=%s location=%s', a.status, a.headers.get('location') || '(none)');
-    const b = await rf('/ajax/garage/kart-details?id=47', { ajax: true });
-    const t = await b.text();
-    console.log('[probe] kart-details?id=47 -> status=%s location=%s body=%s',
-      b.status, b.headers.get('location') || '(none)', JSON.stringify(t.slice(0, 160)) || '<empty>');
+    // ---- ONE-TIME DUMP: kart 20 (rf id 46) full detail + notes, so we can see the "active notes" list shape. Remove after. ----
+    const d = await rf('/ajax/garage/kart-details?id=46', { ajax: true });
+    const dt = await d.text();
+    console.log('[probe] ===KART20_DETAILS_START=== (status ' + d.status + ')');
+    console.log(dt);
+    console.log('[probe] ===KART20_DETAILS_END===');
+    const n = await rf('/ajax/garage/kart-notes?id=46', { ajax: true });
+    const nt = await n.text();
+    console.log('[probe] ===KART20_NOTES_START=== (status ' + n.status + ')');
+    console.log(nt);
+    console.log('[probe] ===KART20_NOTES_END===');
   } catch (e) { console.log('[probe] error:', e.message); }
 }
 
