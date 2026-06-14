@@ -1132,7 +1132,7 @@
 
         <!-- KARTS: colour-coded type tabs + kart-number tiles -->
         <div id="ki-karts" style="display:none">
-          <button class="ki-back" onclick="kiGo('home')">‹ Kart Info</button>
+          <button class="ki-back" onclick="kartScreenBack()">‹ Kart Info</button>
           <div class="ki-sub" id="ki-karts-sub"></div>
           <div class="ktype-tabs" id="ki-type-tabs"></div>
           <div class="ksb-wrap" id="kart-statusbar"></div>
@@ -1142,7 +1142,7 @@
 
         <!-- DETAIL: RaceFacer-style kart page (stats + status + tabs: repairs/parts/cost/…) -->
         <div id="kiv-detail" style="display:none">
-          <button class="ki-back" id="kd-back" onclick="kiGo('karts')">‹ Back</button>
+          <button class="ki-back" id="kd-back" onclick="kartScreenBack()">‹ Back</button>
           <div class="kd-numlabel" id="kd-num"></div>
           <div class="kd-card">
             <div class="kd-headrow">
@@ -1161,7 +1161,7 @@
 
         <!-- REFERENCE: Wiring / CPU / Beacons / Help (fleet-wide) -->
         <div id="ki-ref" style="display:none">
-          <button class="ki-back" onclick="kiGo('home')">‹ Kart Info</button>
+          <button class="ki-back" onclick="kartScreenBack()">‹ Kart Info</button>
           <div class="pgtitle" id="ki-ref-title" style="margin-top:6px"></div>
           <div id="ki-ref-body"></div>
         </div>
@@ -3383,21 +3383,47 @@ var KART_TYPE_COLOR={Adult:'#22D3EE',Intermediate:'#F59E0B',Junior:'#34D399',Min
 var STATUS_COLOR={ok:'#22C55E',maint:'#FFD600',damaged:'#FF3B30'};
 var KI_VIEW='home';   // 'home' | 'karts' | 'detail' | 'ref'
 
-// Router for the Kart Info screen (tile dashboard → karts → detail, plus reference)
-function kiGo(view){
+// Router for the Kart Info screen (tile dashboard → karts → detail, plus reference).
+// kiGo = instant (used on first entry); kiGoAnim = slides like the main screens.
+function kiElem(v){ return document.getElementById(v==='detail'?'kiv-detail':'ki-'+v); }
+function kiApplyView(view){
   KI_VIEW=view;
-  ['home','karts','detail','ref'].forEach(function(v){
-    var el=document.getElementById(v==='detail'?'kiv-detail':'ki-'+v);
-    if(el) el.style.display=(v===view)?'block':'none';
-  });
-  var sb=document.querySelector('#s-kartinfo .sb'); if(sb) sb.scrollTop=0;
+  ['home','karts','detail','ref'].forEach(function(v){ var el=kiElem(v); if(el) el.style.display=(v===view)?'block':'none'; });
   if(view==='karts'||view==='detail'){ startKartAutoRefresh(); } else { stopKartAutoRefresh(); }
 }
+function kiGo(view){ kiApplyView(view); var sb=document.querySelector('#s-kartinfo .sb'); if(sb) sb.scrollTop=0; }
 
-// Back: detail → karts → home → leave screen
+// Depth order so the slide direction is automatic: deeper = slide in from the right, shallower = from the left.
+var KI_ORDER={home:0,karts:1,ref:1,detail:2}, KI_ANIM=false;
+function kiGoAnim(view){
+  if(KI_ANIM || view===KI_VIEW) return;
+  var fromEl=kiElem(KI_VIEW), toEl=kiElem(view), sbEl=document.querySelector('#s-kartinfo .sb');
+  if(!fromEl||!toEl||!sbEl){ kiGo(view); return; }
+  var back=(KI_ORDER[view]||0) < (KI_ORDER[KI_VIEW]||0);
+  KI_ANIM=true;
+  var ease='cubic-bezier(0.32,0.72,0,1)', dur=440;
+  sbEl.style.position='relative'; sbEl.style.overflowX='hidden';
+  toEl.style.display='block';
+  [fromEl,toEl].forEach(function(el){ el.style.position='absolute'; el.style.top='0'; el.style.left='0'; el.style.width='100%'; el.style.transition='none'; el.style.willChange='transform'; });
+  fromEl.style.transform='translate3d(0,0,0)';
+  toEl.style.transform=back?'translate3d(-28%,0,0)':'translate3d(100%,0,0)';
+  void toEl.offsetWidth;                                  // commit start positions before transitioning
+  fromEl.style.transition='transform '+dur+'ms '+ease;
+  toEl.style.transition='transform '+dur+'ms '+ease;
+  fromEl.style.transform=back?'translate3d(100%,0,0)':'translate3d(-28%,0,0)';
+  toEl.style.transform='translate3d(0,0,0)';
+  setTimeout(function(){
+    [fromEl,toEl].forEach(function(el){ el.style.transition=''; el.style.transform=''; el.style.position=''; el.style.top=''; el.style.left=''; el.style.width=''; el.style.willChange=''; });
+    sbEl.style.position=''; sbEl.style.overflowX=''; sbEl.scrollTop=0;
+    kiApplyView(view);
+    KI_ANIM=false;
+  }, dur+20);
+}
+
+// Back: detail → karts → home → leave screen (now slides, matching the main transitions)
 function kartScreenBack(){
-  if(KI_VIEW==='detail'){ kiGo('karts'); return; }
-  if(KI_VIEW==='karts'||KI_VIEW==='ref'){ kiGo('home'); return; }
+  if(KI_VIEW==='detail'){ kiGoAnim('karts'); return; }
+  if(KI_VIEW==='karts'||KI_VIEW==='ref'){ kiGoAnim('home'); return; }
   back();
 }
 
@@ -3435,7 +3461,7 @@ function kiOpenKarts(){
   var ksub=document.getElementById('ki-karts-sub'); if(ksub) ksub.innerText=kiSubText();
   renderTypeTabs();
   renderKartChips();
-  kiGo('karts');
+  kiGoAnim('karts');
 }
 
 // Open a fleet-wide reference section (wiring / cpu / beacons / help)
@@ -3446,7 +3472,7 @@ function kiOpenRef(which){
   else if(which==='cpu') renderCpuSection();
   else if(which==='beacons') renderBeaconsSection();
   else renderHelpSection();
-  kiGo('ref');
+  kiGoAnim('ref');
 }
 
 // Colour-coded type tabs — one per type present in the fleet
@@ -3532,8 +3558,8 @@ function selectKart(rfId){
   var k=KART_LIST.find(function(x){return x.rfId===rfId;});
   if(!k) return;
   SELECTED_KART=k;
-  kiGo('detail');
   renderKartDetail(k);
+  kiGoAnim('detail');
 }
 
 // Single-page kart detail — mirrors the RaceFacer garage page:
