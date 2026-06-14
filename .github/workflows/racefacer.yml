@@ -41,7 +41,7 @@ jobs:
           SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
           SITE: sydney
           GAP_SECONDS: '5'           # <-- gap between cycles. Fast pass now reads ~5 list pages, so this can be low. Raise if RaceFacer gets slow.
-          HEAVY_INTERVAL_SEC: '1200' # <-- full sync (repairs/parts/notes) runs at most this often. 1200 = every 20 min.
+          HEAVY_INTERVAL_SEC: '600'  # <-- full sync (repairs/parts/notes) runs at most this often. 600 = every 10 min.
         run: |
           # Keep the job alive ~1h50m. Allow the heavier FULL sync to START only in the first
           # ~90 min; after that, force status-only cycles so a full sync can never overrun the
