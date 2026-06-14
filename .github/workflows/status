@@ -1,0 +1,49 @@
+name: RaceFacer status (fast)
+
+# A lightweight companion to the main "RaceFacer sync" workflow. This one does ONLY the quick
+# OK / Damaged / For-maintenance refresh and runs on its OWN runner, so a status change you make
+# in RaceFacer shows up in the app within seconds — it never has to wait behind the big full pass
+# (notes/repairs/parts) that the other workflow runs. Same 2-hour cron + long internal loop trick
+# so GitHub doesn't skip it. The "Run workflow" button starts it now.
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch: {}
+
+# Don't stack two status runs on top of each other.
+concurrency:
+  group: racefacer-status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Get the files from the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install the libraries it needs
+        run: npm install undici cheerio
+
+      - name: Status loop (Sydney)
+        env:
+          RF_USER: ${{ secrets.RF_USER }}
+          RF_PASS: ${{ secrets.RF_PASS }}
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
+          SITE: sydney
+          STATUS_ONLY: '1'
+        run: |
+          # Status-only is quick (~5 list-page fetches), so it can safely loop almost the full 2h
+          # with only a small gap before the next run — no heavy pass here to overrun the timeout.
+          end=$(( SECONDS + 7000 ))
+          while [ $SECONDS -lt $end ]; do
+            STATUS_ONLY=1 node racefacer-sync.js || echo "status cycle failed — will retry next loop"
+            sleep 4
+          done
