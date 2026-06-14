@@ -102,6 +102,36 @@ async function probe() {
   } catch (e) { console.log('[probe] error:', e.message); }
 }
 
+// One-off discovery: find the endpoint that lists track layouts ("sub-tracks") and the live one.
+// The Sessions page is a Vue/Livewire app, so the real URLs live in session-management/main.js.
+// Remove this once the track endpoint is wired.
+async function discoverTracks() {
+  try {
+    const res = await rf('/assets/js/session-management/main.js?5.2.1');
+    const js = await res.text();
+    console.log('[trackdisco] main.js status=%s len=%s', res.status, js.length);
+    const eps = new Set();
+    (js.match(/['"`][^'"`]*ajax\/[^'"`]+['"`]/g) || []).forEach((s) => eps.add(s.replace(/['"`]/g, '')));
+    const frags = new Set();
+    (js.match(/['"`][a-zA-Z0-9_.\-\/]*(sub[_-]?track|track|schedule|layout|session)[a-zA-Z0-9_.\-\/]*['"`]/gi) || [])
+      .forEach((s) => { const v = s.replace(/['"`]/g, ''); if (v.length > 2 && v.length < 70) frags.add(v); });
+    console.log('[trackdisco] ajax endpoints: %s', JSON.stringify([...eps].slice(0, 50)));
+    console.log('[trackdisco] track/session fragments: %s', JSON.stringify([...frags].slice(0, 60)));
+  } catch (e) { console.log('[trackdisco] main.js fetch failed:', e.message); }
+  const cands = [
+    '/ajax/sessions/sub-tracks', '/ajax/sub-tracks', '/ajax/get-sub-tracks', '/ajax/sub_tracks',
+    '/ajax/sessions/get-sub-tracks', '/ajax/tracks', '/ajax/track/list', '/ajax/sessions/tracks',
+    '/ajax/sessions/session-management', '/ajax/garage/sub-tracks',
+  ];
+  for (const c of cands) {
+    try {
+      const r = await rf(c, { ajax: true });
+      const t = await r.text();
+      console.log('[trackdisco] GET %s -> %s %s', c, r.status, (t || '').slice(0, 180).replace(/\s+/g, ' ') || '<empty>');
+    } catch (e) { console.log('[trackdisco] GET %s ERR %s', c, e.message); }
+  }
+}
+
 // ---- enumerate kart ids ----
 // Each garage "type" page maps to a (site, track-type) pair. This is the source
 // of truth for which site a kart belongs to (kart-details doesn't tell us the site).
@@ -339,6 +369,7 @@ async function main() {
 
   // ----- full sync (unchanged): enumerate everything + repairs/parts/notes + prune + reconcile -----
   await probe();                       // <-- prints exactly what RaceFacer replies; remove once working
+  await discoverTracks();              // <-- one-off: find the track-layout endpoint; remove once wired
   const idMap = await enumerateKarts();           // Map: rf_id -> { site, type }
   console.log(`Syncing ${idMap.size} karts...`);
   try { await statusFast(); } catch (e) {}        // refresh OK/Damaged up-front so a status flip isn't stuck behind the whole pass
