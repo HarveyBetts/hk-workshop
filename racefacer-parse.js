@@ -160,4 +160,25 @@ function parseGarageStatuses(html) {
   return out;
 }
 
-module.exports = { parseKartDetails, parseRepairs, parseParts, parseKartNotes, parseGarageStatuses, analysePartWear };
+// The "active notes" list shown at the TOP of a kart's detail page (the starred notes with the
+// red X). RaceFacer renders it inside kart-details html as `table.dataTable` rows of class
+// "notification": td[0]=date, td[1]=star icon + note text, td[2]=the X. Clicking the X clears a
+// note from THIS list without archiving it, so this is the only place that distinguishes a live
+// note from one that's been X'd away. Returns {createdIso, note} whose fingerprint (rfId|createdIso|note)
+// matches the same note's row in the Kart Notes table, so callers can flag which stored notes are active.
+function parseActiveNotes(detailsHtml) {
+  const $ = cheerio.load(detailsHtml || '');
+  const out = [];
+  $('table.dataTable tr.notification').each((_, tr) => {
+    const tds = $(tr).children('td');
+    if (tds.length < 2) return;
+    const m = txt($(tds[0]).text()).match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}:\d{2})/);
+    const createdIso = m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}:00` : null;
+    const note = txt($(tds[1]).clone().find('i').remove().end().text());   // drop the star icon, keep the text
+    if (!note) return;
+    out.push({ createdIso, note });
+  });
+  return out;
+}
+
+module.exports = { parseKartDetails, parseRepairs, parseParts, parseKartNotes, parseActiveNotes, parseGarageStatuses, analysePartWear };
