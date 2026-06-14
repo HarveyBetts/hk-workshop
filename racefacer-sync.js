@@ -98,13 +98,6 @@ async function probe() {
   try {
     const a = await rf('/en/administration');
     console.log('[probe] /en/administration -> status=%s location=%s', a.status, a.headers.get('location') || '(none)');
-    // ---- Twin diagnostic: does the Twin type page list karts, and what are they named? Remove once Twins sync. ----
-    const TWIN = '00dd982c-d763-4d21-a4ad-a79035495eaf';
-    const html = await (await rf(`/en/administration/garage/garage?kart_type_uuid=${TWIN}`)).text();
-    const st = parseGarageStatuses(html);
-    console.log('[probe] TWIN page len=%s blocks=%s ids=%s', html.length, st.length, JSON.stringify(st.map((k) => k.rfId)));
-    const names = (html.match(/Name:\s*<span class="bold">([^<]*)<\/span>/g) || []).slice(0, 15);
-    console.log('[probe] TWIN raw name spans:', JSON.stringify(names));
   } catch (e) { console.log('[probe] error:', e.message); }
 }
 
@@ -173,7 +166,9 @@ async function syncKart(id, meta) {
     label: kartLabel(type, details.name),
     status: details.status, status_code: details.statusCode, total_km: details.totalKm,
     total_laps: details.totalLaps, total_hours: details.totalHours, total_cost: details.totalCost,
-    brand: details.brand, model: details.model, fetched_at: new Date().toISOString(),
+    brand: details.brand, model: details.model,
+    type_color: (dj.kart.type && dj.kart.type.color) ? ('#' + String(dj.kart.type.color).replace(/^#/, '')) : null,
+    fetched_at: new Date().toISOString(),
   }] });
 
   const { repairs } = parseRepairs(await rfJson(`/ajax/garage/kart-repairs?id=${id}`));
@@ -203,16 +198,16 @@ async function syncKart(id, meta) {
   // Which notes is RaceFacer currently showing in its top "active" list (starred, not X'd)?
   // Their fingerprints match the same notes in the Kart Notes table, so we can flag them.
   const activeFps = new Set(parseActiveNotes(dj.html).map((n) => noteFp(id, n)));
-  try { notesWritten = await syncKartNotes(id, site, activeFps); } catch (e) { /* rf_kart_notes table may not exist yet — don't fail the kart */ }
+  try { notesWritten = await syncKartNotes(id, site, activeFps); } catch (e) { console.error(`[notes] kart ${id} failed: ${e.message}`); }
 
   return { id, name: details.name, type: type, site: site, label: kartLabel(type, details.name), repairs, notesWritten };
 }
 
-// Kart notes -> rf_kart_notes. Full history for the Kart Notes tab, plus an `active` flag marking
-// the notes RaceFacer currently shows in its top list (starred / not X'd). Replaces the kart's notes
-// wholesale each heavy pass so X'd/removed notes and stale flags can't linger. CRITICAL: de-dupe by
-// fingerprint first — RaceFacer can list the exact same note twice, and a bulk upsert with a repeated
-// conflict key throws "cannot affect row a second time", which previously left those karts with NO notes.
+// Kart notes -> rf_kart_notes. Full history for the Kart Notes tab, plus an `active` flag marking the
+// notes RaceFacer currently shows in its top list (starred / not X'd). Upsert-only (never deletes, so a
+// failure can't wipe existing notes). CRITICAL: de-dupe by fingerprint first — RaceFacer can list the
+// exact same note twice, and a bulk upsert with a repeated conflict key throws "cannot affect row a
+// second time", which previously left those karts with NO notes.
 async function syncKartNotes(id, site, activeFps) {
   const notes = parseKartNotes(await rfJson(`/ajax/garage/kart-notes?id=${id}`));
   const rows = [], batch = new Set();
@@ -224,7 +219,6 @@ async function syncKartNotes(id, site, activeFps) {
       created_at: n.createdIso, created_by: n.createdBy, archived_at: n.archivedIso, archived_by: n.archivedBy,
       active: activeFps ? activeFps.has(fp) : false });
   }
-  await sb(`rf_kart_notes?rf_kart_id=eq.${id}`, { method: 'DELETE' });   // replace this kart's notes wholesale
   if (rows.length) await sb('rf_kart_notes?on_conflict=note_fp', { method: 'POST', prefer: 'resolution=merge-duplicates', body: rows });
   return rows.length;
 }
@@ -305,6 +299,14 @@ async function main() {
   if (!RF_USER || !RF_PASS || !SB_URL || !SB_KEY) throw new Error('missing required env vars');
   await login();
 
+  // STATUS_ONLY mode (used by the dedicated status workflow): just refresh OK/Damaged/Maintenance
+  // and return — never touches the heavy pass, so status stays fast on its own runner.
+  if (process.env.STATUS_ONLY === '1') {
+    const n = await statusFast();
+    console.log(`[status] refreshed ${n} karts.`);
+    return;
+  }
+
   // Run the heavy (full) sync only every HEAVY_INTERVAL_MS; every other cycle is a quick status refresh.
   let lastHeavy = 0, haveFleet = false;
   try { const st = await sb('rf_sync_state?k=eq.last_heavy&select=v'); if (st && st[0] && st[0].v) lastHeavy = Date.parse(st[0].v) || 0; } catch (e) {}
@@ -322,11 +324,14 @@ async function main() {
   await probe();                       // <-- prints exactly what RaceFacer replies; remove once working
   const idMap = await enumerateKarts();           // Map: rf_id -> { site, type }
   console.log(`Syncing ${idMap.size} karts...`);
+  try { await statusFast(); } catch (e) {}        // refresh OK/Damaged up-front so a status flip isn't stuck behind the whole pass
   const perKart = [], skipIds = new Set();
+  let done = 0;
   for (const [id, meta] of idMap) {
     try { const k = await syncKart(id, meta); if (k && k.skipped) skipIds.add(id); else if (k) perKart.push(k); }
     catch (e) { console.error(`kart ${id}: ${e.message}`); }
     await sleep(150);
+    if (++done % 25 === 0) { try { await statusFast(); } catch (e) {} }   // keep status fresh through the long pass (~every 25 karts)
   }
   if (skipIds.size) console.log(`[skip] ${skipIds.size} non-numeric-named karts (George/Late/test) excluded.`);
   const keepIds = [...idMap.keys()].filter((id) => !skipIds.has(id));   // real karts only (incl. ones that transiently failed)
