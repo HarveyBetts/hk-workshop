@@ -1,14 +1,15 @@
 name: RaceFacer sync
 
-# GitHub's scheduler cannot fire faster than every 5 minutes. So instead this
-# starts every 30 minutes and then LOOPS inside the job for the whole half hour.
-# Each loop the script does a QUICK status-only refresh (OK / Damaged / Maintenance)
-# for the real fleet, and once every HEAVY_INTERVAL_SEC it does the FULL sync
-# (repairs, parts, notes, prune). With GAP_SECONDS=10 a status change on RaceFacer
-# shows on the app in roughly 15-20s. The "Run workflow" button starts it now.
+# GitHub's half-hourly crons get skipped a lot, which is why the sync kept stalling.
+# Instead this fires every 2 HOURS (low-frequency crons are honoured far more
+# reliably) and each run then LOOPS inside the job for ~1h50m. Each loop does a
+# QUICK status-only refresh; every HEAVY_INTERVAL_SEC it does a FULL sync
+# (repairs, parts, notes, prune). Because the run is long, it completes several
+# full passes, so EVERY kart's notes get pulled in and stay current. Runs chain
+# back-to-back for near-continuous coverage. The "Run workflow" button starts it now.
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch: {}
 
 # Never let two of these run on top of each other.
@@ -19,7 +20,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 120
     steps:
       - name: Get the files from the repo
         uses: actions/checkout@v4
@@ -40,14 +41,14 @@ jobs:
           SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
           SITE: sydney
           GAP_SECONDS: '5'           # <-- gap between cycles. Fast pass now reads ~5 list pages, so this can be low. Raise if RaceFacer gets slow.
-          HEAVY_INTERVAL_SEC: '300'  # <-- full sync (repairs/parts/notes) runs at most this often. 300 = every 5 min.
+          HEAVY_INTERVAL_SEC: '1200' # <-- full sync (repairs/parts/notes) runs at most this often. 1200 = every 20 min.
         run: |
-          # Keep refreshing status for ~29 min, but only let the heavier FULL sync (which
-          # takes several minutes over the 209 karts) START in the first ~18 min. After that
-          # we force status-only cycles, so a full sync can never overrun the job timeout and
-          # get cancelled. The next scheduled run picks up the full sync again.
-          end=$(( SECONDS + 1740 ))
-          heavy_until=$(( SECONDS + 1080 ))
+          # Keep the job alive ~1h50m. Allow the heavier FULL sync to START only in the first
+          # ~90 min; after that, force status-only cycles so a full sync can never overrun the
+          # job timeout. Over ~90 min the loop completes several full passes, so every kart's
+          # notes/repairs/parts get pulled in. The next run (2h cron) keeps it going.
+          end=$(( SECONDS + 6600 ))
+          heavy_until=$(( SECONDS + 5400 ))
           while [ $SECONDS -lt $end ]; do
             if [ $SECONDS -lt $heavy_until ]; then
               node racefacer-sync.js || echo "sync cycle failed — will retry next loop"
