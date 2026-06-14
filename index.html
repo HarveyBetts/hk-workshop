@@ -969,6 +969,24 @@
     @keyframes bcnpopindown{from{opacity:0;transform:translate(-50%,10px)}}
     .bcnpop.below:after{top:-7px;bottom:auto;border-right:none;border-bottom:none;border-left:1px solid var(--b2);border-top:1px solid var(--b2)}
     @media(max-width:700px){ .bcnside{flex:1 1 100%} .bcnmap{flex:1 1 100%} }
+    /* Mobile beacon detail sheet — covers the beacons screen, track dimmed/blurred behind, ✕ to close. */
+    .bcnsheet{position:absolute;inset:0;z-index:46;display:none;align-items:center;justify-content:center;padding:20px}
+    .bcnsheet.on{display:flex}
+    .bcnsheet:before{content:"";position:absolute;inset:0;background:rgba(7,11,18,.62);-webkit-backdrop-filter:blur(5px) saturate(.8);backdrop-filter:blur(5px) saturate(.8)}
+    .bcnsheetx{position:absolute;top:14px;right:14px;z-index:2;width:46px;height:46px;border-radius:13px;background:var(--card2);border:1px solid var(--b2);color:var(--t1);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .bcnsheetx:active{transform:scale(.92)}
+    .bcnsheetinner{position:relative;z-index:1;width:100%;max-width:430px;animation:bcnsheetin .2s cubic-bezier(.2,.7,.2,1)}
+    @keyframes bcnsheetin{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+    .bcnsheet .bsname{display:flex;align-items:center;gap:13px;font-size:27px;font-weight:800;line-height:1.15;margin-bottom:20px}
+    .bcnsheet .bssw{width:22px;height:22px;border-radius:6px;border:1px solid rgba(255,255,255,.28);flex:0 0 auto;background:var(--bc);box-shadow:0 0 18px var(--bc)}
+    .bcnsheet .bsrow{display:flex;gap:13px;margin-bottom:13px}
+    .bcnsheet .bstag{flex:1;background:var(--card);border:1px solid var(--b2);border-radius:16px;padding:16px 18px;text-align:left}
+    .bcnsheet .bsk{font-size:11px;letter-spacing:.14em;color:var(--t2);text-transform:uppercase;margin-bottom:7px}
+    .bcnsheet .bsv{font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+    .bcnsheet .bsfn{background:var(--card);border:1px solid var(--b1);border-radius:16px;padding:14px 16px;font-size:15px;color:var(--t1);line-height:1.4}
+    .bcnsheet .bsfn .lbl{font-size:11px;letter-spacing:.14em;color:var(--t2);text-transform:uppercase;margin-bottom:6px}
+    .bcnsheet .bszone{display:inline-flex;align-items:center;gap:8px;margin-top:15px;font-size:13.5px;color:var(--t2)}
+    .bcnsheet .bszone i{width:12px;height:12px;border-radius:3px;background:var(--bc)}
   </style>
 </head>
 <body>
@@ -1249,6 +1267,11 @@
           <div class="bcnfnlist" id="bcnFnList"></div>
         </div>
       </div>
+      <!-- Mobile-only near-fullscreen beacon detail sheet (desktop keeps the popup + side list). -->
+      <div class="bcnsheet" id="bcnSheet" aria-hidden="true" onclick="if(event.target===this)closeBeaconSheet()">
+        <button class="bcnsheetx" onclick="closeBeaconSheet()" aria-label="Close beacon">✕</button>
+        <div class="bcnsheetinner" id="bcnSheetInner"></div>
+      </div>
     </div>
 
     <!-- KART INFO (landing) -->
@@ -1276,6 +1299,7 @@
     <div class="scr" id="s-kartlist">
       <div class="phdr">
         <button class="back" onclick="back()"> Back</button>
+        <button class="refresh-btn" id="rb-kartlist" onclick="loadKartInfo()"><span class="ricon">🔄</span><span id="rt-kartlist">Refresh</span></button>
       </div>
       <div class="sb">
         <div id="ki-karts">
@@ -2106,11 +2130,18 @@ function playSplash(full){
 }
 /* Replay the intro (used by tapping the top-left logo on the PIN screen). */
 function replaySplash(){ playSplash(true); }
-/* Top-left logo: on the PIN screen, replay the intro; otherwise go Home. */
+/* Top-left logo: on the PIN screen, replay the intro; otherwise reset to a fresh,
+   re-animated Home and re-pull live data (mirrors the post-login sequence). */
 function logoTap(){
   var cur=stk&&stk.length?stk[stk.length-1]:null;
-  if(cur==='pin'){ replaySplash(); return; }
-  goHome();
+  if(cur==='pin'){ replaySplash(); return; }       // PIN screen: replay the full intro
+  if(!cu) return;                                   // not logged in: nothing to reset
+  homeAnimated=false;                               // let the tiles fan in again (updateUI('home') replays animTiles)
+  if(cur==='home'){ showRoot('home'); }             // already home -> hard reset to a fresh home
+  else { goHome(); }                                // elsewhere -> animated slide home (also lands on updateUI('home'))
+  playSplash(false);                                // replay the HK logo animation
+  loadSites(function(){ applySiteAccent('home'); }); // refresh sites + site accent
+  if(typeof loadRfKarts==='function'){ try{ loadRfKarts(function(){}); }catch(e){} } // re-pull the fleet
 }
 function go(id){
   if(navLock) return;  // block spam taps during in-flight transition
@@ -3693,6 +3724,8 @@ function renderBeacons(t){
   }
 }
 function showBeaconPop(b,el){
+  // On phones, open the near-fullscreen sheet instead of the cramped popup (desktop keeps the popup).
+  if(window.matchMedia&&window.matchMedia('(max-width:700px)').matches){ showBeaconSheet(b); return; }
   closeBeaconPop();
   var stage=document.querySelector('#s-beacons .bcnstage'); if(!stage) return;
   var below=(parseFloat(el.style.top)||0) < 42;   // near the top edge -> drop the card below the beacon
@@ -3703,6 +3736,34 @@ function showBeaconPop(b,el){
   stage.appendChild(p); bcnPop=p;
 }
 function closeBeaconPop(){ if(bcnPop){ bcnPop.remove(); bcnPop=null; } }
+// Map a beacon's colour to the legend label (green=Finish, yellow=Slow, cyan=Caution).
+function bcnZone(color){
+  switch(String(color||'').toUpperCase()){
+    case '#00C853': return 'Finish / go';
+    case '#FFD600': return 'Slow zone';
+    case '#00CFFF': return 'Caution';
+    default: return null;
+  }
+}
+// Phone: near-fullscreen beacon detail with the track dimmed behind. Shows name, S/N, F/N,
+// the colour, and what that F/N does (from DEHAARDT_FN). Close with the ✕ or by tapping outside.
+function showBeaconSheet(b){
+  var sheet=document.getElementById('bcnSheet'), inner=document.getElementById('bcnSheetInner'); if(!sheet||!inner) return;
+  var fn=DEHAARDT_FN.find(function(f){ return String(f.fn)===String(b.fn); });
+  var zone=bcnZone(b.color);
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); };
+  inner.style.setProperty('--bc', b.color);
+  inner.innerHTML=
+    '<div class="bsname"><span class="bssw"></span>'+esc(b.name)+'</div>'
+    +'<div class="bsrow">'
+      +'<div class="bstag"><div class="bsk">Sector S/N</div><div class="bsv">'+esc(b.sn)+'</div></div>'
+      +'<div class="bstag"><div class="bsk">Function F/N</div><div class="bsv">'+esc(b.fn)+'</div></div>'
+    +'</div>'
+    +'<div class="bsfn"><div class="lbl">What F/N '+esc(b.fn)+' does</div>'+(fn?esc(fn.desc):'Not in the Dehaardt list yet.')+'</div>'
+    +(zone?'<div class="bszone"><i></i>'+zone+'</div>':'');
+  sheet.classList.add('on'); sheet.setAttribute('aria-hidden','false');
+}
+function closeBeaconSheet(){ var sheet=document.getElementById('bcnSheet'); if(sheet){ sheet.classList.remove('on'); sheet.setAttribute('aria-hidden','true'); } }
 function openBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=document.getElementById('bcnScrim'); if(d)d.classList.add('on'); if(s)s.classList.add('on'); }
 function closeBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=document.getElementById('bcnScrim'); if(d)d.classList.remove('on'); if(s)s.classList.remove('on'); }
 function buildBeaconList(curId){
@@ -3745,8 +3806,12 @@ function closeFnRef(){ var m=document.getElementById('bcnFn'); if(m)m.classList.
 /* =================== end BEACONS TAB =================== */
 
 function loadKartInfo(){
-  var btn=document.getElementById('rb-kart'),lbl=document.getElementById('rt-kart');
-  if(btn){btn.classList.add('spinning');if(lbl)lbl.innerText='Updating...';}
+  // Spin whichever refresh button is on the current screen: the landing has rb-kart,
+  // the kart LIST has rb-kartlist. (The screens refactor left the button only on the landing.)
+  var btns=[['rb-kart','rt-kart'],['rb-kartlist','rt-kartlist']]
+    .map(function(p){ return {btn:document.getElementById(p[0]),lbl:document.getElementById(p[1])}; })
+    .filter(function(o){ return o.btn; });
+  btns.forEach(function(o){ o.btn.classList.add('spinning'); if(o.lbl) o.lbl.innerText='Updating...'; });
   loadRfKarts(function(){
     var sub=document.getElementById('ki-site-sub'); if(sub) sub.innerText=kiSubText();
     var ksub=document.getElementById('ki-karts-sub'); if(ksub) ksub.innerText=kiSubText();
@@ -3754,7 +3819,7 @@ function loadKartInfo(){
     var scr=(typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null;
     if(scr==='kartdetail'&&SELECTED_KART){ var live=KART_LIST.find(function(x){return x.rfId===SELECTED_KART.rfId;}); if(live){SELECTED_KART=live; renderKartDetail(live);} else { back(); } }
     else if(scr==='kartlist'){ renderTypeTabs(); renderKartChips(); }
-    if(btn){btn.classList.remove('spinning');if(lbl){lbl.innerText='Updated · just now';setTimeout(function(){if(lbl)lbl.innerText='Refresh';},3000);}}
+    btns.forEach(function(o){ o.btn.classList.remove('spinning'); if(o.lbl){ o.lbl.innerText='Updated · just now'; setTimeout(function(){ if(o.lbl) o.lbl.innerText='Refresh'; },3000); } });
   });
 }
 
