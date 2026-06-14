@@ -9,7 +9,7 @@
 // Optional: RF_KART_IDS (comma list), RF_KART_TYPE_UUIDS (comma list), SITE (default sydney)
 
 const { fetch, Agent } = require('undici');
-const { parseKartDetails, parseRepairs, parseParts, parseKartNotes, parseGarageStatuses } = require('./racefacer-parse');
+const { parseKartDetails, parseRepairs, parseParts, parseKartNotes, parseActiveNotes, parseGarageStatuses } = require('./racefacer-parse');
 const { reconcileDay } = require('./racefacer-reconcile');
 
 const RF_BASE = process.env.RF_BASE || 'https://103.166.146.163';
@@ -95,20 +95,16 @@ async function login() {
 
 // ---- one-time diagnostic probe so we can see exactly what RaceFacer replies ----
 async function probe() {
-  const dump = (label, s) => {
-    const SZ = 1800;
-    console.log('[probe] ===' + label + '_START=== len=' + s.length + ' chunks=' + Math.ceil(s.length / SZ));
-    for (let i = 0; i < s.length; i += SZ) console.log('[probe] ' + label + '#' + String(Math.floor(i / SZ)).padStart(3, '0') + '|' + s.slice(i, i + SZ));
-    console.log('[probe] ===' + label + '_END===');
-  };
   try {
     const a = await rf('/en/administration');
     console.log('[probe] /en/administration -> status=%s location=%s', a.status, a.headers.get('location') || '(none)');
-    // ---- ONE-TIME chunked dump of kart 20 (rf id 46) detail + notes. Remove after. ----
-    const d = await rf('/ajax/garage/kart-details?id=46', { ajax: true });
-    dump('KART20_DETAILS', await d.text());
-    const n = await rf('/ajax/garage/kart-notes?id=46', { ajax: true });
-    dump('KART20_NOTES', await n.text());
+    // ---- Twin diagnostic: does the Twin type page list karts, and what are they named? Remove once Twins sync. ----
+    const TWIN = '00dd982c-d763-4d21-a4ad-a79035495eaf';
+    const html = await (await rf(`/en/administration/garage/garage?kart_type_uuid=${TWIN}`)).text();
+    const st = parseGarageStatuses(html);
+    console.log('[probe] TWIN page len=%s blocks=%s ids=%s', html.length, st.length, JSON.stringify(st.map((k) => k.rfId)));
+    const names = (html.match(/Name:\s*<span class="bold">([^<]*)<\/span>/g) || []).slice(0, 15);
+    console.log('[probe] TWIN raw name spans:', JSON.stringify(names));
   } catch (e) { console.log('[probe] error:', e.message); }
 }
 
@@ -204,27 +200,31 @@ async function syncKart(id, meta) {
   if (phRows.length) await sb('rf_parts_history', { method: 'POST', body: phRows });
 
   let notesWritten = 0;
-  try { notesWritten = await syncKartNotes(id, site); } catch (e) { /* rf_kart_notes table may not exist yet — don't fail the kart */ }
+  // Which notes is RaceFacer currently showing in its top "active" list (starred, not X'd)?
+  // Their fingerprints match the same notes in the Kart Notes table, so we can flag them.
+  const activeFps = new Set(parseActiveNotes(dj.html).map((n) => noteFp(id, n)));
+  try { notesWritten = await syncKartNotes(id, site, activeFps); } catch (e) { /* rf_kart_notes table may not exist yet — don't fail the kart */ }
 
   return { id, name: details.name, type: type, site: site, label: kartLabel(type, details.name), repairs, notesWritten };
 }
 
-// Kart notes (open issues + archive). Cheap by design: reads the kart's current
-// fingerprints from Supabase and only writes notes that are NEW or whose archived
-// state changed, so on a fast loop most cycles write nothing.
-async function syncKartNotes(id, site) {
+// Kart notes -> rf_kart_notes. Full history for the Kart Notes tab, plus an `active` flag marking
+// the notes RaceFacer currently shows in its top list (starred / not X'd). Replaces the kart's notes
+// wholesale each heavy pass so X'd/removed notes and stale flags can't linger. CRITICAL: de-dupe by
+// fingerprint first — RaceFacer can list the exact same note twice, and a bulk upsert with a repeated
+// conflict key throws "cannot affect row a second time", which previously left those karts with NO notes.
+async function syncKartNotes(id, site, activeFps) {
   const notes = parseKartNotes(await rfJson(`/ajax/garage/kart-notes?id=${id}`));
-  if (!notes.length) return 0;
-  const existing = (await sb(`rf_kart_notes?rf_kart_id=eq.${id}&select=note_fp,archived_at`)) || [];
-  const seen = new Map();                          // fingerprint -> was it archived already?
-  for (const r of existing) seen.set(r.note_fp, !!r.archived_at);
-  const rows = [];
+  const rows = [], batch = new Set();
   for (const n of notes) {
     const fp = noteFp(id, n);
-    if (seen.has(fp) && seen.get(fp) === n.archived) continue;   // unchanged — skip
+    if (batch.has(fp)) continue;                 // same note listed twice in RaceFacer -> store once
+    batch.add(fp);
     rows.push({ note_fp: fp, rf_kart_id: id, site, note: n.note,
-      created_at: n.createdIso, created_by: n.createdBy, archived_at: n.archivedIso, archived_by: n.archivedBy });
+      created_at: n.createdIso, created_by: n.createdBy, archived_at: n.archivedIso, archived_by: n.archivedBy,
+      active: activeFps ? activeFps.has(fp) : false });
   }
+  await sb(`rf_kart_notes?rf_kart_id=eq.${id}`, { method: 'DELETE' });   // replace this kart's notes wholesale
   if (rows.length) await sb('rf_kart_notes?on_conflict=note_fp', { method: 'POST', prefer: 'resolution=merge-duplicates', body: rows });
   return rows.length;
 }
