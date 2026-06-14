@@ -114,6 +114,8 @@ const KART_TYPES = {
   'e0abc9ae-153e-41bb-be90-9877e39391c3': { site: 'sydney',    type: 'Intermediate Track' },
   '86ffcdf3-f02e-4eb6-9955-0873c846f9b0': { site: 'sydney',    type: 'Junior Track' },
   '3005c630-1894-47f0-bc47-93979f118d17': { site: 'sydney',    type: 'Mini Track' },
+  '00dd982c-d763-4d21-a4ad-a79035495eaf': { site: 'sydney',    type: 'Twin' },
+  'bde73675-16a9-424f-b659-ada7338a2202': { site: 'sydney',    type: 'BattleKart' },
   '8d460fb0-ffc4-4838-bf6f-667f65095e65': { site: 'melbourne', type: 'Adult Track' },
 };
 
