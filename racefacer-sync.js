@@ -149,6 +149,11 @@ async function sb(path, { method = 'GET', body, prefer } = {}) {
 }
 const dmy = (d) => { const [a, b, c] = (d || '').split('.'); return c ? `${c}-${b}-${a}` : null; };
 const noteFp = (id, n) => `${id}|${n.createdIso || ''}|${n.note}`.slice(0, 250);
+// RaceFacer reports note times in its own clock with no zone. Pin that clock here and store a real
+// UTC instant, so the app can render it in whatever timezone the device is in. Default 'Z' (UTC);
+// set RF_SOURCE_TZ to e.g. '+01:00' if RaceFacer turns out to be on Central European time.
+const RF_TZ = process.env.RF_SOURCE_TZ || 'Z';
+const toUtc = (naive) => { if (!naive) return null; const d = new Date(naive + RF_TZ); return isNaN(d.getTime()) ? naive : d.toISOString(); };
 
 // A real kart's name is just its number — 1 to 3 digits (e.g. 1, 18, 104).
 // Anything else ("George", "Late 2", "Archived 3", test entries) is not real fleet.
@@ -228,7 +233,7 @@ async function syncKartNotes(id, site, activeFps) {
     if (batch.has(fp)) continue;                 // same note listed twice in RaceFacer -> store once
     batch.add(fp);
     rows.push({ note_fp: fp, rf_kart_id: id, site, note: n.note,
-      created_at: n.createdIso, created_by: n.createdBy, archived_at: n.archivedIso, archived_by: n.archivedBy,
+      created_at: toUtc(n.createdIso), created_by: n.createdBy, archived_at: toUtc(n.archivedIso), archived_by: n.archivedBy,
       active: activeFps ? activeFps.has(fp) : false });
   }
   if (rows.length) await sb('rf_kart_notes?on_conflict=note_fp', { method: 'POST', prefer: 'resolution=merge-duplicates', body: rows });
