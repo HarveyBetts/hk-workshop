@@ -2037,14 +2037,31 @@ function sbFinanceData(cb){
 /* Realtime: keep parts fresh across every device */
 function startRealtime(){
   function _reload(){ loadParts(function(d){ if(d){parts=d;try{sessionStorage.setItem('hk_p',JSON.stringify(parts));}catch(e){} var cur=(typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null; if(cur&&typeof refreshParts==='function'){try{refreshParts(cur,true);}catch(e){}} }}); }
+  function _curScr(){ return (typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null; }
+  // A single sync pass writes ALL ~155 kart rows at once, so realtime fires ~155 events in a burst.
+  // Doing the work per-event reloads + re-renders the whole grid 155x — that's the visible "flashing"
+  // (and it thrashes the phone). Debounce so a burst settles into ONE refresh; maxWait keeps updates
+  // flowing (every ~2.5s) during a long continuous write instead of stalling.
+  function _debounce(fn, wait, maxWait){
+    var t=null, first=0;
+    return function(){
+      var now=Date.now(); if(!first) first=now;
+      if(maxWait && now-first>=maxWait){ first=0; clearTimeout(t); t=null; fn(); return; }
+      clearTimeout(t); t=setTimeout(function(){ first=0; t=null; fn(); }, wait);
+    };
+  }
+  var _rtKarts = _debounce(function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} }, 600, 2500);
+  var _rtMech  = _debounce(function(){ if(_curScr()==='manager'&&typeof renderMechToday==='function'){try{renderMechToday();}catch(e){}} }, 600, 2500);
+  var _rtMgr   = _debounce(function(){ if(_curScr()==='manager'&&typeof loadMgr==='function'){try{loadMgr();}catch(e){}} }, 700, 3000);
+  var _rtBadge = _debounce(function(){ if(typeof refreshRfBadge==='function'){try{refreshRfBadge();}catch(e){}} }, 800, 3000);
+  var _rtParts = _debounce(_reload, 500, 2500);
   try{
-    SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _reload(); }).subscribe();
-    SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _reload(); }).subscribe();
-    // RaceFacer tables -> refresh whatever RF view is open, live.
-    function _curScr(){ return (typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null; }
-    SBC.channel('rfk-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} }).subscribe();
-    SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} if(_curScr()==='manager'&&typeof renderMechToday==='function'){try{renderMechToday();}catch(e){}} }).subscribe();
-    SBC.channel('rfd-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_discrepancies'},function(){ if(_curScr()==='manager'&&typeof loadMgr==='function'){try{loadMgr();}catch(e){}} if(typeof refreshRfBadge==='function'){try{refreshRfBadge();}catch(e){}} }).subscribe();
+    SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _rtParts(); }).subscribe();
+    SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _rtParts(); }).subscribe();
+    // RaceFacer tables -> refresh whatever RF view is open, live (debounced so a sync burst = one refresh).
+    SBC.channel('rfk-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ _rtKarts(); }).subscribe();
+    SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ _rtKarts(); _rtMech(); }).subscribe();
+    SBC.channel('rfd-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_discrepancies'},function(){ _rtMgr(); _rtBadge(); }).subscribe();
   }catch(e){}
 }
 startRealtime();
@@ -3507,8 +3524,19 @@ function readableColor(hex){
   function hx(x){ return ('0'+Math.round(h2r(p,q,x)*255).toString(16)).slice(-2); }
   return '#'+hx(h+1/3)+hx(h)+hx(h-1/3);
 }
+// Never let kart reloads stack: if one is already in flight, remember to run exactly one more
+// after it (instead of firing a fresh 4-table fetch per caller). With the realtime debounce above
+// this is belt-and-suspenders, but it's what guarantees the app can't thrash itself into a reload.
+var _rfBusy=false, _rfQueued=false, _rfQueuedCb=null;
 function loadRfKarts(cb){
+  if(_rfBusy){ _rfQueued=true; if(cb) _rfQueuedCb=cb; return; }
+  _rfBusy=true;
   var site=currentSite||'sydney';
+  function _fin(thisCb){
+    _rfBusy=false;
+    if(thisCb){ try{thisCb();}catch(e){} }
+    if(_rfQueued){ _rfQueued=false; var c=_rfQueuedCb; _rfQueuedCb=null; loadRfKarts(c); }
+  }
   Promise.all([
     sbFetchAll('rf_karts','*','site',site,'rf_id'),
     sbFetchAll('rf_repairs','id,rf_kart_id,description,date_discovered,date_repaired,mileage,cost,mechanic,notes',null,null,'id'),
@@ -3552,8 +3580,8 @@ function loadRfKarts(cb){
     });
     Object.keys(RF_NOTES_BY_ID).forEach(function(id){ RF_NOTES_BY_ID[id].sort(function(a,b){return String(b.createdIso).localeCompare(String(a.createdIso));}); });
     RF_LOADED=true;
-    if(cb)cb();
-  }).catch(function(){ if(cb)cb(); });
+    _fin(cb);
+  }).catch(function(){ _fin(cb); });
 }
 
 var KART_TYPE_ORDER=['Adult','Intermediate','Junior','Mini','Twin','BattleKart'];
