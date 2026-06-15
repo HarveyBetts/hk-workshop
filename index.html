@@ -727,6 +727,37 @@
     .m-pane{display:none;flex:1;flex-direction:column;min-height:0}
     .m-pane.active{display:flex}
     .m-pane-title{flex:1;font-size:15px;font-weight:800;align-self:center}
+    /* Beacon Designer */
+    .bd-wrap{flex:1;min-height:0;overflow:auto;padding:4px 18px calc(env(safe-area-inset-bottom) + 20px)}
+    .bd-track{width:100%;background:var(--card);border:1px solid var(--b1);color:var(--t1);font-family:inherit;font-size:14px;font-weight:600;padding:11px 12px;border-radius:11px;margin-bottom:10px}
+    .bd-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .bd-btn{background:var(--card);border:1px solid var(--b1);color:var(--t1);font-family:inherit;font-weight:700;font-size:13px;padding:9px 13px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .bd-btn:hover{background:var(--card2)}
+    .bd-save{background:var(--acc);border-color:var(--acc);color:#04222b}
+    .bd-save:disabled{opacity:.45;cursor:default}
+    .bd-status{font-size:12px;color:var(--t2);margin-left:auto;text-align:right}
+    .bd-stage{position:relative;background:var(--card);border:1px solid var(--b1);border-radius:14px;overflow:hidden;min-height:200px;display:flex;align-items:center;justify-content:center}
+    .bd-empty,.bd-drop{padding:34px 16px;text-align:center;color:var(--t2);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:12px;line-height:1.5}
+    .bd-dropi{font-size:34px;opacity:.85}
+    .bd-canvas{position:relative;width:100%;touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
+    .bd-bp{display:block;width:100%;height:auto;-webkit-user-drag:none;pointer-events:none}
+    .bd-mk{position:absolute;width:24px;height:24px;transform:translate(-50%,-50%);border-radius:50%;background:var(--bc,#34C759);border:2px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.5);cursor:grab;display:flex;align-items:center;justify-content:center;touch-action:none}
+    .bd-mk:active{cursor:grabbing}
+    .bd-mk.sel{outline:3px solid var(--acc);outline-offset:2px;z-index:4}
+    .bd-mkn{font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.85);pointer-events:none}
+    .bd-panel{margin-top:12px;background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:14px}
+    .bd-phint{font-size:12.5px;color:var(--t2);line-height:1.55;text-align:center}
+    .bd-ptitle{font-size:13px;font-weight:800;color:var(--t1);margin-bottom:10px}
+    .bd-pgrid{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:560px){.bd-pgrid{grid-template-columns:1fr 1fr 1fr}}
+    .bd-f{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--t2);font-weight:600}
+    .bd-f input{background:var(--bg);border:1px solid var(--b1);color:var(--t1);font-family:inherit;font-size:14px;padding:9px 10px;border-radius:9px}
+    .bd-swrow{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .bd-swlbl{font-size:11px;color:var(--t2);font-weight:600;margin-right:2px}
+    .bd-sw{width:30px;height:30px;border-radius:8px;border:2px solid transparent;cursor:pointer}
+    .bd-sw.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--t1)}
+    .bd-del{margin-top:14px;width:100%;background:rgba(255,59,48,.12);border:1px solid rgba(255,59,48,.4);color:#FF453A;font-family:inherit;font-weight:700;font-size:13px;padding:10px;border-radius:10px;cursor:pointer}
+    .bd-del:hover{background:rgba(255,59,48,.2)}
     .m-staff-foot{flex-shrink:0;padding:10px 18px calc(env(safe-area-inset-bottom) + 16px);border-top:1px solid var(--b1)}
     .m-staff-foot .m-save{width:100%}
     .m-tool-desc{font-size:13px;color:var(--t2);line-height:1.5;margin-top:6px}
@@ -921,6 +952,8 @@
     .bcnhint{color:var(--t2);font-size:12.5px;margin-bottom:14px}
     .bcnmap{flex:1 1 440px;min-width:0;position:relative;border-radius:18px;padding:12px;overflow:hidden;background:radial-gradient(120% 80% at 50% -8%, rgba(0,207,255,.10), transparent 55%), radial-gradient(85% 85% at 94% 114%, rgba(224,64,251,.10), transparent 55%), var(--card);box-shadow:0 0 0 1px rgba(0,207,255,.15), 0 24px 60px rgba(0,0,0,.5), inset 0 0 70px rgba(0,207,255,.045)}
     .bcnstage{position:relative;width:100%;aspect-ratio:1000/660}
+    .bcnstage.hasbp{aspect-ratio:auto}
+    .bcnbp{display:block;width:100%;height:auto;border-radius:inherit;-webkit-user-drag:none}
     .bcnstage svg{position:absolute;inset:0;width:100%;height:100%}
     .bcn-flow{stroke-dasharray:2 16;animation:bcnflow 7s linear infinite}
     @keyframes bcnflow{to{stroke-dashoffset:-180}}
@@ -1495,6 +1528,7 @@
     <button class="m-tab" id="mtab-staff" onclick="mTab('staff')">👥 Staff</button>
     <button class="m-tab" id="mtab-sites" onclick="mTab('sites')">📍 Sites</button>
     <button class="m-tab" id="mtab-tools" onclick="mTab('tools')">⚙️ Tools</button>
+    <button class="m-tab" id="mtab-tracks" onclick="mTab('tracks')">🏁 Tracks</button>
   </div>
   <div class="m-pane active" id="m-pane-parts">
     <div class="m-tools">
@@ -1574,6 +1608,20 @@
       </div>
       <div class="mc"><div class="mct">Inventory summary</div><div id="m-tool-stats"></div></div>
       <div class="mc"><div class="mct">Inventory summary</div><div id="m-tool-stats"></div></div>
+    </div>
+  </div>
+  <div class="m-pane" id="m-pane-tracks">
+    <div class="m-tools"><div class="m-pane-title">Beacon Designer</div></div>
+    <div class="bd-wrap">
+      <select class="bd-track" id="bd-track" onchange="bdSelectTrack(this.value)"><option value="">Loading tracks…</option></select>
+      <div class="bd-bar">
+        <label class="bd-btn bd-up" id="bd-upbtn" style="display:none">⤓ Replace blueprint<input type="file" accept="image/*" style="display:none" onchange="bdUploadBlueprint(this)"></label>
+        <button class="bd-btn bd-save" id="bd-savebtn" onclick="bdSave()" disabled>Save layout</button>
+        <span class="bd-status" id="bd-status"></span>
+      </div>
+      <div class="bd-stage" id="bd-stage"><div class="bd-empty">Pick a track above to start.</div></div>
+      <div class="bd-panel" id="bd-panel"><div class="bd-phint">Pick a track, upload its car-park blueprint, then tap the blueprint to drop beacons.</div></div>
+      <datalist id="bd-fnlist"></datalist>
     </div>
   </div>
 </div>
@@ -3922,7 +3970,8 @@ function mapDbTrack(r){
     return { name:b.name||'Beacon', sn:b.sn||'', fn:b.fn||'', color:b.color||'#00CFFF', x:(b.x==null?50:+b.x), y:(b.y==null?50:+b.y) };
   });
   return { id:r.id, rfConfigId:r.rf_config_id, name:String(r.name||'Track').trim(), site:r.site,
-           live:!!r.live, map:(!!r.has_map||!!r.live), mapSvg:(r.has_map&&r.map_svg)?r.map_svg:null, beacons:bcns };
+           live:!!r.live, map:(!!r.has_map||!!r.blueprint_url||!!r.live),
+           blueprintUrl:(r.blueprint_url||null), mapSvg:(r.has_map&&r.map_svg)?r.map_svg:null, barriers:(r.barriers||null), beacons:bcns };
 }
 function loadBeaconTracks(cb){
   if(typeof sbFetchAll!=='function'){ if(cb)cb(); return; }
@@ -3965,8 +4014,9 @@ function renderBeacons(t){
       +'This layout hasn\'t been drawn yet \u2014 add it in Master Access \u2192 Beacons.</div></div>';
     return;
   }
-  var html='<div class="bcnstage">'+(t.mapSvg||BCN_MAP_SVG);
-  html+='<div class="bcnsf" style="left:26%;top:20%;">\u258e Start / Finish</div>';
+  var stageBg=t.blueprintUrl ? '<img class="bcnbp" src="'+t.blueprintUrl+'" alt="">' : (t.mapSvg||BCN_MAP_SVG);
+  var html='<div class="bcnstage'+(t.blueprintUrl?' hasbp':'')+'">'+stageBg;
+  if(!t.blueprintUrl) html+='<div class="bcnsf" style="left:26%;top:20%;">\u258e Start / Finish</div>';
   t.beacons.forEach(function(b,i){
     html+='<button class="bcnpt" style="left:'+b.x+'%;top:'+b.y+'%;--bc:'+b.color+'" data-i="'+i+'" aria-label="Beacon '+b.name+', sector '+b.sn+', function '+b.fn+'"></button>';
   });
@@ -4583,7 +4633,7 @@ function mSearch(){ mRenderList(); }
 /* ----- Master tabs ----- */
 var mStaffDraft=[], mStaffLoaded=false;
 function mTab(name){
-  ['parts','staff','sites','tools'].forEach(function(t){
+  ['parts','staff','sites','tools','tracks'].forEach(function(t){
     var tab=document.getElementById('mtab-'+t), pane=document.getElementById('m-pane-'+t);
     if(tab) tab.classList.toggle('active',t===name);
     if(pane) pane.classList.toggle('active',t===name);
@@ -4591,6 +4641,148 @@ function mTab(name){
   if(name==='staff'&&!mStaffLoaded) msLoad();
   if(name==='sites'&&!mSitesLoaded) siLoad();
   if(name==='tools'){ mToolsStats(); mQRCount(); qrDesignerInit(); }
+  if(name==='tracks') bdOpen();
+}
+
+/* ===== Beacon Designer (Master Access -> Tracks) ===================================
+   Upload a track's car-park blueprint, drop/drag beacons, set name + S/N + F/N + colour,
+   and save. Reads use the anon key; the save is a privileged write via the master-tracks
+   Edge Function (service key stays on the server). Beacon x/y are % of the blueprint. */
+var BD_TRACKS=[], BD_CUR=null, BD_SEL=-1, BD_DIRTY=false;
+var BD_COLORS=[['#34C759','Finish / Go'],['#FFD600','Slow'],['#00CFFF','Caution'],['#FF3B30','Stop']];
+function bdEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];}); }
+function bdClamp(v){ return v<0?0:(v>100?100:v); }
+function bdStatus(m){ var s=document.getElementById('bd-status'); if(s) s.textContent=m||''; }
+
+function bdOpen(){
+  var dl=document.getElementById('bd-fnlist');
+  if(dl && typeof DEHAARDT_FN!=='undefined') dl.innerHTML=DEHAARDT_FN.map(function(f){return '<option value="'+bdEsc(String(f.fn))+'">'+bdEsc(f.desc||'')+'</option>';}).join('');
+  if(typeof loadBeaconTracks!=='function'){ return; }
+  BEACON_TRACKS_DB=null;                       // always pull fresh on open
+  loadBeaconTracks(function(){ BD_TRACKS=(BEACON_TRACKS_DB||[]).slice(); bdFillSelector(); });
+}
+function bdFillSelector(){
+  var sel=document.getElementById('bd-track'); if(!sel) return;
+  if(!BD_TRACKS.length){ sel.innerHTML='<option value="">No tracks synced yet — run a sync first</option>'; return; }
+  var sorted=BD_TRACKS.slice().sort(function(a,b){ return String(a.site).localeCompare(String(b.site)) || (b.live?1:0)-(a.live?1:0) || String(a.name).localeCompare(String(b.name)); });
+  var cur=BD_CUR?BD_CUR.id:'';
+  sel.innerHTML='<option value="">— pick a track —</option>'+sorted.map(function(t){
+    var lbl=(typeof siteLabel==='function'?siteLabel(t.site):t.site)+' · '+t.name+(t.live?' (live)':'')+(t.blueprintUrl?'  ✓ mapped':'');
+    return '<option value="'+bdEsc(t.id)+'"'+(t.id===cur?' selected':'')+'>'+bdEsc(lbl)+'</option>';
+  }).join('');
+}
+function bdSelectTrack(id){
+  if(BD_DIRTY && BD_CUR && !confirm('Discard unsaved changes to '+BD_CUR.name+'?')){ bdFillSelector(); return; }
+  var src=BD_TRACKS.find(function(t){return t.id===id;});
+  if(!src){ BD_CUR=null; BD_SEL=-1; bdRenderStage(); bdRenderPanel(); bdSyncBar(); bdStatus(''); return; }
+  BD_CUR={ id:src.id, name:src.name, site:src.site, blueprintUrl:src.blueprintUrl||null,
+           beacons:(src.beacons||[]).map(function(b){return {name:b.name,sn:b.sn,fn:b.fn,color:b.color,x:b.x,y:b.y};}) };
+  BD_SEL=-1; BD_DIRTY=false; bdStatus(''); bdRenderStage(); bdRenderPanel(); bdSyncBar();
+}
+function bdSyncBar(){
+  var up=document.getElementById('bd-upbtn'), sv=document.getElementById('bd-savebtn');
+  if(up) up.style.display=(BD_CUR&&BD_CUR.blueprintUrl)?'':'none';
+  if(sv) sv.disabled=!(BD_CUR&&BD_DIRTY);
+}
+function bdUploadBlueprint(input){
+  var f=input&&input.files&&input.files[0]; if(!f||!BD_CUR) return;
+  if(!/^image\//.test(f.type)){ bdStatus('Pick an image file'); return; }
+  bdStatus('Loading image…');
+  var rd=new FileReader();
+  rd.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var maxW=1400, sc=Math.min(1,maxW/img.width), w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+      var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      try{ BD_CUR.blueprintUrl=cv.toDataURL('image/jpeg',0.82); }catch(e){ bdStatus('Could not read that image'); return; }
+      BD_DIRTY=true; bdRenderStage(); bdSyncBar(); bdStatus('Blueprint set — tap it to drop beacons, then Save');
+    };
+    img.onerror=function(){ bdStatus('Could not load that image'); };
+    img.src=rd.result;
+  };
+  rd.onerror=function(){ bdStatus('Could not read that file'); };
+  rd.readAsDataURL(f);
+  input.value='';
+}
+function bdRenderStage(){
+  var stage=document.getElementById('bd-stage'); if(!stage) return;
+  if(!BD_CUR){ stage.innerHTML='<div class="bd-empty">Pick a track above to start.</div>'; return; }
+  if(!BD_CUR.blueprintUrl){
+    stage.innerHTML='<div class="bd-drop"><div class="bd-dropi">🗺️</div><div>No blueprint for <b>'+bdEsc(BD_CUR.name)+'</b> yet</div>'
+      +'<label class="bd-btn bd-save">⤓ Upload blueprint image<input type="file" accept="image/*" style="display:none" onchange="bdUploadBlueprint(this)"></label></div>';
+    return;
+  }
+  var h='<div class="bd-canvas" id="bd-canvas"><img class="bd-bp" src="'+BD_CUR.blueprintUrl+'" alt="">';
+  BD_CUR.beacons.forEach(function(b,i){
+    h+='<div class="bd-mk'+(i===BD_SEL?' sel':'')+'" data-i="'+i+'" style="left:'+b.x+'%;top:'+b.y+'%;--bc:'+b.color+'"><span class="bd-mkn">'+(i+1)+'</span></div>';
+  });
+  stage.innerHTML=h+'</div>';
+  bdWireCanvas();
+}
+function bdWireCanvas(){
+  var canvas=document.getElementById('bd-canvas'); if(!canvas) return;
+  canvas.addEventListener('pointerdown',function(e){
+    if(e.target.closest('.bd-mk')) return;                       // markers handle their own
+    var r=canvas.getBoundingClientRect();
+    bdAddBeacon(bdClamp((e.clientX-r.left)/r.width*100), bdClamp((e.clientY-r.top)/r.height*100));
+  });
+  canvas.querySelectorAll('.bd-mk').forEach(function(mk){
+    mk.addEventListener('pointerdown',function(e){
+      e.stopPropagation(); e.preventDefault();
+      var i=+mk.dataset.i; bdSelectBeacon(i);
+      var r=canvas.getBoundingClientRect(), moved=false;
+      try{ mk.setPointerCapture(e.pointerId); }catch(_){}
+      function mv(ev){ moved=true; var x=bdClamp((ev.clientX-r.left)/r.width*100), y=bdClamp((ev.clientY-r.top)/r.height*100); BD_CUR.beacons[i].x=x; BD_CUR.beacons[i].y=y; mk.style.left=x+'%'; mk.style.top=y+'%'; BD_DIRTY=true; }
+      function up(){ try{ mk.releasePointerCapture(e.pointerId); }catch(_){} mk.removeEventListener('pointermove',mv); mk.removeEventListener('pointerup',up); if(moved){ bdSyncBar(); bdStatus('Moved — remember to Save'); } }
+      mk.addEventListener('pointermove',mv); mk.addEventListener('pointerup',up);
+    });
+  });
+}
+function bdAddBeacon(x,y){
+  if(!BD_CUR) return;
+  BD_CUR.beacons.push({name:'Beacon '+(BD_CUR.beacons.length+1),sn:'',fn:'',color:'#34C759',x:x,y:y});
+  BD_SEL=BD_CUR.beacons.length-1; BD_DIRTY=true; bdRenderStage(); bdRenderPanel(); bdSyncBar(); bdStatus('Beacon added — set its details below');
+}
+function bdSelectBeacon(i){
+  BD_SEL=i;
+  var canvas=document.getElementById('bd-canvas');
+  if(canvas) canvas.querySelectorAll('.bd-mk').forEach(function(mk){ mk.classList.toggle('sel',+mk.dataset.i===i); });
+  bdRenderPanel();
+}
+function bdRenderPanel(){
+  var p=document.getElementById('bd-panel'); if(!p) return;
+  if(BD_SEL<0||!BD_CUR||!BD_CUR.beacons[BD_SEL]){ p.innerHTML='<div class="bd-phint">'+(BD_CUR&&BD_CUR.blueprintUrl?'Tap the blueprint to drop a beacon, or tap an existing one to edit it.':'Pick a track, upload its blueprint, then tap to drop beacons.')+'</div>'; return; }
+  var b=BD_CUR.beacons[BD_SEL];
+  var sw=BD_COLORS.map(function(c){ return '<button class="bd-sw'+(String(b.color).toUpperCase()===c[0]?' on':'')+'" style="background:'+c[0]+'" title="'+c[1]+'" onclick="bdSetColor(\''+c[0]+'\')"></button>'; }).join('');
+  p.innerHTML='<div class="bd-ptitle">Beacon '+(BD_SEL+1)+'</div>'
+    +'<div class="bd-pgrid">'
+    +'<label class="bd-f"><span>Name</span><input value="'+bdEsc(b.name)+'" oninput="bdField(\'name\',this.value)"></label>'
+    +'<label class="bd-f"><span>S/N (serial)</span><input value="'+bdEsc(b.sn)+'" oninput="bdField(\'sn\',this.value)"></label>'
+    +'<label class="bd-f"><span>F/N (function)</span><input list="bd-fnlist" value="'+bdEsc(b.fn)+'" oninput="bdField(\'fn\',this.value)"></label>'
+    +'</div>'
+    +'<div class="bd-swrow"><span class="bd-swlbl">Colour</span>'+sw+'</div>'
+    +'<button class="bd-del" onclick="bdDeleteBeacon()">Delete this beacon</button>';
+}
+function bdField(f,v){ if(BD_SEL<0||!BD_CUR.beacons[BD_SEL]) return; BD_CUR.beacons[BD_SEL][f]=v; BD_DIRTY=true; bdSyncBar(); }
+function bdSetColor(c){ if(BD_SEL<0||!BD_CUR.beacons[BD_SEL]) return; BD_CUR.beacons[BD_SEL].color=c; BD_DIRTY=true; var mk=document.querySelector('.bd-mk[data-i="'+BD_SEL+'"]'); if(mk) mk.style.setProperty('--bc',c); bdRenderPanel(); bdSyncBar(); }
+function bdDeleteBeacon(){ if(BD_SEL<0||!BD_CUR) return; BD_CUR.beacons.splice(BD_SEL,1); BD_SEL=-1; BD_DIRTY=true; bdRenderStage(); bdRenderPanel(); bdSyncBar(); bdStatus('Beacon removed — Save to apply'); }
+function bdSave(){
+  if(!BD_CUR){ return; }
+  if(!masterPin){ bdStatus('Re-enter Master Access first'); return; }
+  var sv=document.getElementById('bd-savebtn'); if(sv) sv.disabled=true; bdStatus('Saving…');
+  fetch(SB_FN+'master-tracks',{method:'POST',headers:HDRS,body:JSON.stringify({
+    masterPin:masterPin, op:'save', trackId:BD_CUR.id, blueprintUrl:BD_CUR.blueprintUrl||null,
+    beacons:BD_CUR.beacons.map(function(b){return {name:b.name,sn:b.sn,fn:b.fn,color:b.color,x:Math.round(b.x*10)/10,y:Math.round(b.y*10)/10};})
+  })}).then(function(r){return r.json();}).then(function(res){
+    if(res&&res.success){
+      BD_DIRTY=false; bdStatus('Saved \u2713'); bdSyncBar();
+      var src=BD_TRACKS.find(function(t){return t.id===BD_CUR.id;});
+      if(src){ src.blueprintUrl=BD_CUR.blueprintUrl||null; src.map=(!!src.blueprintUrl||!!src.live); src.beacons=BD_CUR.beacons.map(function(b){return {name:b.name,sn:b.sn,fn:b.fn,color:b.color,x:b.x,y:b.y};}); }
+      BEACON_TRACKS_DB=null;                                      // beacons tab re-pulls fresh next open
+      bdFillSelector();
+    } else { bdStatus((res&&res.message)?('Save failed: '+res.message):'Save failed'); bdSyncBar(); }
+  }).catch(function(){ bdStatus('Connection error — check the master-tracks function is deployed'); bdSyncBar(); });
 }
 /* ----- Staff editor (server-backed, gated by the master code) ----- */
 function msLoad(){
