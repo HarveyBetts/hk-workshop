@@ -107,10 +107,12 @@ async function syncTracks() {
   if (!cfgs.length) { console.log('[tracks] no track_configurations — skipping'); return; }
   const byName = new Map(cfgs.map((c) => [String(c.name || '').trim().toLowerCase(), c]));
 
-  // 2) which layout(s) are live RIGHT NOW? The main track gets reconfigured between sessions, so one
-  //    day holds many configs — we must pick only what's on track now, not everything that ran today.
-  //    Primary signal: the session(s) RaceFacer flags as running. Fallbacks pick a SINGLE session so
-  //    "live" can never balloon to every layout of the day.
+  // 2) which layout(s) are live RIGHT NOW?
+  //    - MAIN/Adult track: it gets reconfigured between sessions, so a day holds many configs. We pick
+  //      only the CURRENT main layout (most-recent running, else last finished/started) — never every
+  //      layout that ran. Scans back so a closed day still shows the last main layout.
+  //    - SET tracks (Mini/Junior/Intermediate): they run on their own and count as live ONLY when they
+  //      have a session running now (e.g. weekends, alongside the main track).
   const dayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   async function daySessions(ds) {
     try {
@@ -125,28 +127,38 @@ async function syncTracks() {
   const RUN_RE  = /progress|running|active|ongoing|on[-\s]?track|racing|started|\blive\b/i;
   const DONE_RE = /finish|complete|done|closed|ended|past/i;
   const isRunning = (s) => RUN_RE.test(String(s.status || s.state || s.session_status || ''));
+  const cfgOf = (s) => byName.get(String(s.configuration).trim().toLowerCase());
+  const SET_TRACK_IDS = new Set([9, 15, 16]);   // Mini=9, Intermediate=15, Junior=16 — live only while racing
+  const isSet = (c) => !!c && (SET_TRACK_IDS.has(c.id) || /\b(mini|junior|intermediate|inter)\b/i.test(String(c.name || '')));
+  const byTimeDesc = (a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || ''));
 
-  let liveSessions = [];
   const today = new Date();
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    const ss = await daySessions(dayOf(d));
-    if (!ss.length) continue;
-    if (i === 0) console.log('[tracks] today session statuses:', JSON.stringify([...new Set(ss.map((s) => String(s.status || s.state || s.session_status || '')))]));
-    const running = ss.filter(isRunning);
-    if (running.length) { liveSessions = running; break; }                       // exactly what's on track now (main + any concurrent set track)
-    const done = ss.filter((s) => DONE_RE.test(String(s.status || s.state || ''))).sort((a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || '')));
-    if (done.length) { liveSessions = [done[0]]; break; }                         // between races: layout of the most recent finished race
-    const started = ss.filter((s) => String(s.start_time_key || '') <= nowKey).sort((a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || '')));
-    if (started.length) { liveSessions = [started[0]]; break; }                   // last resort (no status field): most recent started session
-    break;                                                                        // today had only future slots — leave live flags as-is
+  const todaySessions = await daySessions(dayOf(today));
+  if (todaySessions.length) {
+    console.log('[tracks] today statuses:', JSON.stringify([...new Set(todaySessions.map((s) => String(s.status || s.state || s.session_status || '')))]));
+    console.log('[tracks] today configs:', JSON.stringify([...new Set(todaySessions.map((s) => String(s.configuration)))]));
   }
+
+  // current MAIN layout (scan back to the most recent day the main track ran)
+  let mainCfg = null;
+  for (let i = 0; i < 14 && !mainCfg; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const ss = (i === 0) ? todaySessions : await daySessions(dayOf(d));
+    const mains = ss.filter((s) => { const c = cfgOf(s); return c && !isSet(c); });
+    if (!mains.length) continue;
+    const pick = mains.filter(isRunning).sort(byTimeDesc)[0]
+              || mains.filter((s) => DONE_RE.test(String(s.status || s.state || ''))).sort(byTimeDesc)[0]
+              || mains.filter((s) => String(s.start_time_key || '') <= nowKey).sort(byTimeDesc)[0]
+              || mains.slice().sort(byTimeDesc)[0];
+    mainCfg = cfgOf(pick);
+  }
+
+  // set tracks running right now (today only — never a stale fallback)
+  const setCfgs = [];
+  todaySessions.filter(isRunning).forEach((s) => { const c = cfgOf(s); if (isSet(c) && !setCfgs.some((x) => x.id === c.id)) setCfgs.push(c); });
+
   const liveIds = new Set(), liveNames = [];
-  liveSessions.forEach((s) => {
-    const c = byName.get(String(s.configuration).trim().toLowerCase());
-    if (c && !liveIds.has(c.id)) { liveIds.add(c.id); liveNames.push(c.name); }
-    else if (!c) console.log('[tracks] live session config not found in layout list:', JSON.stringify(String(s.configuration)));
-  });
+  [mainCfg].concat(setCfgs).forEach((c) => { if (c && !liveIds.has(c.id)) { liveIds.add(c.id); liveNames.push(c.name); } });
   if (!liveIds.size) console.log('[tracks] no live layout resolved this pass — writing names, leaving live flags as-is');
 
   // 3) upsert EVERY layout (names straight from RaceFacer), flagging the live set (and clearing the rest)
