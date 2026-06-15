@@ -606,7 +606,7 @@
     .nf-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
     .nf-h1{font-size:20px;font-weight:800;color:var(--t1)}
     .nf-sub{font-size:12px;color:var(--t2)}
-    .nf-card{background:var(--card);border:1px solid var(--b1);border-radius:14px;overflow:hidden;margin-bottom:9px;animation:nfIn .3s ease both}
+    .nf-card{background:var(--card);border:1px solid var(--b1);border-radius:14px;overflow:hidden;margin-bottom:9px}
     @keyframes nfIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
     .nf-ico{flex:none;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1}
     .nf-sec{width:100%;display:flex;align-items:center;gap:12px;background:transparent;border:none;padding:14px;cursor:pointer;font-family:inherit;text-align:left;color:var(--t1)}
@@ -1201,7 +1201,7 @@
           <div style="font-size:18px;font-weight:800;color:#FF6500;margin-bottom:10px">Coming Soon</div>
           <div style="font-size:14px;color:var(--t2);line-height:2.3;text-align:left;display:inline-block">📊&nbsp; Track layout of the day<br>👥&nbsp; Customer numbers & sessions<br>🔧&nbsp; Parts broken on this layout<br>📦&nbsp; Pre-event stock predictions<br>💰&nbsp; Cost per session<br>🚨&nbsp; Stock discrepancy alerts<br>📈&nbsp; Usage vs booking correlation</div>
         </div>
-        <div class="mc" style="text-align:center"><div style="font-size:13px;color:var(--t2);line-height:1.8">Contact Ross to connect Racefacer API<br><span style="color:var(--acc);font-weight:600">Coming soon</span></div></div>
+        <div class="mc" style="text-align:center"><div style="font-size:13px;color:var(--t2);line-height:1.8">Wiring up the RaceFacer API — track of the day, sessions &amp; predictions<br><span style="color:var(--acc);font-weight:600">Coming soon</span></div></div>
       </div>
     </div>
 
@@ -3321,7 +3321,13 @@ function buildNotifSections(){
   var disc=NOTIF_DISC||[];
   if(disc.length) secs.push({type:'group',key:'rf',icon:'🚨',color:'#FF453A',title:'RaceFacer discrepancies',sub:disc.length+' need'+(disc.length===1?'s':'')+' mapping',count:disc.length,
     items:disc.map(function(r){ var dd=r.day||(r.at?String(r.at).slice(0,10):''); return {t:'Kart '+(r.rf_kart_name||'?'),s:(r.message||((r.part_name||'Part')+' mismatch')),r:(fmtNotifDate(dd)+(r.mechanic?(' · '+r.mechanic):''))}; })});
-  if(NOTIF_FIN) secs.push({type:'alert',key:'fin',icon:'💰',color:'#34C759',title:'Weekly financial update',body:nfMoney(NOTIF_FIN.spendMonth)+' spent this month · stock value '+nfMoney(NOTIF_FIN.stockValue)+' · reorder forecast '+nfMoney(NOTIF_FIN.reorderForecastCost)});
+  if(NOTIF_FIN) secs.push({type:'group',key:'fin',icon:'💰',color:'#34C759',title:'Weekly financial update',sub:nfMoney(NOTIF_FIN.spendMonth)+' spent this month',count:0,
+    items:[
+      {t:'Spent this month',s:'',r:nfMoney(NOTIF_FIN.spendMonth)},
+      {t:'Stock value',s:'',r:nfMoney(NOTIF_FIN.stockValue)},
+      {t:'Reorder forecast',s:(NOTIF_FIN.reorderForecastItems!=null?(NOTIF_FIN.reorderForecastItems+' item'+(NOTIF_FIN.reorderForecastItems===1?'':'s')):''),r:nfMoney(NOTIF_FIN.reorderForecastCost)},
+      {t:'Spent year to date',s:'',r:nfMoney(NOTIF_FIN.spendYTD)}
+    ]});
   return secs;
 }
 
@@ -3331,12 +3337,15 @@ function notifAttentionCount(){
   return n+(NOTIF_DISC||[]).length+(NOTIF_CHECK||[]).length;
 }
 
-function toggleNotifSec(key){ NOTIF_OPEN[key]=!NOTIF_OPEN[key]; renderNotifications(); }
-
-function renderNotifications(){
+var _nfSig='', _nfTimer=null;
+function _renderNotifNow(){
   var pane=document.getElementById('md-pane-notif'); if(!pane) return;
   var secs=buildNotifSections();
   var n=notifAttentionCount();
+  // only repaint when something visible actually changed — stops the flicker from realtime/reload churn
+  var sig=n+'~'+secs.map(function(s){return s.key+':'+s.type+':'+(s.count||0)+':'+(s.sub||'')+':'+(s.body||'')+':'+(NOTIF_OPEN[s.key]?1:0);}).join('|');
+  if(sig===_nfSig && pane.childNodes.length) return;
+  _nfSig=sig;
   var head='<div class="nf-head"><div class="nf-h1">Notifications</div><div class="nf-sub">'+(n?(n+' need'+(n===1?'s':'')+' attention'):'All caught up')+'</div></div>';
   var body;
   if(!secs.length){
@@ -3350,11 +3359,11 @@ function renderNotifications(){
           +'</div></div>';
       }
       var open=!!NOTIF_OPEN[s.key];
+      var cnt=s.count?('<span class="nf-seccount" style="background:'+s.color+'">'+s.count+'</span>'):'';
       var header='<button class="nf-sec" style="--nc:'+s.color+'" onclick="toggleNotifSec(\''+s.key+'\')">'
         +'<span class="nf-ico" style="background:'+s.color+'22">'+s.icon+'</span>'
         +'<span class="nf-secmid"><span class="nf-sectitle">'+nfEsc(s.title)+'</span><span class="nf-secsub">'+nfEsc(s.sub)+'</span></span>'
-        +'<span class="nf-seccount" style="background:'+s.color+'">'+s.count+'</span>'
-        +'<span class="nf-chev'+(open?' open':'')+'">\u203a</span></button>';
+        +cnt+'<span class="nf-chev'+(open?' open':'')+'">\u203a</span></button>';
       var det=open?('<div class="nf-secbody">'+s.items.map(function(it){
         return '<div class="nf-item"><div class="nf-itx"><div class="nf-itt">'+nfEsc(it.t)+'</div>'+(it.s?'<div class="nf-its">'+nfEsc(it.s)+'</div>':'')+'</div>'+(it.r?'<div class="nf-itr">'+nfEsc(it.r)+'</div>':'')+'</div>';
       }).join('')+'</div>'):'';
@@ -3363,6 +3372,9 @@ function renderNotifications(){
   }
   pane.innerHTML='<div class="nf-wrap">'+head+body+'</div>';
 }
+function renderNotifications(){ if(_nfTimer) return; _nfTimer=setTimeout(function(){ _nfTimer=null; _renderNotifNow(); }, 120); }   // coalesce realtime bursts into one paint
+function renderNotifNow(){ if(_nfTimer){ clearTimeout(_nfTimer); _nfTimer=null; } _renderNotifNow(); }
+function toggleNotifSec(key){ NOTIF_OPEN[key]=!NOTIF_OPEN[key]; renderNotifNow(); }
 
 function refreshNotifBadge(){
   var ct=document.getElementById('mdNotifCt'); if(!ct) return;
@@ -3372,7 +3384,7 @@ function refreshNotifBadge(){
 
 // fetch async sources (recent unresolved discrepancies + weekly finance), then render
 function loadNotifications(){
-  renderNotifications();        // instant: stock from parts + whatever's cached
+  _nfSig=''; renderNotifNow();   // force an instant paint on tab open
   loadNotifBadge();             // refresh discrepancies + badge (re-renders the feed if it's open)
   loadCheckAlerts();            // morning kart-check anomalies (e.g. tyre-puncture spikes)
   if(!NOTIF_FIN && typeof sbFinanceData==='function'){ sbFinanceData(function(f){ NOTIF_FIN=f; if(MD_TAB==='notif') renderNotifications(); refreshNotifBadge(); }); }
