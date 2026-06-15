@@ -107,10 +107,9 @@ async function syncTracks() {
   if (!cfgs.length) { console.log('[tracks] no track_configurations — skipping'); return; }
   const byName = new Map(cfgs.map((c) => [String(c.name || '').trim().toLowerCase(), c]));
 
-  // 2) which layout is live now? A session running right now if there is one; otherwise the LAST
-  //    session that ran. We scan today first, then step back through recent days, so a closed day
-  //    still shows the last-used track. (All of a day's sessions share the layout — they only change
-  //    it weekly — so any session on the chosen day gives that day's track.)
+  // 2) which layouts are live now? All distinct configurations on the most recent operating day —
+  //    that's the current main track PLUS any set tracks (Mini/Junior/Inter) that were open. We scan
+  //    today first, then step back through recent days so a closed day still shows the last-used tracks.
   const dayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   async function daySessions(ds) {
     try {
@@ -118,42 +117,33 @@ async function syncTracks() {
       return ((sch && sch.schedule && sch.schedule.data) || []).filter((x) => x && x.type === 'session' && x.configuration);
     } catch (e) { return []; }
   }
-  function pickSession(ss) {
-    if (!ss.length) return null;
-    const running = ss.find((x) => /progress|running|active|live/i.test(x.status || ''));
-    if (running) return running;                                  // a session running right now
-    // start_time_key ("YYYY-MM-DD HH:MM:SS") sorts chronologically as a string — no timezone math.
-    const sorted = ss.slice().sort((a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || '')));
-    return sorted.find((x) => /finish|complete|done|closed/i.test(x.status || '')) || sorted[0];  // last session that ran
-  }
-  let pick = null;
+  let liveSessions = [];
   const today = new Date();
-  for (let i = 0; i < 14 && !pick; i++) {                          // today, then back through recent days
+  for (let i = 0; i < 14 && !liveSessions.length; i++) {            // today, then back to the most recent day with sessions
     const d = new Date(today); d.setDate(d.getDate() - i);
-    pick = pickSession(await daySessions(dayOf(d)));
+    liveSessions = await daySessions(dayOf(d));
   }
-  let cur = null;   // the current/live layout, when we can resolve it from a session
-  if (pick) {
-    const c = byName.get(String(pick.configuration).trim().toLowerCase());
-    if (c) cur = { id: c.id, name: String(c.name).trim() };
-    else console.log('[tracks] session config "%s" not found in the layout list', String(pick.configuration).trim());
-  }
-  if (!cur) console.log('[tracks] no current layout resolved this pass — writing names, leaving live flags as-is');
+  const liveIds = new Set(), liveNames = [];
+  liveSessions.forEach((s) => {
+    const c = byName.get(String(s.configuration).trim().toLowerCase());
+    if (c && !liveIds.has(c.id)) { liveIds.add(c.id); liveNames.push(c.name); }
+  });
+  if (!liveIds.size) console.log('[tracks] no live layouts resolved this pass — writing names, leaving live flags as-is');
 
-  // 3) upsert EVERY layout (names straight from RaceFacer). When we know the current one, flag it live
-  //    and clear the rest in the same bulk upsert. merge-duplicates preserves designer-owned columns
-  //    (map_svg / blueprint_url / barriers) and any beacons.
+  // 3) upsert EVERY layout (names straight from RaceFacer), flagging the live set (and clearing the rest)
+  //    in one bulk upsert. merge-duplicates preserves designer-owned columns (map_svg / blueprint_url /
+  //    barriers) and any beacons.
   const dirOf = (n) => (/anti[-\s]?clockwise/i.test(n) ? 'Anti-Clockwise' : (/clockwise/i.test(n) ? 'Clockwise' : null));
   const nowIso = new Date().toISOString();
   const rows = cfgs.map((c) => {
     const nm = String(c.name || '').trim();
     const row = { site: SITE, rf_config_id: c.id, rf_sub_track_id: c.sub_track_id, name: nm, direction: dirOf(nm), synced_at: nowIso };
-    if (cur) row.live = (c.id === cur.id);   // only touch the live flag when we resolved the current layout
+    if (liveIds.size) row.live = liveIds.has(c.id);   // only touch live flags when we resolved the live set
     return row;
   });
   try {
     await sb('tracks?on_conflict=site,rf_config_id', { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: rows });
-    console.log('[tracks] upserted %s layouts for %s%s', rows.length, SITE, cur ? ` · live = "${cur.name}" (config ${cur.id})` : '');
+    console.log('[tracks] upserted %s layouts for %s%s', rows.length, SITE, liveIds.size ? ` · live (${liveIds.size}): ${liveNames.join(', ')}` : '');
   } catch (e) { console.log('[tracks] upsert failed:', e.message); }
 }
 
