@@ -597,6 +597,35 @@
     @media (min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr)}.stat-num{font-size:32px}}
 
     /* ── Manager ── */
+    /* Manager Dashboard tabs + Notifications inbox */
+    .md-tabs{display:flex;gap:6px;margin:4px 0 16px;background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:5px}
+    .md-tab{flex:1;background:transparent;border:none;color:var(--t2);font-family:inherit;font-weight:800;font-size:14px;padding:10px 12px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s}
+    .md-tab.active{background:#00CFFF;color:#04121a}
+    .md-tabct{min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#FF3B30;color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+    .md-tab.active .md-tabct{background:rgba(0,0,0,.22)}
+    .nf-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+    .nf-h1{font-size:20px;font-weight:800;color:var(--t1)}
+    .nf-sub{font-size:12px;color:var(--t2)}
+    .nf-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+    .nf-chip{background:var(--card);border:1px solid var(--b1);color:var(--t2);font-family:inherit;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+    .nf-chip.on{background:var(--t1);color:var(--bg);border-color:var(--t1)}
+    .nf-chipn{min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:rgba(127,127,127,.25);font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+    .nf-chip.on .nf-chipn{background:rgba(0,0,0,.18)}
+    .nf-list{display:flex;flex-direction:column;gap:8px}
+    .nf-row{display:flex;align-items:flex-start;gap:12px;background:var(--card);border:1px solid var(--b1);border-left:3px solid var(--b1);border-radius:13px;padding:13px 14px;transition:background .15s;animation:nfIn .3s ease both}
+    @keyframes nfIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .nf-row:hover{background:var(--card2)}
+    .nf-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1}
+    .nf-mid{flex:1;min-width:0}
+    .nf-title{font-size:14px;font-weight:700;color:var(--t1);line-height:1.35}
+    .nf-body{font-size:12.5px;color:var(--t2);margin-top:3px;line-height:1.4;word-break:break-word}
+    .nf-meta{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:7px;padding-top:2px}
+    .nf-time{font-size:11px;color:var(--t2);white-space:nowrap}
+    .nf-dot{width:8px;height:8px;border-radius:50%}
+    .nf-empty{text-align:center;padding:54px 18px}
+    .nf-emoji{font-size:40px;margin-bottom:10px}
+    .nf-et{font-size:17px;font-weight:800;color:var(--t1)}
+    .nf-es{font-size:13px;color:var(--t2);margin:5px auto 0;max-width:300px;line-height:1.5}
     .mc{background:var(--card);border:1px solid var(--b1);border-radius:16px;padding:16px;margin-bottom:10px;overflow:hidden}
     .mc:first-of-type{margin-top:6px}
     .mct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin-bottom:12px}
@@ -1178,6 +1207,12 @@
       </div>
       <div class="sb">
         <div class="pgtitle">Manager Dashboard</div>
+        <div class="md-tabs">
+          <button class="md-tab active" id="mdtab-overview" onclick="mdTab('overview')">Overview</button>
+          <button class="md-tab" id="mdtab-notif" onclick="mdTab('notif')">Notifications<span class="md-tabct" id="mdNotifCt" style="display:none">0</span></button>
+        </div>
+        <div id="md-pane-notif" style="display:none"></div>
+        <div id="md-pane-overview">
         <!-- Quick stats row -->
         <div class="stats-grid">
           <div class="stat-card stat-take"><div class="stat-num" id="st-takes">—</div><div class="stat-lbl">Taken Today</div></div>
@@ -1194,6 +1229,7 @@
         <div class="mc"><div class="mct">🚨 Racefacer Discrepancies</div><div id="mrf"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct">📦 Racefacer Warehouse Stock</div><div id="mrfw"><div class="emp" style="padding:4px 0;font-size:13px;color:var(--t2)">Awaiting Racefacer integration</div></div></div>
         <div class="mc"><div class="mct">🔐 Master Access Code</div><div id="mpin-body"><button class="mpin-reveal" onclick="revealMasterPin()">Tap to reveal master code</button></div></div>
+        </div><!-- /md-pane-overview -->
       </div>
     </div>
 
@@ -1253,7 +1289,7 @@
           <span class="bcnlg"><i style="background:#00C853"></i> Finish / go</span>
           <span class="bcnlg"><i style="background:#FFD600"></i> Slow zone</span>
           <span class="bcnlg"><i style="background:#00CFFF"></i> Caution</span>
-          <span class="bcnlg"><span class="bcndot" style="position:static;width:9px;height:9px"></span> Live track from RaceFacer</span>
+          <span class="bcnlg" id="bcnLegLive"><span class="bcndot" style="position:static;width:9px;height:9px"></span> Live track from RaceFacer</span>
         </div>
         </div>
       </div>
@@ -2063,9 +2099,10 @@ function startRealtime(){
   var _rtMgr   = _debounce(function(){ if(_curScr()==='manager'&&typeof loadMgr==='function'){try{loadMgr();}catch(e){}} }, 700, 3000);
   var _rtBadge = _debounce(function(){ if(typeof refreshRfBadge==='function'){try{refreshRfBadge();}catch(e){}} }, 800, 3000);
   var _rtParts = _debounce(_reload, 500, 2500);
+  var _rtNotif = _debounce(function(){ if(_curScr()==='manager'){ if(typeof refreshNotifBadge==='function'){try{refreshNotifBadge();}catch(e){}} if(MD_TAB==='notif'&&typeof renderNotifications==='function'){try{renderNotifications();}catch(e){}} } }, 700, 3000);
   try{
-    SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _rtParts(); }).subscribe();
-    SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _rtParts(); }).subscribe();
+    SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _rtParts(); _rtNotif(); }).subscribe();
+    SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _rtParts(); _rtNotif(); }).subscribe();
     // RaceFacer tables -> refresh whatever RF view is open, live (debounced so a sync burst = one refresh).
     SBC.channel('rfk-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ _rtKarts(); }).subscribe();
     SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ _rtKarts(); _rtMech(); }).subscribe();
@@ -3220,8 +3257,103 @@ function renderMechToday(){
 }
 
 
+/* ===================== MANAGER DASHBOARD · NOTIFICATIONS =====================
+   Inbox-style feed. Aggregates live alerts the app already knows about: out/low
+   stock (parts), RaceFacer discrepancies (rf_discrepancies) and a weekly financial
+   summary (sbFinanceData). Updates in real time via the parts/stock/discrepancy
+   channels. (Part-order requests will appear here once they're stored — today they
+   route straight to the sheet.) */
+var MD_TAB='overview', NOTIF_FILTER='all', NOTIF_DISC=[], NOTIF_FIN=null;
+function nfEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];}); }
+function nfMoney(n){ return '$'+Math.round(n||0).toLocaleString(); }
+function notifAgo(ts){ if(!ts) return ''; var s=Math.floor((Date.now()-ts)/1000); if(s<45) return 'just now'; var m=Math.floor(s/60); if(m<60) return m+'m ago'; var h=Math.floor(m/60); if(h<24) return h+'h ago'; var d=Math.floor(h/24); if(d<7) return d+'d ago'; return new Date(ts).toLocaleDateString('en-AU',{day:'numeric',month:'short'}); }
+
+function mdTab(name){
+  MD_TAB=name;
+  var ov=document.getElementById('md-pane-overview'), nf=document.getElementById('md-pane-notif');
+  var to=document.getElementById('mdtab-overview'), tn=document.getElementById('mdtab-notif');
+  var isN=(name==='notif');
+  if(ov) ov.style.display=isN?'none':'';
+  if(nf) nf.style.display=isN?'':'none';
+  if(to) to.classList.toggle('active',!isN);
+  if(tn) tn.classList.toggle('active',isN);
+  if(isN) loadNotifications();
+}
+
+// unified, sorted notification list from the data currently loaded
+function buildNotifList(){
+  var L=[], ps=(typeof parts!=='undefined'&&parts)?parts:[];
+  ps.forEach(function(p){
+    if(p.qty===0){
+      L.push({cat:'stock',sev:3,icon:'📦',color:'#FF3B30',title:'Out of stock — '+(p.desc||p.sku||'Part'),body:(p.sku?('SKU '+p.sku+' · '):'')+'reorder needed',ts:null});
+    } else if(p.reorder!=null && p.qty<=p.reorder){
+      L.push({cat:'stock',sev:2,icon:'⚠️',color:'#FFD600',title:'Low stock — '+(p.desc||p.sku||'Part'),body:p.qty+' left · reorder point '+p.reorder,ts:null});
+    }
+  });
+  (NOTIF_DISC||[]).forEach(function(r){
+    L.push({cat:'rf',sev:3,icon:'🚨',color:'#FF453A',title:'RaceFacer discrepancy — Kart '+(r.rf_kart_name||'?'),body:(r.message||((r.part_name||'Part')+' mismatch'))+(r.mechanic?(' · '+r.mechanic):''),ts:(r.at?Date.parse(r.at):null)});
+  });
+  if(NOTIF_FIN){
+    L.push({cat:'fin',sev:1,icon:'💰',color:'#34C759',title:'Weekly financial update',body:nfMoney(NOTIF_FIN.spendMonth)+' spent this month · stock value '+nfMoney(NOTIF_FIN.stockValue)+' · reorder forecast '+nfMoney(NOTIF_FIN.reorderForecastCost),ts:Date.now()});
+  }
+  L.sort(function(a,b){ return (b.sev-a.sev) || ((b.ts||0)-(a.ts||0)); });
+  return L;
+}
+
+function notifFilter(c){ NOTIF_FILTER=c; renderNotifications(); }
+
+function renderNotifications(){
+  var pane=document.getElementById('md-pane-notif'); if(!pane) return;
+  var all=buildNotifList();
+  var counts={all:all.length,stock:0,rf:0,fin:0};
+  all.forEach(function(n){ if(counts[n.cat]!=null) counts[n.cat]++; });
+  if(!(NOTIF_FILTER in counts)) NOTIF_FILTER='all';
+  var list=all.filter(function(n){ return NOTIF_FILTER==='all'||n.cat===NOTIF_FILTER; });
+  var chips=[['all','All'],['stock','Stock'],['rf','RaceFacer'],['fin','Finance']].map(function(c){
+    var n=counts[c[0]]||0;
+    return '<button class="nf-chip'+(NOTIF_FILTER===c[0]?' on':'')+'" onclick="notifFilter(\''+c[0]+'\')">'+c[1]+(n?'<span class="nf-chipn">'+n+'</span>':'')+'</button>';
+  }).join('');
+  var alerts=all.filter(function(n){return n.sev>=2;}).length;
+  var head='<div class="nf-head"><div class="nf-h1">Notifications</div><div class="nf-sub">'+(alerts?(alerts+' need'+(alerts===1?'s':'')+' attention'):'All caught up')+'</div></div><div class="nf-chips">'+chips+'</div>';
+  var body;
+  if(!list.length){
+    var clear=(NOTIF_FILTER==='all');
+    body='<div class="nf-empty"><div class="nf-emoji">'+(clear?'✅':'🗂️')+'</div><div class="nf-et">'+(clear?'All caught up':'Nothing here')+'</div><div class="nf-es">'+(clear?'No stock, RaceFacer or finance alerts right now.':'No notifications in this filter.')+'</div></div>';
+  } else {
+    body='<div class="nf-list">'+list.map(function(n){
+      return '<div class="nf-row" style="border-left-color:'+n.color+'">'
+        +'<div class="nf-ico" style="background:'+n.color+'22">'+n.icon+'</div>'
+        +'<div class="nf-mid"><div class="nf-title">'+nfEsc(n.title)+'</div><div class="nf-body">'+nfEsc(n.body)+'</div></div>'
+        +'<div class="nf-meta">'+(n.ts?'<span class="nf-time">'+notifAgo(n.ts)+'</span>':'')+'<span class="nf-dot" style="background:'+n.color+'"></span></div>'
+        +'</div>';
+    }).join('')+'</div>';
+  }
+  pane.innerHTML=head+body;
+}
+
+function refreshNotifBadge(){
+  var ct=document.getElementById('mdNotifCt'); if(!ct) return;
+  var n=buildNotifList().filter(function(x){return x.sev>=2;}).length;   // count only actionable alerts (not the finance summary)
+  ct.textContent=n; ct.style.display=n?'':'none';
+}
+
+// fetch async sources (recent unresolved discrepancies + weekly finance), then render
+function loadNotifications(){
+  renderNotifications();        // instant: stock from parts + whatever's cached
+  loadNotifBadge();             // refresh discrepancies + badge (re-renders the feed if it's open)
+  if(!NOTIF_FIN && typeof sbFinanceData==='function'){ sbFinanceData(function(f){ NOTIF_FIN=f; if(MD_TAB==='notif') renderNotifications(); refreshNotifBadge(); }); }
+}
+function loadNotifBadge(){
+  if(typeof SBC!=='undefined' && SBC){
+    SBC.from('rf_discrepancies').select('*').neq('status','resolved').order('at',{ascending:false}).limit(40)
+      .then(function(res){ NOTIF_DISC=(res&&res.data)||[]; refreshNotifBadge(); if(MD_TAB==='notif') renderNotifications(); },
+            function(){ refreshNotifBadge(); });
+  } else { refreshNotifBadge(); }
+}
+
 function loadMgr(){
   renderMechToday();
+  loadNotifBadge();
   var btn=document.getElementById('rb-mgr'),lbl=document.getElementById('rt-mgr');
   if(btn){btn.classList.add('spinning');if(lbl)lbl.innerText='Updating...';}
   sbManagerData(function(d){
@@ -3732,13 +3864,13 @@ function loadBeacons(){
   });
 }
 function renderBeacons(t){
-  var nm=document.getElementById('bcnTrk'), site=document.getElementById('bcnSite'), live=document.getElementById('bcnLive');
+  var nm=document.getElementById('bcnTrk'), site=document.getElementById('bcnSite'), live=document.getElementById('bcnLive'), leglive=document.getElementById('bcnLegLive');
   var host=document.getElementById('bcnHost'), side=document.getElementById('bcnSide'), sideList=document.getElementById('bcnSideList');
   closeBeaconPop();
   if(!t){
     if(nm) nm.textContent='No track';
     if(site){ site.textContent=(typeof siteLabel==='function'?siteLabel(currentSite):'\u2014'); site.style.color=''; site.style.borderColor=''; }
-    if(live) live.style.display='none';
+    if(live) live.style.display='none'; if(leglive) leglive.style.display='none';
     if(side) side.style.display='none';
     if(host) host.innerHTML='<div class="bcnempty"><div><div class="big">No track layouts for this site</div>Add one in Master Access \u2192 Beacons.</div></div>';
     return;
@@ -3746,7 +3878,7 @@ function renderBeacons(t){
   if(nm) nm.textContent=t.name;
   if(site){ site.textContent=(typeof siteLabel==='function'?siteLabel(t.site):t.site);
     var ac=(typeof siteAccent==='function'?siteAccent(t.site):'#00CFFF'); site.style.color=ac; site.style.borderColor=ac; }
-  if(live) live.style.display=t.live?'':'none';
+  if(live) live.style.display=t.live?'':'none'; if(leglive) leglive.style.display=t.live?'':'none';
   if(!host) return;
   if(!t.map){
     if(side) side.style.display='none';
