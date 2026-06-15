@@ -95,7 +95,7 @@ async function login() {
 
 // ---- current track layout: pull RaceFacer's "track configurations", flag the live one ----
 // /settings -> track_configurations (id = the layout's identity, sub_track_id = physical track, name).
-// Today's sessions-schedule (or race-control) says which configuration is running now; we upsert that
+// Today's sessions-schedule says which configuration is running now (or last ran); we upsert that
 // one into `tracks` flagged live. merge-duplicates preserves designer-owned map/beacon columns.
 async function syncTracks() {
   // 1) the layout list
@@ -105,39 +105,40 @@ async function syncTracks() {
     cfgs = (s && s.track_configurations && s.track_configurations.data) || [];
   } catch (e) { console.log('[tracks] settings failed:', e.message); }
   if (!cfgs.length) { console.log('[tracks] no track_configurations — skipping'); return; }
-  const byId = new Map(cfgs.map((c) => [c.id, c]));
   const byName = new Map(cfgs.map((c) => [String(c.name || '').trim().toLowerCase(), c]));
 
-  // 2) which layout is live right now? primary: today's schedule (the running / latest session's configuration).
-  const now = new Date();
-  const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  let live = null;
-  try {
-    const sch = await rfJson(`/ajax/session-management/sessions-schedule?date=${ymd}`);
-    let ss = ((sch && sch.schedule && sch.schedule.data) || []).filter((x) => x && x.type === 'session' && x.configuration);
-    if (ss.length) {
-      // start_time_key ("YYYY-MM-DD HH:MM:SS") sorts chronologically as a string — no timezone math needed.
-      ss.sort((a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || '')));
-      const pick = ss.find((x) => /progress|running|active|live/i.test(x.status || '')) || ss[0]; // running, else latest scheduled
-      const c = byName.get(String(pick.configuration).trim().toLowerCase());
-      live = c ? { id: c.id, sub: c.sub_track_id, name: String(c.name).trim() }
-               : { id: null, sub: pick.sub_track_id || null, name: String(pick.configuration).trim() };
-    }
-  } catch (e) { console.log('[tracks] schedule failed:', e.message); }
-  // fallback: race-control's current session
-  if (!live) {
+  // 2) which layout is live now? A session running right now if there is one; otherwise the LAST
+  //    session that ran. We scan today first, then step back through recent days, so a closed day
+  //    still shows the last-used track. (All of a day's sessions share the layout — they only change
+  //    it weekly — so any session on the chosen day gives that day's track.)
+  const dayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  async function daySessions(ds) {
     try {
-      const cur = await rfJson('/ajax/session-management/race-control-current-sessions');
-      const c0 = Array.isArray(cur) ? cur[0] : null;
-      if (c0 && (c0.track_configuration_id != null || c0.track_configuration)) {
-        const c = c0.track_configuration_id != null ? byId.get(c0.track_configuration_id)
-                                                     : byName.get(String(c0.track_configuration || '').trim().toLowerCase());
-        live = c ? { id: c.id, sub: c.sub_track_id, name: String(c.name).trim() }
-                 : { id: c0.track_configuration_id || null, sub: c0.sub_track_id || null, name: String(c0.track_configuration || '').trim() };
-      }
-    } catch (e) { console.log('[tracks] current-sessions failed:', e.message); }
+      const sch = await rfJson(`/ajax/session-management/sessions-schedule?date=${ds}`);
+      return ((sch && sch.schedule && sch.schedule.data) || []).filter((x) => x && x.type === 'session' && x.configuration);
+    } catch (e) { return []; }
   }
-  if (!live || live.id == null) { console.log('[tracks] could not resolve the live config — leaving live unchanged'); return; }
+  function pickSession(ss) {
+    if (!ss.length) return null;
+    const running = ss.find((x) => /progress|running|active|live/i.test(x.status || ''));
+    if (running) return running;                                  // a session running right now
+    // start_time_key ("YYYY-MM-DD HH:MM:SS") sorts chronologically as a string — no timezone math.
+    const sorted = ss.slice().sort((a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || '')));
+    return sorted.find((x) => /finish|complete|done|closed/i.test(x.status || '')) || sorted[0];  // last session that ran
+  }
+  let pick = null;
+  const today = new Date();
+  for (let i = 0; i < 14 && !pick; i++) {                          // today, then back through recent days
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    pick = pickSession(await daySessions(dayOf(d)));
+  }
+  let live = null;
+  if (pick) {
+    const c = byName.get(String(pick.configuration).trim().toLowerCase());
+    live = c ? { id: c.id, sub: c.sub_track_id, name: String(c.name).trim() }
+             : { id: null, sub: pick.sub_track_id || null, name: String(pick.configuration).trim() };
+  }
+  if (!live || live.id == null) { console.log('[tracks] no recent session/config found — leaving live unchanged'); return; }
 
   // 3) clear live for this site, then upsert the current layout as live (designer fields preserved)
   const dir = /anti[-\s]?clockwise/i.test(live.name) ? 'Anti-Clockwise' : (/clockwise/i.test(live.name) ? 'Clockwise' : null);
