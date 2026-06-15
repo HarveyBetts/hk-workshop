@@ -420,6 +420,10 @@
     .kart-chip.selected{outline:2px solid #fff;outline-offset:1px}
     /* Fleet status bar (OK / maintenance / damaged) shown above the chips for the selected type */
     .ksb-wrap{margin:2px 0 16px}
+    .ksb-head{display:flex;align-items:baseline;gap:7px;margin-bottom:9px}
+    .ksb-usable{font-size:23px;font-weight:800;color:var(--t1);font-variant-numeric:tabular-nums;line-height:1}
+    .ksb-usable b{color:#22C55E;font-weight:800}
+    .ksb-usablelbl{font-size:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.09em}
     .ksb-bar{display:flex;height:30px;border-radius:9px;overflow:hidden;background:var(--card);border:1px solid var(--b1);box-shadow:inset 0 1px 2px rgba(0,0,0,.25);animation:ksbReveal .55s cubic-bezier(.22,.61,.36,1) both}
     .ksb-seg{display:flex;align-items:center;justify-content:center;min-width:34px;font-weight:800;font-size:13px;color:#06120a;letter-spacing:.02em;white-space:nowrap;position:relative}
     .ksb-seg.ok{background:linear-gradient(180deg,#34d977,#22C55E)}
@@ -3895,13 +3899,15 @@ function renderStatusBar(){
   KSB_LAST=sig;
   if(!list.length){ box.innerHTML=''; return; }
   var seg=function(cls,n){ return n>0?('<div class="ksb-seg '+cls+'" style="flex-grow:'+n+'"><span class="ksb-n">'+n+'</span></div>'):''; };
+  var usable=c.ok+c.maint, total=list.length;   // OK + For-Maintenance karts can still run; Damaged can't
+  var head='<div class="ksb-head"><span class="ksb-usable"><b>'+usable+'</b>/'+total+'</span><span class="ksb-usablelbl">usable</span></div>';
   var bar='<div class="ksb-bar">'+seg('ok',c.ok)+seg('maint',c.maint)+seg('dmg',c.damaged)+'</div>';
   var leg='<div class="ksb-legend">'
     +'<span class="ksb-li"><span class="ksb-dot" style="background:#22C55E"></span>OK '+c.ok+'</span>'
     +'<span class="ksb-li"><span class="ksb-dot" style="background:#FFD600"></span>Maintenance '+c.maint+'</span>'
     +'<span class="ksb-li"><span class="ksb-dot" style="background:#FF3B30"></span>Damaged '+c.damaged+'</span>'
     +'</div>';
-  box.innerHTML=bar+leg;
+  box.innerHTML=head+bar+leg;
 }
 
 function renderKartChips(filter){
