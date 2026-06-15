@@ -912,6 +912,9 @@
     .bcndh{padding:18px 18px 12px;border-bottom:1px solid var(--b1)}
     .bcndh .t{font-weight:800;font-size:16px}
     .bcndh .s{color:var(--t2);font-size:12px;margin-top:3px}
+    .bcndsearch{padding:10px 12px 8px;border-bottom:1px solid var(--b1)}
+    .bcndsearch input{width:100%;background:var(--bg);border:1px solid var(--b1);border-radius:10px;color:var(--t1);padding:9px 11px;font-size:14px;outline:none}
+    .bcndsearch input:focus{border-color:var(--acc)}
     .bcndlist{overflow:auto;padding:8px}
     .bcnti{width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:11px;padding:11px 12px;cursor:pointer;color:var(--t1);display:flex;align-items:center;justify-content:space-between;gap:10px}
     .bcnti:hover{background:var(--card2);border-color:var(--b1)}
@@ -1253,6 +1256,7 @@
       <div class="bcnscrim" id="bcnScrim" onclick="closeBeaconDrawer()"></div>
       <aside class="bcndrawer" id="bcnDrawer" aria-label="Tracks">
         <div class="bcndh"><div class="t">Tracks</div><div class="s">Pulled from RaceFacer · live track shown first</div></div>
+        <div class="bcndsearch"><input id="bcnTrackSearch" placeholder="Search tracks…" oninput="filterBeaconList(this.value)" autocomplete="off"></div>
         <div class="bcndlist" id="bcnDlist"></div>
         <div class="bcndfoot"><button class="bcndfn" onclick="openFnRef()"><span>⚡</span> Dehaardt Functions</button></div>
       </aside>
@@ -3713,7 +3717,9 @@ function loadBeaconTracks(cb){
     if(cb)cb();
   }).catch(function(){ if(cb)cb(); });
 }
-function beaconTracksForSite(){ var site=(typeof currentSite!=='undefined'&&currentSite)||'sydney'; return allBeaconTracks().filter(function(t){return t.site===site;}); }
+function beaconTracksForSite(){ var site=(typeof currentSite!=='undefined'&&currentSite)||'sydney';
+  return allBeaconTracks().filter(function(t){return t.site===site;})
+    .sort(function(a,b){ return (b.live?1:0)-(a.live?1:0) || String(a.name).localeCompare(String(b.name)); }); }   // live first, then A-Z
 function loadBeacons(){
   loadBeaconTracks(function(){
     var list=beaconTracksForSite();
@@ -3812,15 +3818,19 @@ function showBeaconSheet(b){
   sheet.classList.add('on'); sheet.setAttribute('aria-hidden','false');
 }
 function closeBeaconSheet(){ var sheet=document.getElementById('bcnSheet'); if(sheet){ sheet.classList.remove('on'); sheet.setAttribute('aria-hidden','true'); } }
-function openBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=document.getElementById('bcnScrim'); if(d)d.classList.add('on'); if(s)s.classList.add('on'); }
+function openBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=document.getElementById('bcnScrim'); if(d)d.classList.add('on'); if(s)s.classList.add('on'); var si=document.getElementById('bcnTrackSearch'); if(si)si.value=''; BCN_TRACK_Q=''; buildBeaconList(); }
 function closeBeaconDrawer(){ var d=document.getElementById('bcnDrawer'),s=document.getElementById('bcnScrim'); if(d)d.classList.remove('on'); if(s)s.classList.remove('on'); }
+var BCN_CUR_ID=null, BCN_TRACK_Q='';
+function filterBeaconList(q){ BCN_TRACK_Q=q||''; buildBeaconList(); }
 function buildBeaconList(curId){
+  if(curId!==undefined && curId!==null) BCN_CUR_ID=curId;        // remember the active track across searches
   var dl=document.getElementById('bcnDlist'); if(!dl) return;
-  var tracks=beaconTracksForSite();
-  if(!tracks.length){ dl.innerHTML='<div class="bcnempty" style="aspect-ratio:auto;padding:24px 14px">No track layouts assigned to this site yet.</div>'; return; }
+  var q=(BCN_TRACK_Q||'').trim().toLowerCase();
+  var tracks=beaconTracksForSite().filter(function(t){ return !q || String(t.name).toLowerCase().indexOf(q)>=0; });
+  if(!tracks.length){ dl.innerHTML='<div class="bcnempty" style="aspect-ratio:auto;padding:24px 14px">'+(q?'No tracks match \u201c'+q+'\u201d.':'No track layouts assigned to this site yet.')+'</div>'; return; }
   dl.innerHTML=tracks.map(function(t){
     var lbl=(typeof siteLabel==='function'?siteLabel(t.site):t.site);
-    return '<button class="bcnti'+(t.id===curId?' cur':'')+'" data-id="'+t.id+'">'
+    return '<button class="bcnti'+(t.id===BCN_CUR_ID?' cur':'')+'" data-id="'+t.id+'">'
       +'<span><span class="nm">'+t.name+'</span><span class="meta">'
       +'<span class="bcnmini">'+lbl+'</span>'+(t.map?'':'<span class="bcnmini">No map</span>')
       +'</span></span>'+(t.live?'<span class="bcnlt"><span class="d"></span>Live</span>':'')+'</button>';
