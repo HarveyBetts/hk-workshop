@@ -2255,13 +2255,17 @@ function startRealtime(){
       clearTimeout(t); t=setTimeout(function(){ first=0; t=null; fn(); }, wait);
     };
   }
-  var _rtKarts = _debounce(function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} }, 600, 2500);
-  var _rtMech  = _debounce(function(){ if(_curScr()==='manager'&&typeof renderMechToday==='function'){try{renderMechToday();}catch(e){}} }, 600, 2500);
-  var _rtMgr   = _debounce(function(){ if(_curScr()==='manager'&&typeof loadMgr==='function'){try{loadMgr();}catch(e){}} }, 700, 3000);
-  var _rtBadge = _debounce(function(){ if(typeof refreshRfBadge==='function'){try{refreshRfBadge();}catch(e){}} }, 800, 3000);
-  var _rtParts = _debounce(_reload, 500, 2500);
-  var _rtNotif = _debounce(function(){ if(_curScr()==='manager'){ if(typeof refreshNotifBadge==='function'){try{refreshNotifBadge();}catch(e){}} if(MD_TAB==='notif'&&typeof renderNotifications==='function'){try{renderNotifications();}catch(e){}} } }, 700, 3000);
-  var _rtCheck = _debounce(function(){ if(_curScr()==='manager'&&typeof loadCheckAlerts==='function'){try{loadCheckAlerts();}catch(e){}} }, 1200, 5000);
+  // Live-update reaction times. Short leading waits so a change shows almost instantly; a small
+  // maxWait still coalesces a burst (e.g. a heavy pass) into a few renders. Safe to run this tight
+  // because the sync now writes only changed rows (events are rare) and every render is signature-
+  // guarded (KSB_LAST / _nfSig / etc.) so an unchanged re-render rebuilds no DOM and never flickers.
+  var _rtKarts = _debounce(function(){ if(typeof kartRefreshSilent==='function'){try{kartRefreshSilent();}catch(e){}} }, 180, 1200);
+  var _rtMech  = _debounce(function(){ if(_curScr()==='manager'&&typeof renderMechToday==='function'){try{renderMechToday();}catch(e){}} }, 200, 1200);
+  var _rtMgr   = _debounce(function(){ if(_curScr()==='manager'&&typeof loadMgr==='function'){try{loadMgr();}catch(e){}} }, 220, 1400);
+  var _rtBadge = _debounce(function(){ if(typeof refreshRfBadge==='function'){try{refreshRfBadge();}catch(e){}} }, 220, 1400);
+  var _rtParts = _debounce(_reload, 200, 1200);
+  var _rtNotif = _debounce(function(){ if(_curScr()==='manager'){ if(typeof refreshNotifBadge==='function'){try{refreshNotifBadge();}catch(e){}} if(MD_TAB==='notif'&&typeof renderNotifications==='function'){try{renderNotifications();}catch(e){}} } }, 220, 1400);
+  var _rtCheck = _debounce(function(){ if(_curScr()==='manager'&&typeof loadCheckAlerts==='function'){try{loadCheckAlerts();}catch(e){}} }, 450, 2500);
   try{
     SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _rtParts(); _rtNotif(); }).subscribe();
     SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _rtParts(); _rtNotif(); }).subscribe();
