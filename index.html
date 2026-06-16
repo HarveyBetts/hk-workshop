@@ -689,6 +689,19 @@
     .ng-full:first-child{margin-top:3px}
     .ng-fulltt{font-size:13.5px;font-weight:800;color:var(--t1);line-height:1.35}
     .ng-fullbd{font-size:12.5px;color:var(--t2);line-height:1.5;margin-top:4px;overflow-wrap:anywhere}
+    /* repairs log: date strip + per-day report */
+    .rpt{padding-top:2px}
+    .rpt-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 0 11px;scrollbar-width:none}
+    .rpt-strip::-webkit-scrollbar{height:0;display:none}
+    .rpt-day{flex:none;background:var(--card2);border:1px solid var(--b1);color:var(--t2);font-family:inherit;font-size:11.5px;font-weight:700;padding:7px 11px;border-radius:9px;cursor:pointer;white-space:nowrap}
+    .rpt-day:hover{color:var(--t1);border-color:var(--b2)}
+    .rpt-day.sel{background:var(--acc);border-color:var(--acc);color:#04222b}
+    .rpt-title{font-size:13.5px;font-weight:800;color:var(--t1);margin:2px 0 8px;letter-spacing:-.2px}
+    .rpt-sum{font-size:13px;color:var(--t1)}
+    .rpt-big{font-size:19px;font-weight:800;color:var(--t1)}
+    .rpt-h{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:var(--t2);margin:14px 0 3px}
+    .rpt-none{font-size:12px;color:var(--t2);padding:7px 2px;line-height:1.5}
+    .rpt-load{font-size:12.5px;color:var(--t2);padding:16px 2px;text-align:center}
     .mc{background:var(--card);border:1px solid var(--b1);border-radius:16px;padding:16px;margin-bottom:10px;overflow:hidden}
     .mc:first-of-type{margin-top:6px}
     .mct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin-bottom:12px}
@@ -3412,7 +3425,7 @@ function renderMechToday(){
    summary (sbFinanceData). Updates in real time via the parts/stock/discrepancy
    channels. (Part-order requests will appear here once they're stored — today they
    route straight to the sheet.) */
-var MD_TAB='overview', NOTIF_FILTER='all', NOTIF_DISC=[], NOTIF_FIN=null, NOTIF_CHECK=[], NOTIF_DAILY=null;
+var MD_TAB='overview', NOTIF_FILTER='all', NOTIF_DISC=[], NOTIF_FIN=null, NOTIF_CHECK=[], RPT_DATE=null, RPT_CACHE={}, RPT_DAYS=14;
 /* Morning kart-check anomaly detection. The 6am-ish check logs damage into RaceFacer (rf_repairs:
    description = the note, date_discovered = the morning it was found). We count today's matches for
    each pattern against the trailing per-day average and flag a spike. Add more patterns here over time. */
@@ -3484,17 +3497,11 @@ function buildNotifGroups(){
   G.push({ key:'order', icon:'📦', color:'#FF453A', title:'Parts to order', count:orderItems.length, urgent:out.length>0,
     summary: orderItems.length ? (out.length+' out \u00b7 '+low.length+' low') : 'Stock levels OK',
     items: orderItems });
-  // 4) Today's repairs (daily summary of work + cost)
-  if(NOTIF_DAILY){
-    var d=NOTIF_DAILY;
-    var rows=[ { kind:'row', t:'Repairs logged today', s:'', r:String(d.count) },
-               { kind:'row', t:'Cost today', s:'', r:nfMoney(d.cost) },
-               { kind:'row', t:'Karts worked on', s:'', r:String(d.karts) } ];
-    (d.list||[]).forEach(function(x){ rows.push({ kind:'row', t:(x.desc||'Repair'), s:(x.kart!=null?('Kart '+x.kart):''), r:(x.cost?nfMoney(x.cost):'') }); });
-    G.push({ key:'daily', icon:'🔧', color:'#30D158', title:'Today\u2019s repairs', count:0, urgent:false,
-      summary: d.count ? (d.count+' repair'+(d.count===1?'':'s')+' \u00b7 '+nfMoney(d.cost)) : 'No repairs logged yet',
-      items: rows });
-  }
+  // 4) Repairs log — today's summary in the header, a clickable date browser when expanded
+  var _today=localDay(), _tr=RPT_CACHE[_today];
+  G.push({ key:'daily', icon:'🔧', color:'#30D158', title:'Repairs log', count:0, urgent:false,
+    summary: _tr ? (_tr.count ? (_tr.count+' today \u00b7 '+nfMoney(_tr.cost)) : 'No repairs logged today') : 'Tap to browse by day',
+    items: [ { kind:'report' } ] });
   // 5) Finance summary
   if(NOTIF_FIN){
     var rfi=Array.isArray(NOTIF_FIN.reorderForecastItems)?NOTIF_FIN.reorderForecastItems.length:(+NOTIF_FIN.reorderForecastItems||0);
@@ -3519,7 +3526,7 @@ function _renderNotifNow(){
   var pane=document.getElementById('md-pane-notif'); if(!pane) return;
   var groups=buildNotifGroups();
   var act=0; groups.forEach(function(g){ if(g.key==='spikes'||g.key==='disc'||g.key==='order') act+=g.count; });
-  var sig=act+'~'+groups.map(function(g){ return g.key+g.count+(ngIsOpen(g)?'o':'')+':'+g.summary; }).join('|');
+  var sig=act+'~'+groups.map(function(g){ return g.key+g.count+(ngIsOpen(g)?'o':'')+':'+g.summary; }).join('|')+'~'+rptSig();
   if(sig===_nfSig && pane.childNodes.length) return; _nfSig=sig;
   var head='<div class="nf-head"><div class="nf-h1">Notifications</div>'
     +'<div class="nf-sub2">'+(act ? (act+' need'+(act===1?'s':'')+' attention') : 'You\u2019re all caught up')+'</div></div>';
@@ -3528,6 +3535,7 @@ function _renderNotifNow(){
     if(open){
       if(!g.items.length){ inner='<div class="ng-none">Nothing here right now.</div>'; }
       else inner=g.items.map(function(it){
+        if(it.kind==='report') return renderRptBlock();
         if(it.kind==='full') return '<div class="ng-full" style="border-left-color:'+it.color+'"><div class="ng-fulltt">'+nfEsc(it.title)+'</div><div class="ng-fullbd">'+nfEsc(it.body)+'</div></div>';
         if(it.kind==='disc') return '<div class="ng-disc"><div class="ng-dx"><div class="ng-dt">'+nfEsc(it.title)+'</div><div class="ng-ds">'+nfEsc(it.sub)+'</div>'+(it.meta?'<div class="ng-dm">'+nfEsc(it.meta)+'</div>':'')+'</div><button class="ng-done" data-x="'+it.uid+'" title="Mark handled" aria-label="Mark handled">\u2713</button></div>';
         return '<div class="ng-row"><div class="ng-rx"><div class="ng-rt">'+nfEsc(it.t)+'</div>'+(it.s?'<div class="ng-rs">'+nfEsc(it.s)+'</div>':'')+'</div>'+(it.r?'<div class="ng-rr'+(it.red?' red':'')+'">'+nfEsc(it.r)+'</div>':'')+'</div>';
@@ -3549,6 +3557,7 @@ function renderNotifNow(){ if(_nfTimer){ clearTimeout(_nfTimer); _nfTimer=null; 
 function nfWire(pane){
   if(pane._nfWired) return; pane._nfWired=true;   // one delegated listener survives innerHTML swaps
   pane.addEventListener('click',function(e){
+    var rd=e.target.closest('[data-rptdate]'); if(rd){ e.stopPropagation(); var ds=rd.getAttribute('data-rptdate'); RPT_DATE=ds; if(!(RPT_CACHE[ds]&&RPT_CACHE[ds].loaded)) loadDailyReport(ds); renderNotifNow(); return; }
     var x=e.target.closest('[data-x]'); if(x){ e.stopPropagation(); nfDismiss(x.getAttribute('data-x')); return; }
     var head=e.target.closest('.ng-head'); if(head){ var k=head.parentNode.getAttribute('data-ng'); NG_OPEN[k]=!ngIsOpenKey(k); ngSaveOpen(); renderNotifNow(); return; }
   });
@@ -3584,24 +3593,90 @@ function refreshNotifBadge(){
 
 // fetch async sources (recent unresolved discrepancies + weekly finance), then render
 function loadNotifications(){
+  if(!RPT_DATE) RPT_DATE=localDay();
   _nfSig=''; renderNotifNow();   // force an instant paint on tab open
   loadNotifBadge();             // refresh discrepancies + badge (re-renders the feed if it's open)
   loadCheckAlerts();            // morning kart-check anomalies (e.g. tyre-puncture spikes)
-  loadDailySummary();           // today's repairs + cost
+  ensureStockSnapshot();        // capture today's stock levels (for day-over-day transitions)
+  loadDailyReport(RPT_DATE);    // repairs / spend / mechanics / parts for the selected day
   if(!NOTIF_FIN && typeof sbFinanceData==='function'){ sbFinanceData(function(f){ NOTIF_FIN=f; if(MD_TAB==='notif') renderNotifications(); refreshNotifBadge(); }); }
 }
-function loadDailySummary(){
+// ---- Repairs log: per-day report (repairs, spend, who did what, parts replaced, stock changes) ----
+function localDay(d){ d=d||new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }   // device-local calendar date
+function rptAddDays(ds,n){ var p=String(ds).split('-'); var t=new Date(+p[0],+p[1]-1,+p[2]); t.setDate(t.getDate()+n); return localDay(t); }
+function rptSkuDesc(sku){ var ps=(typeof parts!=='undefined'&&parts)?parts:[]; for(var i=0;i<ps.length;i++){ if(ps[i].sku===sku) return ps[i].desc||sku; } return sku; }
+function rptRecentDays(n){ var out=[]; for(var i=0;i<n;i++){ var d=new Date(); d.setDate(d.getDate()-i); var ds=localDay(d); out.push({ ds:ds, lbl:(i===0?'Today':i===1?'Yesterday':d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric'})) }); } return out; }
+function rptTitle(ds){ var t=localDay(); if(ds===t) return 'Today'; if(ds===rptAddDays(t,-1)) return 'Yesterday'; var p=String(ds).split('-'); return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'}); }
+function rptSig(){ var r=RPT_CACHE[RPT_DATE]; return RPT_DATE+'|'+(r?((r.loaded?'L':'')+r.count+'m'+r.mechanics.length+'p'+r.parts.length+(r.stock&&r.stock.hasData?('s'+r.stock.worse.length):'')):''); }
+
+function loadDailyReport(D){
   if(typeof SBC==='undefined'||!SBC) return;
-  var today=new Date().toISOString().slice(0,10);
-  SBC.from('rf_repairs').select('rf_kart_id,description,cost,date_discovered').eq('date_discovered',today).limit(500)
+  if(RPT_CACHE[D]&&RPT_CACHE[D].loaded){ if(MD_TAB==='notif') renderNotifications(); return; }
+  SBC.from('rf_repairs').select('id,rf_kart_id,description,cost,mechanic,date_discovered').eq('date_discovered',D).limit(2000)
     .then(function(res){
-      var rows=(res&&res.data)||[], cost=0, karts={};
-      rows.forEach(function(r){ cost+=(+r.cost||0); if(r.rf_kart_id!=null) karts[r.rf_kart_id]=true; });
-      var list=rows.slice().sort(function(a,b){return (+b.cost||0)-(+a.cost||0);}).slice(0,6)
-        .map(function(r){ return { kart:r.rf_kart_id, desc:(r.description||'Repair'), cost:(+r.cost||0) }; });
-      NOTIF_DAILY={ count:rows.length, cost:cost, karts:Object.keys(karts).length, list:list };
+      var rows=(res&&res.data)||[], cost=0, karts={}, mech={};
+      rows.forEach(function(r){ var c=+r.cost||0; cost+=c; if(r.rf_kart_id!=null) karts[r.rf_kart_id]=true; var m=(r.mechanic||'Unassigned'); if(!mech[m]) mech[m]={name:m,n:0,cost:0}; mech[m].n++; mech[m].cost+=c; });
+      var rep={ day:D, count:rows.length, cost:cost, karts:Object.keys(karts).length,
+        mechanics:Object.keys(mech).map(function(k){return mech[k];}).sort(function(a,b){return (b.n-a.n)||(b.cost-a.cost);}),
+        parts:[], stock:{worse:[],hasData:false}, loaded:true };
+      RPT_CACHE[D]=rep;
+      if(MD_TAB==='notif') renderNotifications();
+      var ids=rows.map(function(r){return r.id;}).filter(function(x){return x!=null;});
+      if(ids.length){
+        SBC.from('rf_repair_parts').select('part_name,qty,price,repair_id').in('repair_id',ids).limit(5000)
+          .then(function(pr){ var pm={}; ((pr&&pr.data)||[]).forEach(function(p){ var n=p.part_name||'Part'; if(!pm[n]) pm[n]={name:n,qty:0,cost:0}; var q=+p.qty||0; pm[n].qty+=q; pm[n].cost+=((+p.price||0)*q); });
+            rep.parts=Object.keys(pm).map(function(k){return pm[k];}).sort(function(a,b){return b.qty-a.qty;}); if(MD_TAB==='notif') renderNotifications(); }, function(){});
+      }
+      loadStockDiff(D, rep);
+    }, function(){ RPT_CACHE[D]={ day:D, count:0, cost:0, karts:0, mechanics:[], parts:[], stock:{worse:[],hasData:false}, loaded:true, failed:true }; if(MD_TAB==='notif') renderNotifications(); });
+}
+// stock level transitions vs the previous day, from daily snapshots (silent if the table isn't there yet)
+function loadStockDiff(D, rep){
+  try{
+    SBC.from('stock_snapshots').select('sku,qty,reorder,day').in('day',[D,rptAddDays(D,-1)]).limit(8000).then(function(res){
+      var rows=(res&&res.data)||[]; if(!rows.length) return;
+      var cur={}, pre={};
+      rows.forEach(function(r){ (r.day===D?cur:pre)[r.sku]={qty:+r.qty||0,reorder:(r.reorder==null?null:+r.reorder)}; });
+      function cls(x){ if(!x) return null; if(x.qty<=0) return 'out'; if(x.reorder!=null&&x.qty<=x.reorder) return 'amber'; return 'ok'; }
+      var rank={ok:0,amber:1,out:2}, worse=[];
+      Object.keys(cur).forEach(function(sku){ var a=cls(pre[sku]), b=cls(cur[sku]); if(a&&b&&rank[b]>rank[a]) worse.push({ sku:sku, desc:rptSkuDesc(sku), to:b }); });
+      worse.sort(function(a,b){return rank[b.to]-rank[a.to];});
+      rep.stock={worse:worse, hasData:true};
       if(MD_TAB==='notif') renderNotifications();
     }, function(){});
+  }catch(e){}
+}
+// write today's stock levels once per day so transitions can be computed going forward
+function ensureStockSnapshot(){
+  if(typeof SBC==='undefined'||!SBC) return;
+  var ps=(typeof parts!=='undefined'&&parts)?parts:[]; if(!ps.length) return;
+  var today=localDay();
+  try{
+    SBC.from('stock_snapshots').select('sku').eq('day',today).limit(1).then(function(res){
+      if(res&&res.data&&res.data.length) return;
+      var rows=ps.filter(function(p){return p.sku;}).map(function(p){ return { day:today, sku:p.sku, qty:(+p.qty||0), reorder:(p.reorder==null?null:+p.reorder) }; });
+      if(rows.length) SBC.from('stock_snapshots').upsert(rows,{onConflict:'day,sku'}).then(function(){},function(){});
+    }, function(){});
+  }catch(e){}
+}
+function renderRptBlock(){
+  var strip=rptRecentDays(RPT_DAYS).map(function(x){ return '<button class="rpt-day'+(x.ds===RPT_DATE?' sel':'')+'" data-rptdate="'+x.ds+'">'+nfEsc(x.lbl)+'</button>'; }).join('');
+  var rep=RPT_CACHE[RPT_DATE], body;
+  if(!rep){ body='<div class="rpt-load">Loading '+nfEsc(rptTitle(RPT_DATE))+'\u2026</div>'; }
+  else {
+    var sum='<div class="rpt-sum"><span class="rpt-big">'+rep.count+'</span> repair'+(rep.count===1?'':'s')+' \u00b7 '+nfMoney(rep.cost)+' \u00b7 '+rep.karts+' kart'+(rep.karts===1?'':'s')+'</div>';
+    var none=rep.count?'':'<div class="rpt-none">No repairs logged on this day.</div>';
+    var mech=rep.mechanics.length?('<div class="rpt-h">Who did what</div>'+rep.mechanics.map(function(m){ return '<div class="ng-row"><div class="ng-rx"><div class="ng-rt">'+nfEsc(m.name)+'</div></div><div class="ng-rr">'+m.n+' repair'+(m.n===1?'':'s')+' \u00b7 '+nfMoney(m.cost)+'</div></div>'; }).join('')):'';
+    var prt=rep.parts.length?('<div class="rpt-h">Parts replaced</div>'+rep.parts.map(function(p){ return '<div class="ng-row"><div class="ng-rx"><div class="ng-rt">'+nfEsc(p.name)+'</div></div><div class="ng-rr">\u00d7'+p.qty+(p.cost?(' \u00b7 '+nfMoney(p.cost)):'')+'</div></div>'; }).join('')):'';
+    var stk;
+    if(rep.stock&&rep.stock.hasData){
+      stk=rep.stock.worse.length?('<div class="rpt-h">Stock changes</div>'+rep.stock.worse.map(function(s){ var out=(s.to==='out'); return '<div class="ng-row"><div class="ng-rx"><div class="ng-rt">'+(out?'\u26D4':'\u26A0\uFE0F')+' '+nfEsc(s.desc)+'</div><div class="ng-rs">'+nfEsc(s.sku)+'</div></div><div class="ng-rr'+(out?' red':'')+'">'+(out?'hit zero':'dropped to amber')+'</div></div>'; }).join('')):'<div class="rpt-h">Stock changes</div><div class="rpt-none">No parts dropped a level.</div>';
+    } else {
+      stk='<div class="rpt-h">Stock changes</div><div class="rpt-none">Building daily history \u2014 this fills in once there are two days of snapshots.</div>';
+    }
+    body=sum+none+mech+prt+stk;
+  }
+  return '<div class="rpt"><div class="rpt-strip">'+strip+'</div><div class="rpt-title">'+nfEsc(rptTitle(RPT_DATE))+'</div>'+body+'</div>';
 }
 function loadNotifBadge(){
   if(typeof SBC!=='undefined' && SBC){
