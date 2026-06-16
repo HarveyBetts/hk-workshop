@@ -157,6 +157,13 @@ async function syncTracks() {
   const setCfgs = [];
   todaySessions.filter(isRunning).forEach((s) => { const c = cfgOf(s); if (isSet(c) && !setCfgs.some((x) => x.id === c.id)) setCfgs.push(c); });
 
+  // diagnostic: which set tracks (Mini/Junior/Inter) are visible in today's feed and their state. If a
+  // set track is racing (incl. midweek school holidays) but shows "none in feed" here, RaceFacer's
+  // schedule isn't surfacing it and it needs a per-track fetch.
+  const setStatus = {};
+  todaySessions.forEach((s) => { const c = cfgOf(s); if (!isSet(c)) return; if (isRunning(s)) setStatus[c.name] = 'running'; else if (!setStatus[c.name]) setStatus[c.name] = 'idle'; });
+  console.log('[tracks] set-tracks today:', Object.keys(setStatus).length ? Object.entries(setStatus).map(([n, v]) => `${n}=${v}`).join(', ') : 'none in feed');
+
   const liveIds = new Set(), liveNames = [];
   [mainCfg].concat(setCfgs).forEach((c) => { if (c && !liveIds.has(c.id)) { liveIds.add(c.id); liveNames.push(c.name); } });
   if (!liveIds.size) console.log('[tracks] no live layout resolved this pass — writing names, leaving live flags as-is');
@@ -176,6 +183,56 @@ async function syncTracks() {
     await sb('tracks?on_conflict=site,rf_config_id', { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: rows });
     console.log('[tracks] upserted %s layouts for %s%s', rows.length, SITE, liveIds.size ? ` · live (${liveIds.size}): ${liveNames.join(', ')}` : '');
   } catch (e) { console.log('[tracks] upsert failed:', e.message); }
+}
+
+// Lightweight live-flag refresh for the FAST loop, so "what's on track now" self-corrects within a
+// couple of minutes instead of waiting for the ~2h heavy pass. Reads the layout names already in the
+// DB (no settings call), checks TODAY's schedule only, and PATCHes just the `live` column:
+//   - main/Adult track  -> its current layout (most-recent running, else last finished/started)
+//   - set tracks (Mini/Junior/Inter, cfg 9/15/16) -> live only while actually running today
+// If the main track hasn't raced yet today (early morning / closed), it leaves the flags untouched so
+// the last heavy pass's layout stays put.
+async function refreshLiveTracks() {
+  try {
+    const layouts = await sb(`tracks?site=eq.${SITE}&select=rf_config_id,name`);
+    if (!layouts || !layouts.length) return;
+    const byName = new Map();
+    layouts.forEach((t) => byName.set(String(t.name || '').trim().toLowerCase(), { id: t.rf_config_id, name: t.name }));
+    const dayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const TZ = SITE === 'melbourne' ? 'Australia/Melbourne' : 'Australia/Sydney';
+    let nowKey = '';
+    try { nowKey = new Date().toLocaleString('sv-SE', { timeZone: TZ }).replace('T', ' '); } catch (e) { nowKey = new Date().toISOString().slice(0, 19).replace('T', ' '); }
+    const RUN_RE = /progress|running|active|ongoing|on[-\s]?track|racing|started|\blive\b/i;
+    const DONE_RE = /finish|complete|done|closed|ended|past/i;
+    const isRunning = (s) => RUN_RE.test(String(s.status || s.state || s.session_status || ''));
+    const SET_TRACK_IDS = new Set([9, 15, 16]);
+    const isSet = (c) => !!c && (SET_TRACK_IDS.has(c.id) || /\b(mini|junior|intermediate|inter)\b/i.test(String(c.name || '')));
+    const cfgOf = (s) => byName.get(String(s.configuration).trim().toLowerCase());
+    const byTimeDesc = (a, b) => String(b.start_time_key || '').localeCompare(String(a.start_time_key || ''));
+
+    const sch = await rfJson(`/ajax/session-management/sessions-schedule?date=${dayOf(new Date())}`);
+    const today = ((sch && sch.schedule && sch.schedule.data) || []).filter((x) => x && x.type === 'session' && x.configuration);
+    const mains = today.filter((s) => { const c = cfgOf(s); return c && !isSet(c); });
+    if (!mains.length) return;   // main track hasn't run yet today — don't disturb the heavy-pass flags
+    const pick = mains.filter(isRunning).sort(byTimeDesc)[0]
+              || mains.filter((s) => DONE_RE.test(String(s.status || s.state || ''))).sort(byTimeDesc)[0]
+              || mains.filter((s) => String(s.start_time_key || '') <= nowKey).sort(byTimeDesc)[0]
+              || mains.slice().sort(byTimeDesc)[0];
+    const mainCfg = cfgOf(pick);
+    if (!mainCfg) return;
+
+    const liveIds = new Set([mainCfg.id]);
+    today.filter(isRunning).forEach((s) => { const c = cfgOf(s); if (isSet(c)) liveIds.add(c.id); });
+    const ids = [...liveIds];
+
+    const setStatus = {};
+    today.forEach((s) => { const c = cfgOf(s); if (!isSet(c)) return; if (isRunning(s)) setStatus[c.name] = 'running'; else if (!setStatus[c.name]) setStatus[c.name] = 'idle'; });
+    console.log('[live] set-tracks today:', Object.keys(setStatus).length ? Object.entries(setStatus).map(([n, v]) => `${n}=${v}`).join(', ') : 'none in feed');
+
+    await sb(`tracks?site=eq.${SITE}`, { method: 'PATCH', prefer: 'return=minimal', body: { live: false } });
+    await sb(`tracks?site=eq.${SITE}&rf_config_id=in.(${ids.join(',')})`, { method: 'PATCH', prefer: 'return=minimal', body: { live: true } });
+    console.log(`[live] refreshed · live(${ids.length}) cfg ${ids.join(',')}`);
+  } catch (e) { console.log('[live] refresh skipped:', e.message); }
 }
 
 // ---- enumerate kart ids ----
@@ -389,6 +446,7 @@ async function main() {
   // and return — never touches the heavy pass, so status stays fast on its own runner.
   if (process.env.STATUS_ONLY === '1') {
     const n = await statusFast();
+    await refreshLiveTracks();                 // keep "live now" fresh on the fast runner
     console.log(`[status] refreshed ${n} karts.`);
     return;
   }
@@ -401,6 +459,7 @@ async function main() {
 
   if (!doHeavy) {
     const n = await statusFast();
+    await refreshLiveTracks();                 // keep "live now" fresh between heavy passes
     const due = Math.max(0, Math.round((HEAVY_INTERVAL_MS - (Date.now() - lastHeavy)) / 1000));
     console.log(`[fast] status refreshed for ${n} karts; full sync due in ~${due}s.`);
     return;
