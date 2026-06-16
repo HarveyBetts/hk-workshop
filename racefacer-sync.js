@@ -183,6 +183,15 @@ async function syncTracks() {
     await sb('tracks?on_conflict=site,rf_config_id', { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: rows });
     console.log('[tracks] upserted %s layouts for %s%s', rows.length, SITE, liveIds.size ? ` · live (${liveIds.size}): ${liveNames.join(', ')}` : '');
   } catch (e) { console.log('[tracks] upsert failed:', e.message); }
+
+  // Record the live-layout TIMELINE on the heavy pass too — so capture works under the GitHub
+  // Actions "sync" workflow (sync:once = heavy) and as a safety reconcile on the worker. It's
+  // write-on-change, so when the fast loop already logged this change it's a harmless no-op.
+  if (liveIds.size) {
+    const liveList = [mainCfg].concat(setCfgs).filter(Boolean)
+      .map((c) => { const nm = String(c.name || '').trim(); return { id: c.id, name: nm, direction: dirOf(nm) }; });
+    if (liveList.length) await logTrackSegments(SITE, liveList);
+  }
 }
 
 // Lightweight live-flag refresh for the FAST loop, so "what's on track now" self-corrects within a
@@ -194,10 +203,10 @@ async function syncTracks() {
 // the last heavy pass's layout stays put.
 async function refreshLiveTracks() {
   try {
-    const layouts = await sb(`tracks?site=eq.${SITE}&select=rf_config_id,name`);
+    const layouts = await sb(`tracks?site=eq.${SITE}&select=rf_config_id,name,direction`);
     if (!layouts || !layouts.length) return;
     const byName = new Map();
-    layouts.forEach((t) => byName.set(String(t.name || '').trim().toLowerCase(), { id: t.rf_config_id, name: t.name }));
+    layouts.forEach((t) => byName.set(String(t.name || '').trim().toLowerCase(), { id: t.rf_config_id, name: t.name, direction: t.direction || null }));
     const dayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const TZ = SITE === 'melbourne' ? 'Australia/Melbourne' : 'Australia/Sydney';
     let nowKey = '';
@@ -213,7 +222,7 @@ async function refreshLiveTracks() {
     const sch = await rfJson(`/ajax/session-management/sessions-schedule?date=${dayOf(new Date())}`);
     const today = ((sch && sch.schedule && sch.schedule.data) || []).filter((x) => x && x.type === 'session' && x.configuration);
     const mains = today.filter((s) => { const c = cfgOf(s); return c && !isSet(c); });
-    if (!mains.length) return;   // main track hasn't run yet today — don't disturb the heavy-pass flags
+    if (!mains.length) { await closeStaleOpenSegments(SITE, TZ); return; }   // venue closed / pre-open — flush yesterday's open span, leave today's flags as the heavy pass left them
     const pick = mains.filter(isRunning).sort(byTimeDesc)[0]
               || mains.filter((s) => DONE_RE.test(String(s.status || s.state || ''))).sort(byTimeDesc)[0]
               || mains.filter((s) => String(s.start_time_key || '') <= nowKey).sort(byTimeDesc)[0]
@@ -221,9 +230,9 @@ async function refreshLiveTracks() {
     const mainCfg = cfgOf(pick);
     if (!mainCfg) return;
 
-    const liveIds = new Set([mainCfg.id]);
-    today.filter(isRunning).forEach((s) => { const c = cfgOf(s); if (isSet(c)) liveIds.add(c.id); });
-    const ids = [...liveIds];
+    const liveCfgs = new Map([[mainCfg.id, mainCfg]]);              // id -> {id, name, direction}
+    today.filter(isRunning).forEach((s) => { const c = cfgOf(s); if (isSet(c) && c) liveCfgs.set(c.id, c); });
+    const ids = [...liveCfgs.keys()];
 
     const setStatus = {};
     today.forEach((s) => { const c = cfgOf(s); if (!isSet(c)) return; if (isRunning(s)) setStatus[c.name] = 'running'; else if (!setStatus[c.name]) setStatus[c.name] = 'idle'; });
@@ -232,7 +241,77 @@ async function refreshLiveTracks() {
     await sb(`tracks?site=eq.${SITE}`, { method: 'PATCH', prefer: 'return=minimal', body: { live: false } });
     await sb(`tracks?site=eq.${SITE}&rf_config_id=in.(${ids.join(',')})`, { method: 'PATCH', prefer: 'return=minimal', body: { live: true } });
     console.log(`[live] refreshed · live(${ids.length}) cfg ${ids.join(',')}`);
+
+    // Intelligence-engine data foundation: record the live-layout TIMELINE (write-on-change).
+    await logTrackSegments(SITE, [...liveCfgs.values()].map((c) => ({ id: c.id, name: String(c.name || '').trim(), direction: c.direction || null })));
   } catch (e) { console.log('[live] refresh skipped:', e.message); }
+}
+
+// ---- track-layout TIMELINE capture (the Intelligence-engine data foundation) ----
+// Records the HISTORY of which layout was live, as spans in `track_log`:
+//     (site, rf_config_id, name, direction, started_at, ended_at)
+//   ended_at IS NULL  => that layout is live RIGHT NOW (the open segment).
+// When the live set changes, we close the open row(s) that dropped out and open the
+// newly-live one(s). Later, a repair's date_discovered is matched against these
+// time-ranges to learn which layout was live when each part broke (per-layout damage
+// rate + danger score). Until this has banked a few weeks of data there's nothing
+// honest to predict, so it just runs quietly and accumulates.
+//
+// WRITE-ON-CHANGE: a cycle with no layout change writes NOTHING (one tiny read of the
+// open rows, then return) — so on the ~10s always-on loop it adds no realtime/egress
+// load, the same discipline as statusFast(). Freshness of an open segment is implied
+// by rf_sync_state.last_status (bumped every cycle); a stale row left by a crash or an
+// overnight gap is closed on the next resolve at that last-confirmed-alive time, so a
+// closed span never stretches across hours the venue was shut.
+//   `live`: [{ id, name, direction }] of the configs live this cycle (main + running set tracks).
+//          MUST be non-empty — callers only pass a resolved live set. The only path that
+//          closes everything is closeStaleOpenSegments (prior-day flush), never this one.
+async function logTrackSegments(site, live) {
+  if (!Array.isArray(live) || !live.length) return;          // never close-all from here — guard against an empty resolve
+  let open;
+  try { open = (await sb(`track_log?site=eq.${site}&ended_at=is.null&select=id,rf_config_id`)) || []; }
+  catch (e) { console.log('[tracklog] read failed:', e.message); return; }
+  const liveById = new Map(live.map((c) => [c.id, c]));
+  const openIds  = new Set(open.map((r) => r.rf_config_id));
+  const toClose  = open.filter((r) => !liveById.has(r.rf_config_id)).map((r) => r.id);
+  const toOpen   = live.filter((c) => !openIds.has(c.id));
+  if (!toClose.length && !toOpen.length) return;             // no layout change this cycle -> no writes
+
+  const nowIso = new Date().toISOString();
+  if (toClose.length) {
+    // close at the last confirmed-alive heartbeat so a crash/overnight gap can't stretch
+    // the closed span up to "now"; fall back to now if it's missing or somehow in the future.
+    let closeAt = nowIso;
+    try { const st = await sb('rf_sync_state?k=eq.last_status&select=v'); const v = st && st[0] && st[0].v; if (v && v < nowIso) closeAt = v; } catch (e) {}
+    try { await sb(`track_log?id=in.(${toClose.join(',')})`, { method: 'PATCH', prefer: 'return=minimal', body: { ended_at: closeAt } }); }
+    catch (e) { console.log('[tracklog] close failed:', e.message); }
+  }
+  if (toOpen.length) {
+    try { await sb('track_log', { method: 'POST', prefer: 'return=minimal', body: toOpen.map((c) => ({
+      site, rf_config_id: c.id, name: c.name, direction: c.direction, started_at: nowIso, ended_at: null })) }); }
+    catch (e) { console.log('[tracklog] open failed:', e.message); }
+  }
+  console.log(`[tracklog] +${toOpen.length} open / -${toClose.length} closed${toOpen.length ? ' · now live: ' + toOpen.map((c) => c.name).join(', ') : ''}`);
+}
+
+// Daily flush: when the venue has had no main sessions yet (overnight / before open), any segment
+// still open from a PREVIOUS local day is stale — close it at the last confirmed-alive heartbeat so
+// it doesn't bleed across the closed hours. A same-day open segment is left alone (it could just be a
+// transient schedule-feed miss mid-day). Idempotent: once closed, later cycles find nothing to do.
+async function closeStaleOpenSegments(site, tz) {
+  try {
+    const open = (await sb(`track_log?site=eq.${site}&ended_at=is.null&select=id,started_at`)) || [];
+    if (!open.length) return;
+    const dayInTz = (iso) => { try { return new Date(iso).toLocaleDateString('en-CA', { timeZone: tz }); } catch (e) { return String(iso || '').slice(0, 10); } };
+    const today = dayInTz(new Date().toISOString());
+    const stale = open.filter((r) => dayInTz(r.started_at) < today).map((r) => r.id);
+    if (!stale.length) return;
+    const nowIso = new Date().toISOString();
+    let closeAt = nowIso;
+    try { const st = await sb('rf_sync_state?k=eq.last_status&select=v'); const v = st && st[0] && st[0].v; if (v && v < nowIso) closeAt = v; } catch (e) {}
+    await sb(`track_log?id=in.(${stale.join(',')})`, { method: 'PATCH', prefer: 'return=minimal', body: { ended_at: closeAt } });
+    console.log(`[tracklog] daily flush — closed ${stale.length} stale open segment(s) from before ${today}`);
+  } catch (e) { console.log('[tracklog] daily flush skipped:', e.message); }
 }
 
 // ---- enumerate kart ids ----
@@ -498,4 +577,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { login, enumerateKarts, syncKart, statusFast, reconcileToday };
+module.exports = { login, enumerateKarts, syncKart, statusFast, reconcileToday, logTrackSegments, refreshLiveTracks };
