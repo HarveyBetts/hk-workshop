@@ -1235,7 +1235,7 @@
             <div class="tile hkai"     id="whkai" onclick="go('hkai')"><div class="ti">🤖</div><div class="tl">HK AI</div><div class="ts">Coming soon</div></div>
             <div class="tile tasks"    id="wtasks" onclick="go('tasks')"><div class="ti">✅</div><div class="tl">Tasks</div><div class="ts">Coming soon</div></div>
             <div class="tile chats"    id="wchats" onclick="go('chats')"><div class="ti">💬</div><div class="tl">Chats</div><div class="ts">Coming soon</div></div>
-            <div class="tile race"     id="wrace" onclick="go('race')"><div class="ti">🏎️</div><div class="tl">Racefacer</div><div class="ts">Coming soon</div><span id="rf-badge" style="display:none;position:absolute;top:8px;right:8px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#FF3B30;color:#fff;font-size:11px;font-weight:800;line-height:20px;text-align:center;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.4)"></span></div>
+            <div class="tile race"     id="wrace" onclick="go('race')"><div class="ti">🏎️</div><div class="tl">Racefacer</div><div class="ts">Track of the day</div><span id="rf-badge" style="display:none;position:absolute;top:8px;right:8px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#FF3B30;color:#fff;font-size:11px;font-weight:800;line-height:20px;text-align:center;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.4)"></span></div>
             <div class="tile kartinfo" id="wkart" onclick="go('kartinfo');loadKartInfo()"><div class="ti">🏁</div><div class="tl">Kart Info</div><div class="ts">Live fleet</div></div>
             <div class="tile beacon"   id="wbeacon" onclick="go('beacons')"><div class="ti">📡</div><div class="tl">Beacons</div><div class="ts">Live layout</div></div>
             <div class="tile gord"     id="wgord" style="display:none" onclick="go('genorder');loadGenOrder()"><div class="ti">📦</div><div class="tl">Generate Order</div><div class="ts">Order from RIMO</div></div>
@@ -1334,14 +1334,18 @@
       <div class="phdr"><button class="back" onclick="back()"> Back</button></div>
       <div class="sb">
         <div class="pgtitle">Racefacer</div>
-        <div class="rcard">
-          <div style="font-size:56px;margin-bottom:16px">🏎️</div>
-          <div style="font-size:18px;font-weight:800;color:#FF6500;margin-bottom:10px">Coming Soon</div>
-          <div style="font-size:14px;color:var(--t2);line-height:2.3;text-align:left;display:inline-block">📊&nbsp; Track layout of the day<br>👥&nbsp; Customer numbers & sessions<br>🔧&nbsp; Parts broken on this layout<br>📦&nbsp; Pre-event stock predictions<br>💰&nbsp; Cost per session<br>🚨&nbsp; Stock discrepancy alerts<br>📈&nbsp; Usage vs booking correlation</div>
+        <div id="raceTrack" class="rcard" style="text-align:left;padding:20px"><div style="font-size:13px;color:var(--t2)">Loading track…</div></div>
+        <div id="raceStats" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px"></div>
+        <div id="raceDisc"></div>
+        <div id="raceWork"></div>
+        <div class="mc" style="border-style:dashed;opacity:.9">
+          <div style="font-size:12px;font-weight:800;letter-spacing:.4px;color:var(--t2);text-transform:uppercase;margin-bottom:8px">Coming next</div>
+          <div style="font-size:13px;color:var(--t2);line-height:2">👥&nbsp; Customer numbers &amp; sessions<br>📦&nbsp; Pre-event stock predictions<br>💰&nbsp; Cost per session<br>📈&nbsp; Usage vs booking correlation</div>
+          <div style="font-size:11.5px;color:var(--t2);opacity:.7;margin-top:8px">Unlocks once sessions sync and repairs are tagged by layout.</div>
         </div>
-        <div class="mc" style="text-align:center"><div style="font-size:13px;color:var(--t2);line-height:1.8">Wiring up the RaceFacer API — track of the day, sessions &amp; predictions<br><span style="color:var(--acc);font-weight:600">Coming soon</span></div></div>
       </div>
     </div>
+
 
     <!-- MANAGER -->
     <div class="scr" id="s-manager">
@@ -2633,6 +2637,7 @@ function updateUI(id){
   // Keep the live status/notes refresh running only while a kart list/detail screen is open.
   if(typeof startKartAutoRefresh==='function'){ if(id==='kartlist'||id==='kartdetail'){ startKartAutoRefresh(); } else { stopKartAutoRefresh(); } }
   if(id==='beacons' && typeof loadBeacons==='function') loadBeacons();
+  if(id==='race' && typeof loadRace==='function') loadRace();
   // sz() removed from nav path — only runs on resize/orientation now (was causing layout thrash on every transition)
 }
 function sizeTiles(){ layoutHome(); }
@@ -4236,6 +4241,72 @@ function loadBeacons(){
     var t=list.find(function(x){return x.live;})||list[0]||null;
     renderBeacons(t); buildBeaconList(t?t.id:null);
   });
+}
+// ===== RaceFacer tab: live track of the day + today's repairs / parts / discrepancies (real data only) =====
+function raceEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function raceDir(t){ if(!t) return ''; return t.direction || (/anti[-\s]?clock/i.test(t.name)?'Anti-clockwise':(/\bclock/i.test(t.name)?'Clockwise':'')); }
+var RACE_STAT={rep:null,parts:null,disc:null};
+function renderRaceStats(rep,parts,disc){
+  if(rep!=null) RACE_STAT.rep=rep; if(parts!=null) RACE_STAT.parts=parts; if(disc!=null) RACE_STAT.disc=disc;
+  var host=document.getElementById('raceStats'); if(!host) return;
+  function tile(num,label,color){ return '<div class="mc" style="margin-bottom:0;text-align:center;padding:14px 8px"><div style="font-size:26px;font-weight:800;color:'+(color||'var(--t1)')+';line-height:1">'+num+'</div><div style="font-size:11px;color:var(--t2);margin-top:5px;letter-spacing:.2px">'+label+'</div></div>'; }
+  var d=RACE_STAT.disc;
+  host.innerHTML=tile(RACE_STAT.rep==null?'–':RACE_STAT.rep,'Repairs today')+tile(RACE_STAT.parts==null?'–':RACE_STAT.parts,'Parts used')+tile(d==null?'–':d,'Discrepancies',(d&&d>0)?'#FF3B30':'var(--t1)');
+}
+function renderRaceWork(rows,mechs,parts){
+  var host=document.getElementById('raceWork'); if(!host) return;
+  if(!rows.length){ host.innerHTML='<div class="mc"><div style="font-size:13px;font-weight:800;letter-spacing:.4px;color:var(--t2);text-transform:uppercase;margin-bottom:6px">Today\'s work</div><div style="font-size:14px;color:var(--t2)">No repairs logged yet today.</div></div>'; return; }
+  var h='<div class="mc"><div style="font-size:13px;font-weight:800;letter-spacing:.4px;color:var(--t2);text-transform:uppercase;margin-bottom:10px">Today\'s work</div><div style="display:flex;flex-direction:column;gap:7px">';
+  mechs.forEach(function(m){ h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="font-size:14px;color:var(--t1)">'+raceEsc(m.name)+'</span><span style="font-size:13px;color:var(--t2)">'+m.n+' job'+(m.n===1?'':'s')+(m.cost>0?(' · $'+m.cost.toFixed(0)):'')+'</span></div>'; });
+  h+='</div>';
+  if(parts&&parts.length){ h+='<div style="height:1px;background:var(--b1);margin:12px 0"></div><div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">Parts replaced</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    parts.slice(0,12).forEach(function(p){ h+='<span style="font-size:12.5px;background:var(--card2);border:1px solid var(--b1);border-radius:999px;padding:4px 10px;color:var(--t1)">'+raceEsc(p.name)+' ×'+p.qty+'</span>'; });
+    h+='</div>'; }
+  h+='</div>'; host.innerHTML=h;
+}
+function renderRaceDisc(rows){
+  var host=document.getElementById('raceDisc'); if(!host) return;
+  if(!rows.length){ host.innerHTML=''; return; }   // hidden when clean, so the tab stays tidy
+  var h='<div class="mc" style="border-color:rgba(255,59,48,.3)"><div style="display:flex;align-items:center;gap:7px;margin-bottom:10px"><span style="font-size:13px;font-weight:800;letter-spacing:.4px;color:#FF3B30;text-transform:uppercase">🚨 Stock discrepancies</span><span style="font-size:12px;color:var(--t2);margin-left:auto">'+rows.length+' open</span></div><div style="display:flex;flex-direction:column;gap:8px">';
+  rows.slice(0,12).forEach(function(r){ var kart=raceEsc(r.rf_kart_name||'Kart'); var part=r.part_name?(' · '+raceEsc(r.part_name)):''; var who=r.mechanic?(' · '+raceEsc(r.mechanic)):''; var msg=raceEsc(r.message||'');
+    h+='<div style="font-size:13px;color:var(--t1);line-height:1.5"><span style="font-weight:700">'+kart+'</span>'+part+who+(msg?('<br><span style="color:var(--t2);font-size:12.5px">'+msg+'</span>'):'')+'</div>'; });
+  h+='</div>'; if(rows.length>12) h+='<div style="font-size:12px;color:var(--t2);margin-top:8px">+'+(rows.length-12)+' more</div>'; h+='</div>'; host.innerHTML=h;
+}
+function loadRace(){
+  if(typeof SBC==='undefined'||!SBC) return;
+  RACE_STAT={rep:null,parts:null,disc:null};
+  var today=(typeof localDay==='function')?localDay():new Date().toISOString().slice(0,10);
+  var acc=(typeof siteAccent==='function'&&siteAccent())||'#00CFFF';
+
+  // Track of the day — the live layout for this site (same source as the beacons tab)
+  loadBeaconTracks(function(){
+    var host=document.getElementById('raceTrack'); if(!host) return;
+    var list=(typeof beaconTracksForSite==='function')?beaconTracksForSite():[];
+    var t=list.find(function(x){return x.live;})||null;
+    var sl=(typeof siteLabel==='function'&&siteLabel())||'';
+    if(!t){ host.innerHTML='<div style="font-size:13px;font-weight:800;letter-spacing:.4px;color:var(--t2);text-transform:uppercase;margin-bottom:6px">Track of the day</div><div style="font-size:15px;color:var(--t2)">No live layout running right now'+(sl?(' · '+raceEsc(sl)):'')+'</div>'; return; }
+    var dir=raceDir(t);
+    host.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:50%;background:#34C759;box-shadow:0 0 8px #34C759;display:inline-block"></span><span style="font-size:12px;font-weight:800;letter-spacing:.5px;color:#34C759;text-transform:uppercase">Live now</span>'+(sl?('<span style="font-size:12px;color:var(--t2);margin-left:auto">'+raceEsc(sl)+'</span>'):'')+'</div><div style="font-size:22px;font-weight:800;color:var(--t1);line-height:1.2;margin-bottom:'+(dir?'6px':'0')+'">'+raceEsc(t.name)+'</div>'+(dir?('<div style="font-size:13px;color:'+acc+';font-weight:600">'+raceEsc(dir)+'</div>'):'');
+  });
+
+  // Today's repairs (discovered today) → count, cost, by-mechanic, + parts replaced
+  SBC.from('rf_repairs').select('id,cost,mechanic,date_discovered').eq('date_discovered',today).limit(3000).then(function(res){
+    var rows=(res&&res.data)||[], mech={}, ids=[];
+    rows.forEach(function(r){ var c=+r.cost||0; var m=r.mechanic||'Unassigned'; if(!mech[m]) mech[m]={name:m,n:0,cost:0}; mech[m].n++; mech[m].cost+=c; if(r.id!=null) ids.push(r.id); });
+    var mechs=Object.keys(mech).map(function(k){return mech[k];}).sort(function(a,b){return (b.n-a.n)||(b.cost-a.cost);});
+    if(ids.length){
+      SBC.from('rf_repair_parts').select('part_name,qty,price,repair_id').in('repair_id',ids).limit(8000).then(function(pr){
+        var pm={}, ptot=0; ((pr&&pr.data)||[]).forEach(function(p){ var n=p.part_name||'Part'; var q=+p.qty||0; if(!pm[n]) pm[n]={name:n,qty:0,cost:0}; pm[n].qty+=q; pm[n].cost+=((+p.price||0)*q); ptot+=q; });
+        var pl=Object.keys(pm).map(function(k){return pm[k];}).sort(function(a,b){return b.qty-a.qty;});
+        renderRaceStats(rows.length,ptot,null); renderRaceWork(rows,mechs,pl);
+      }, function(){ renderRaceStats(rows.length,0,null); renderRaceWork(rows,mechs,[]); });
+    } else { renderRaceStats(rows.length,0,null); renderRaceWork(rows,mechs,[]); }
+  }, function(){ renderRaceStats(0,0,null); renderRaceWork([],[],[]); });
+
+  // Today's open stock discrepancies
+  SBC.from('rf_discrepancies').select('*').eq('day',today).neq('status','resolved').order('at',{ascending:false}).limit(60).then(function(res){
+    var rows=(res&&res.data)||[]; renderRaceStats(null,null,rows.length); renderRaceDisc(rows);
+  }, function(){ renderRaceStats(null,null,0); renderRaceDisc([]); });
 }
 function renderBeacons(t){
   var nm=document.getElementById('bcnTrk'), site=document.getElementById('bcnSite'), live=document.getElementById('bcnLive'), leglive=document.getElementById('bcnLegLive');
