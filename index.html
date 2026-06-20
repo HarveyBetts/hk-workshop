@@ -803,8 +803,9 @@
     .m-row-btn.m-qrtog{color:var(--acc);border-color:rgba(0,207,255,.4);font-size:17px;font-weight:700}
     .m-row-btn.m-qrtog.off{color:#FF5A52;border-color:rgba(255,90,82,.35)}
     .m-row-del{color:var(--red)}
-    .m-tabs{display:flex;gap:6px;padding:10px 18px 2px;flex-shrink:0}
-    .m-tab{flex:1;background:var(--card);border:1px solid var(--b2);border-radius:10px;color:var(--t2);font-weight:700;font-size:13px;padding:10px 4px;cursor:pointer}
+    .m-tabs{display:flex;gap:6px;padding:10px 18px 2px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+    .m-tabs::-webkit-scrollbar{display:none}
+    .m-tab{flex:1;min-width:64px;white-space:nowrap;background:var(--card);border:1px solid var(--b2);border-radius:10px;color:var(--t2);font-weight:700;font-size:13px;padding:10px 4px;cursor:pointer}
     .m-tab.active{background:var(--grad);color:#fff;border-color:transparent}
     .m-pane{display:none;flex:1;flex-direction:column;min-height:0}
     .m-pane.active{display:flex}
@@ -884,6 +885,12 @@
     .m-lockhint{font-size:11.5px;color:var(--t2);line-height:1.4;margin:0 0 6px}
     .m-lock input{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:var(--acc)}
     .m-empty{text-align:center;color:var(--t2);padding:40px 0;font-size:14px}
+    /* Master Access -> Karts: long-term-damage toggle + type group headers */
+    .mk-tog{flex-shrink:0;background:var(--card2);border:1px solid var(--b2);color:var(--t2);border-radius:9px;font-size:12px;font-weight:700;padding:0 13px;height:38px;cursor:pointer;white-space:nowrap;font-family:inherit;transition:background .12s,border-color .12s,color .12s}
+    .mk-tog:active{transform:scale(.96)}
+    .mk-tog.on{background:rgba(148,163,184,.22);border-color:rgba(148,163,184,.6);color:#CBD5E1}
+    .mk-group-h{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;margin:16px 2px 8px}
+    .mk-group-h:first-child{margin-top:4px}
     /* Master form */
     .m-form{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center}
     .m-form.show{display:flex}
@@ -1651,6 +1658,7 @@
     <button class="m-tab" id="mtab-sites" onclick="mTab('sites')">📍 Sites</button>
     <button class="m-tab" id="mtab-tools" onclick="mTab('tools')">⚙️ Tools</button>
     <button class="m-tab" id="mtab-tracks" onclick="mTab('tracks')">🏁 Tracks</button>
+    <button class="m-tab" id="mtab-karts" onclick="mTab('karts')">🏎️ Karts</button>
   </div>
   <div class="m-pane active" id="m-pane-parts">
     <div class="m-tools">
@@ -1747,6 +1755,11 @@
       <div class="bd-panel" id="bd-panel"><div class="bd-phint">Pick a track, upload its car-park blueprint, then tap the blueprint to drop beacons.</div></div>
       <datalist id="bd-fnlist"></datalist>
     </div>
+  </div>
+  <div class="m-pane" id="m-pane-karts">
+    <div class="m-tools"><input class="m-search-in" id="mk-search" placeholder="Find a kart number or type…" oninput="mkSearch()" autocomplete="off"></div>
+    <div class="m-form-msg" id="mk-msg" style="margin:0 18px 8px"></div>
+    <div class="m-list" id="m-karts-list"><div class="m-empty">Loading karts…</div></div>
   </div>
 </div>
 <div class="m-form" id="m-form">
@@ -4019,7 +4032,7 @@ function mapRfKart(r){
   return { rfId:r.rf_id, type:rfTypeShort(r.type), num:rfNum(r.name), status:rfStatusClass(r.status_code,r.status),
     kartId:r.kart_id_label||'-', transponder:'-', brand:r.brand||'RiMO', model:r.model||'-', engine:'Electric',
     mileage:Number(r.total_km)||0, laps:Number(r.total_laps)||0, hours:Number(r.total_hours)||0,
-    cost:(parseFloat(String(r.total_cost||'').replace(/[^0-9.]/g,''))||0), startDate:'-', typeColor:(r.type_color||null) };
+    cost:(parseFloat(String(r.total_cost||'').replace(/[^0-9.]/g,''))||0), startDate:'-', longTerm:(r.long_term===true), typeColor:(r.type_color||null) };
 }
 // Paginated read — Supabase/PostgREST caps a single response at ~1000 rows,
 // so we page through with .range() until a short page comes back (otherwise
@@ -4122,6 +4135,7 @@ function loadRfKarts(cb){
 var KART_TYPE_ORDER=['Adult','Intermediate','Junior','Mini','Twin','BattleKart'];
 var KART_TYPE_COLOR={Adult:'#22D3EE',Intermediate:'#F59E0B',Junior:'#34D399',Mini:'#A78BFA',Twin:'#F472B6',BattleKart:'#F87171'};
 var STATUS_COLOR={ok:'#22C55E',maint:'#FFD600',damaged:'#FF3B30'};
+var LT_TYPE='Long Term', LT_COLOR='#94A3B8';   // long-term-damage pile: karts kept by type but set aside from the fixable counts
 // Kart Info is now four real screens (kartinfo / kartlist / kartdetail / kartref). Navigation and
 // the back-swipe go through the standard go()/back() engine, so they behave exactly like every
 // other screen — no bespoke sub-view router needed.
@@ -4156,8 +4170,11 @@ function kiSubText(){ return (typeof siteLabel==='function'?siteLabel(currentSit
 // Open the Karts screen (colour-coded type tabs + number tiles)
 function kiOpenKarts(){
   SELECTED_KART=null;
-  var present={}; KART_LIST.forEach(function(k){present[k.type]=true;});
-  if(!present[SELECTED_KART_TYPE]){ var first=KART_TYPE_ORDER.filter(function(t){return present[t];})[0]||Object.keys(present)[0]; if(first) SELECTED_KART_TYPE=first; }
+  var present={}; KART_LIST.forEach(function(k){ if(!k.longTerm) present[k.type]=true; });
+  var hasLT=KART_LIST.some(function(k){return k.longTerm;});
+  var firstReal=function(){ return KART_TYPE_ORDER.filter(function(t){return present[t];})[0]||Object.keys(present)[0]||''; };
+  if(SELECTED_KART_TYPE===LT_TYPE){ if(!hasLT){ var fr=firstReal(); if(fr) SELECTED_KART_TYPE=fr; } }
+  else if(!present[SELECTED_KART_TYPE]){ var first=firstReal(); if(first) SELECTED_KART_TYPE=first; else if(hasLT) SELECTED_KART_TYPE=LT_TYPE; }
   var ksub=document.getElementById('ki-karts-sub'); if(ksub) ksub.innerText=kiSubText();
   renderTypeTabs();
   renderKartChips();
@@ -4176,15 +4193,18 @@ function kiOpenRef(which){
   go('kartref');
 }
 
-// Colour-coded type tabs — one per type present in the fleet
+// Colour-coded type tabs — one per type present in the fleet, plus a Long Term pile
 function renderTypeTabs(){
   var box=document.getElementById('ki-type-tabs'); if(!box) return;
-  var byType={}; KART_LIST.forEach(function(k){ (byType[k.type]=byType[k.type]||[]).push(k); });
+  var byType={}, lt=[];
+  KART_LIST.forEach(function(k){ if(k.longTerm){ lt.push(k); } else { (byType[k.type]=byType[k.type]||[]).push(k); } });
   var types=KART_TYPE_ORDER.filter(function(t){return byType[t]&&byType[t].length;});
   Object.keys(byType).forEach(function(t){ if(types.indexOf(t)<0) types.push(t); });
-  if(!types.length){ box.innerHTML=''; return; }
-  if(types.indexOf(SELECTED_KART_TYPE)<0) SELECTED_KART_TYPE=types[0];
-  box.innerHTML=types.map(function(t){
+  // keep the selected pile valid as karts move in/out of Long Term
+  if(SELECTED_KART_TYPE===LT_TYPE){ if(!lt.length) SELECTED_KART_TYPE=types[0]||LT_TYPE; }
+  else if(types.indexOf(SELECTED_KART_TYPE)<0) SELECTED_KART_TYPE=types[0]||(lt.length?LT_TYPE:'');
+  if(!types.length && !lt.length){ box.innerHTML=''; return; }
+  var html=types.map(function(t){
     var col=KART_TYPE_COLOR[t]||'#2DD4BF', n=byType[t].length, active=(t===SELECTED_KART_TYPE);
     var label=(t==='Intermediate')?'Inter':t;
     var style=active?('background:'+col+'22;border-color:'+col+';color:'+col):'';
@@ -4192,6 +4212,14 @@ function renderTypeTabs(){
       +'<span>'+label+'</span><span class="ktt-n"'+(active?(' style="color:'+col+'"'):'')+'>'+n+' kart'+(n===1?'':'s')+'</span>'
       +'</button>';
   }).join('');
+  if(lt.length){
+    var act=(SELECTED_KART_TYPE===LT_TYPE);
+    var st=act?('background:'+LT_COLOR+'22;border-color:'+LT_COLOR+';color:'+LT_COLOR):'';
+    html+='<button class="ktype-tab" style="'+st+'" onclick="setKartType(\''+LT_TYPE+'\')">'
+      +'<span>Long Term</span><span class="ktt-n"'+(act?(' style="color:'+LT_COLOR+'"'):'')+'>'+lt.length+' kart'+(lt.length===1?'':'s')+'</span>'
+      +'</button>';
+  }
+  box.innerHTML=html;
 }
 
 function setKartType(type){
@@ -4487,7 +4515,21 @@ function loadKartInfo(){
 var KSB_LAST='';
 function renderStatusBar(){
   var box=document.getElementById('kart-statusbar'); if(!box) return;
-  var list=KART_LIST.filter(function(k){return k.type===SELECTED_KART_TYPE;});
+  // Long Term pile — a count + per-type breakdown (no usable bar; these can't be fixed right now)
+  if(SELECTED_KART_TYPE===LT_TYPE){
+    var lt=KART_LIST.filter(function(k){return k.longTerm;});
+    var bt={}; lt.forEach(function(k){ bt[k.type]=(bt[k.type]||0)+1; });
+    var ord=KART_TYPE_ORDER.filter(function(t){return bt[t];}); Object.keys(bt).forEach(function(t){if(ord.indexOf(t)<0)ord.push(t);});
+    var sigL='LT|'+lt.length+'|'+ord.map(function(t){return t+':'+bt[t];}).join(',');
+    if(sigL===KSB_LAST) return; KSB_LAST=sigL;
+    if(!lt.length){ box.innerHTML=''; return; }
+    var headL='<div class="ksb-head"><span class="ksb-usable"><b style="color:'+LT_COLOR+'">'+lt.length+'</b></span><span class="ksb-usablelbl">can\u2019t be fixed right now</span></div>';
+    var chipsL='<div class="ksb-legend">'+ord.map(function(t){ var c=KART_TYPE_COLOR[t]||LT_COLOR; var l=(t==='Intermediate')?'Inter':t; return '<span class="ksb-li"><span class="ksb-dot" style="background:'+c+'"></span>'+l+' '+bt[t]+'</span>'; }).join('')+'</div>';
+    var noteL='<div style="font-size:11px;color:var(--t2);margin-top:7px;line-height:1.5">Set aside in Master Access — excluded from the usable counts so the fixable fleet reads true.</div>';
+    box.innerHTML=headL+chipsL+noteL;
+    return;
+  }
+  var list=KART_LIST.filter(function(k){return k.type===SELECTED_KART_TYPE && !k.longTerm;});
   var c={ok:0,maint:0,damaged:0};
   list.forEach(function(k){ if(c[k.status]!=null) c[k.status]++; });
   var sig=SELECTED_KART_TYPE+'|'+c.ok+'|'+c.maint+'|'+c.damaged;
@@ -4509,14 +4551,28 @@ function renderStatusBar(){
 function renderKartChips(filter){
   renderStatusBar();
   var q=(filter||(document.getElementById('kart-search')?document.getElementById('kart-search').value:'')||'').trim().toLowerCase();
+  var grid=document.getElementById('kart-chips');
+  if(SELECTED_KART_TYPE===LT_TYPE){
+    var ltlist=KART_LIST.filter(function(k){return k.longTerm;})
+      .filter(function(k){return !q||String(k.num).indexOf(q)>=0;})
+      .sort(function(a,b){ var ai=KART_TYPE_ORDER.indexOf(a.type), bi=KART_TYPE_ORDER.indexOf(b.type); return (ai-bi)||(a.num-b.num); });
+    var lthtml=ltlist.map(function(k){
+      var col=KART_TYPE_COLOR[k.type]||LT_COLOR, lbl=(k.type==='Intermediate')?'Inter':(k.type||'');
+      return '<div class="kart-chip" onclick="selectKart('+k.rfId+')" style="flex-direction:column;gap:2px;background:'+col+'1f;border-color:'+col+'88">'
+        +'<div class="kc-num">'+k.num+'</div>'
+        +'<div style="font-size:9px;font-weight:800;letter-spacing:.3px;color:'+col+';text-transform:uppercase;line-height:1">'+lbl+'</div>'
+        +'</div>';
+    }).join('');
+    if(grid) grid.innerHTML=lthtml||'<div class="emp" style="grid-column:1/-1;padding:14px 0;text-align:center;color:var(--t2);font-size:13px">No long-term karts match that number</div>';
+    return;
+  }
   var list=KART_LIST
-    .filter(function(k){return k.type===SELECTED_KART_TYPE;})
+    .filter(function(k){return k.type===SELECTED_KART_TYPE && !k.longTerm;})
     .filter(function(k){return !q||String(k.num).indexOf(q)>=0;})
     .sort(function(a,b){return a.num-b.num;});
   var html=list.map(function(k){
     return '<div class="kart-chip" data-status="'+k.status+'" data-online="0" onclick="selectKart('+k.rfId+')"><span class="kc-badge" title="Offline"></span><div class="kc-num">'+k.num+'</div></div>';
   }).join('');
-  var grid=document.getElementById('kart-chips');
   if(grid) grid.innerHTML=html||'<div class="emp" style="grid-column:1/-1;padding:14px 0;text-align:center;color:var(--t2);font-size:13px">No karts match that number</div>';
 }
 function filterKarts(v){renderKartChips(v);}
@@ -4566,7 +4622,7 @@ function renderKartDetail(k){
   KD_TAB='Repairs';
   var det=document.getElementById('kiv-detail'); if(det) det.style.setProperty('--kacc',(KART_TYPE_COLOR[k.type]||'#22D3EE'));
   document.getElementById('kd-num').innerText=k.num;
-  document.getElementById('kd-type').innerText=k.type||'-';
+  var _kdt=document.getElementById('kd-type'); if(_kdt) _kdt.innerHTML=kEsc(k.type||'-')+(k.longTerm?(' <span style="font-size:10px;font-weight:800;letter-spacing:.4px;color:#0b0f17;background:'+LT_COLOR+';padding:2px 7px;border-radius:6px;vertical-align:middle">LONG TERM</span>'):'');
   document.getElementById('kd-name').innerText=k.num;
   document.getElementById('kd-kartid').innerText=k.kartId||'-';
   document.getElementById('kd-trans').innerText=(k.transponder&&k.transponder!=='-')?k.transponder:'—';
@@ -4994,7 +5050,7 @@ function mSearch(){ mRenderList(); }
 /* ----- Master tabs ----- */
 var mStaffDraft=[], mStaffLoaded=false;
 function mTab(name){
-  ['parts','staff','sites','tools','tracks'].forEach(function(t){
+  ['parts','staff','sites','tools','tracks','karts'].forEach(function(t){
     var tab=document.getElementById('mtab-'+t), pane=document.getElementById('m-pane-'+t);
     if(tab) tab.classList.toggle('active',t===name);
     if(pane) pane.classList.toggle('active',t===name);
@@ -5003,6 +5059,71 @@ function mTab(name){
   if(name==='sites'&&!mSitesLoaded) siLoad();
   if(name==='tools'){ mToolsStats(); mQRCount(); qrDesignerInit(); }
   if(name==='tracks') bdOpen();
+  if(name==='karts') mkOpen();
+}
+
+/* ===== Karts (Master Access -> Karts): mark karts long-term damaged =================
+   A list of every kart (grouped by type) with a Long Term toggle. Tapping it flips an
+   overlay flag on rf_karts via the master-karts Edge Function (service key on the
+   server). The kart keeps its real type but moves to the Long Term pile in Kart Info and
+   drops out of the usable counts — a true reflection of how many karts we can fix. */
+function mkMsg(t,col){ var m=document.getElementById('mk-msg'); if(m){ m.textContent=t||''; m.style.color=col||'#FF5A52'; } }
+function mkOpen(){
+  mkRender();
+  loadRfKarts(function(){ mkRender(); });   // refresh the list in the background (realtime keeps it live too)
+}
+function mkTogLabel(on){ return on?'\u2713 Long Term':'Long Term'; }
+function mkRender(){
+  var el=document.getElementById('m-karts-list'); if(!el) return;
+  var q=(document.getElementById('mk-search')?document.getElementById('mk-search').value:'').trim().toLowerCase();
+  var all=KART_LIST||[];
+  var list=all.filter(function(k){ return !q || String(k.num).indexOf(q)>=0 || String(k.type||'').toLowerCase().indexOf(q)>=0 || (q==='long term' && k.longTerm); });
+  if(!all.length){ el.innerHTML='<div class="m-empty">No karts synced yet — run a sync first.</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="m-empty">No karts match that.</div>'; return; }
+  var ltN=all.filter(function(k){return k.longTerm;}).length;
+  var statusPill=function(s){ var m=({ok:['OK','#22C55E'],maint:['Maintenance','#FFD600'],damaged:['Damaged','#FF3B30']})[s]||['—','#7C8597'];
+    return '<span style="font-size:10px;font-weight:700;color:'+m[1]+';background:'+m[1]+'1f;border:1px solid '+m[1]+'40;padding:2px 7px;border-radius:6px">'+m[0]+'</span>'; };
+  var byType={}; list.forEach(function(k){ (byType[k.type]=byType[k.type]||[]).push(k); });
+  var order=KART_TYPE_ORDER.filter(function(t){return byType[t];}); Object.keys(byType).forEach(function(t){if(order.indexOf(t)<0)order.push(t);});
+  var head='<div class="m-row-sub" style="margin:0 2px 12px;font-size:12px;line-height:1.55">Tap <b>Long Term</b> on any kart you <b>can\u2019t fix right now</b>. It keeps its type but moves to the <b style="color:'+LT_COLOR+'">Long Term</b> pile in Kart Info and drops out of the usable counts. '+(ltN?('<b>'+ltN+'</b> set aside.'):'None set aside.')+'</div>';
+  var body=order.map(function(t){
+    var col=KART_TYPE_COLOR[t]||'#2DD4BF', label=(t==='Intermediate')?'Intermediate':t;
+    var rows=byType[t].slice().sort(function(a,b){return a.num-b.num;}).map(function(k){
+      var on=!!k.longTerm;
+      return '<div class="m-row">'
+        +'<div class="m-row-main" style="cursor:default">'
+          +'<div class="m-row-desc"><span style="color:'+col+'">'+label+'</span> '+k.num+'</div>'
+          +'<div class="m-row-sub" style="margin-top:4px">'+statusPill(k.status)+(on?(' <span style="font-size:10px;font-weight:700;color:'+LT_COLOR+'">\u00b7 set aside</span>'):'')+'</div>'
+        +'</div>'
+        +'<button class="mk-tog'+(on?' on':'')+'" id="mk-tog-'+k.rfId+'" onclick="mkToggle('+k.rfId+')">'+mkTogLabel(on)+'</button>'
+      +'</div>';
+    }).join('');
+    return '<div class="mk-group-h" style="color:'+col+'">'+label+' <span style="color:var(--t2);font-weight:600">'+byType[t].length+'</span></div>'+rows;
+  }).join('');
+  el.innerHTML=head+body;
+}
+function mkSearch(){ mkRender(); }
+function mkToggle(rfId){
+  var k=(KART_LIST||[]).find(function(x){return x.rfId===rfId;}); if(!k) return;
+  if(!masterPin){ mkMsg('Re-enter Master Access first'); return; }
+  var next=!k.longTerm;
+  var btn=document.getElementById('mk-tog-'+rfId);
+  if(btn){ btn.disabled=true; btn.textContent='\u2026'; }
+  mkMsg('');
+  fetch(SB_FN+'master-karts',{method:'POST',headers:HDRS,body:JSON.stringify({
+    masterPin:masterPin, op:'setLongTerm', rfId:rfId, longTerm:next, by:((typeof cu!=='undefined'&&cu&&cu.name)||'')
+  })}).then(function(r){return r.json();}).then(function(res){
+    if(res&&res.success){
+      k.longTerm=next;
+      mkRender();
+      // refresh the Kart Info piles if they're on screen behind the overlay
+      var scr=(typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null;
+      if(scr==='kartlist'){ KSB_LAST=''; renderTypeTabs(); renderKartChips(); }
+    } else {
+      if(btn){ btn.disabled=false; btn.textContent=mkTogLabel(k.longTerm); }
+      mkMsg((res&&res.message)?('Couldn\u2019t save: '+res.message):'Couldn\u2019t save — check the master-karts function is deployed.');
+    }
+  }).catch(function(){ if(btn){ btn.disabled=false; btn.textContent=mkTogLabel(k.longTerm); } mkMsg('Connection error — check the master-karts function is deployed.'); });
 }
 
 /* ===== Beacon Designer (Master Access -> Tracks) ===================================
