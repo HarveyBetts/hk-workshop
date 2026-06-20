@@ -1499,7 +1499,6 @@
     <div class="scr" id="s-kartinfo">
       <div class="phdr">
         <button class="back" onclick="back()"> Back</button>
-        <button class="refresh-btn" id="rb-kart" onclick="loadKartInfo()"><span class="ricon">🔄</span><span id="rt-kart">Refresh</span></button>
       </div>
       <div class="sb">
         <div id="ki-home">
@@ -1564,6 +1563,7 @@
     <div class="scr" id="s-kartref">
       <div class="phdr">
         <button class="back" onclick="back()"> Back</button>
+        <button class="refresh-btn" id="rb-kref" onclick="kiRefRefresh()" style="display:none"><span class="ricon">🔄</span><span id="rt-kref">Refresh</span></button>
       </div>
       <div class="sb">
         <div id="ki-ref">
@@ -4193,9 +4193,14 @@ function kiOpenKarts(){
 }
 
 // Open a fleet-wide reference section (wiring / cpu / beacons / help)
+var KI_REF_WHICH='';
 function kiOpenRef(which){
+  KI_REF_WHICH=which;
   var titles={wiring:'Wiring',cpu:'CPU / WiFi',beacons:'Dehaardt',help:'Help',notes:'Kart Notes',repairs:'Repairs'};
   var t=document.getElementById('ki-ref-title'); if(t) t.innerText=titles[which]||'Reference';
+  // Refresh only matters on the live-data sections; static reference pages don't get the button.
+  var rb=document.getElementById('rb-kref'); if(rb) rb.style.display=(which==='repairs'||which==='notes'||which==='beacons')?'':'none';
+  var rl=document.getElementById('rt-kref'); if(rl) rl.innerText='Refresh';
   if(which==='wiring') renderWiringSection();
   else if(which==='cpu') renderCpuSection();
   else if(which==='beacons') renderBeaconsSection();
@@ -4203,6 +4208,16 @@ function kiOpenRef(which){
   else if(which==='repairs') renderRepairsSection();
   else renderHelpSection();
   go('kartref');
+}
+function kiRefRefresh(){
+  var which=KI_REF_WHICH||'';
+  var btn=document.getElementById('rb-kref'), lbl=document.getElementById('rt-kref');
+  if(btn) btn.classList.add('spinning'); if(lbl) lbl.innerText='Updating...';
+  function done(){ if(btn) btn.classList.remove('spinning'); if(lbl){ lbl.innerText='Updated \u00b7 just now'; setTimeout(function(){ if(lbl) lbl.innerText='Refresh'; },3000); } }
+  if(which==='repairs'){ loadRfKarts(function(){ if(RF_LOADED) rpBuild(); done(); }); return; }
+  if(which==='notes'){ KI_NKMAP=null; renderKartNotesFeed(); done(); return; }
+  if(which==='beacons'){ renderBeaconsSection(); done(); return; }
+  kiOpenRef(which); done();
 }
 
 // Colour-coded type tabs — one per type present in the fleet, plus a Long Term pile
