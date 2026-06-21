@@ -213,7 +213,7 @@
     .ts{font-size:clamp(10px,2.4vw,15px);color:rgba(255,255,255,0.65);line-height:1.2;position:relative;z-index:1}
 
     /* Colour palette — one per tab (blues / teals / indigos kept distinct) */
-    .tile.tc      {background:linear-gradient(145deg,#0891B2,#0E5F73);border:1px solid rgba(34,211,238,0.32)}
+    .tile.tc      {background:linear-gradient(145deg,#C026D3,#701A75);border:1px solid rgba(240,171,252,0.42)}
     .tile.tse     {background:linear-gradient(145deg,#2563EB,#1E3A8A);border:1px solid rgba(96,165,250,0.42)}
     .tile.tlo     {background:linear-gradient(145deg,#EAB308,#A16207);border:1px solid rgba(250,204,21,0.6)}
     .tile.tor     {background:linear-gradient(145deg,#059669,#064E3B);border:1px solid rgba(52,211,153,0.38)}
@@ -4809,9 +4809,10 @@ function fmtNoteDate(iso){
 }
 function fmtNoteWhen(iso,who){ if(!iso) return '\u2014'; return fmtNoteDate(iso)+(who?(' - '+kEsc(who)):''); }
 
-// The active notes — shown above the tabs, mirroring exactly RaceFacer's top list (starred, not X'd).
-// "Active" comes from RaceFacer's own list, so notes cleared with the red X drop off here even though
-// they're not archived. This is the "why is it damaged" list.
+// The active notes — shown above the tabs, mirroring exactly RaceFacer's top list of open issues.
+// "Active" comes from RaceFacer's own list: a note drops off here once it's been resolved — the proper
+// way is logging a repair against the kart, which clears it; clicking the red X is a separate manual
+// dismiss (no repair recorded). Either way it leaves this list. This is the "why is it damaged" list.
 function kartOpenNotesHTML(rfId){
   var notes=(rfId!=null&&RF_NOTES_BY_ID[rfId])||[];
   var open=notes.filter(function(n){return n.active;});
