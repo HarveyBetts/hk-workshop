@@ -404,8 +404,8 @@ async function syncAllRepairs() {
         description: it.annotation || '', notes: '',
         date_discovered: dashToIso(it.damage_discovery_date),
         date_repaired: dashToIso(it.repair_date),
-        mileage: (it.repair_km != null ? Number(it.repair_km) : null),
-        cost: (it.cost != null ? Number(it.cost) : null),
+        mileage: (Number.isFinite(Number(it.repair_km)) ? Number(it.repair_km) : null),
+        cost: (Number.isFinite(Number(it.cost)) ? Number(it.cost) : null),
         mechanic: it.user_name || null,
         kart_name: (it.kart_name != null ? String(it.kart_name) : null),
         kart_type: it.kart_type_name || null,
@@ -426,16 +426,30 @@ async function syncAllRepairs() {
     for (const p of parts) partRows.push({ repair_id: row.id, part_name: p.name, qty: p.qty, price: p.price });
   }
 
+  // Write in chunks, but if a chunk is rejected (in PostgREST one bad row fails the whole batch),
+  // retry that chunk row-by-row so a single bad record can't drop the thousands of good rows after it.
+  async function writeChunked(path, rows, prefer, label) {
+    let bad = 0;
+    for (let i = 0; i < rows.length; i += 500) {
+      const chunk = rows.slice(i, i + 500);
+      try { await sb(path, { method: 'POST', prefer, body: chunk }); }
+      catch (e) {
+        console.error(`[${label}] chunk ${i}-${i + chunk.length} rejected (${(e.message || '').slice(0, 140)}); retrying row-by-row`);
+        for (const row of chunk) {
+          try { await sb(path, { method: 'POST', prefer, body: [row] }); }
+          catch (e2) { bad++; console.error(`[${label}] dropped id=${row.id != null ? row.id : row.repair_id}: ${(e2.message || '').slice(0, 120)}`); }
+        }
+      }
+    }
+    return bad;
+  }
+
   // repairs first (parts FK references them); upsert on the RaceFacer id so edits update in place
-  for (let i = 0; i < repairRows.length; i += 500) {
-    await sb('rf_repairs?on_conflict=id', { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: repairRows.slice(i, i + 500) });
-  }
+  const badR = await writeChunked('rf_repairs?on_conflict=id', repairRows, 'resolution=merge-duplicates,return=minimal', 'repairs');
   // parts: wipe + rebuild (small table — guarantees no duplicates without per-line bookkeeping)
-  await sb('rf_repair_parts?repair_id=gte.0', { method: 'DELETE' });
-  for (let i = 0; i < partRows.length; i += 500) {
-    await sb('rf_repair_parts', { method: 'POST', prefer: 'return=minimal', body: partRows.slice(i, i + 500) });
-  }
-  console.log(`[repairs] full-fleet: ${repairRows.length} repairs${total != null ? ' / ' + total + ' reported' : ''}, ${partRows.length} part lines across ${byKart.size} karts.`);
+  try { await sb('rf_repair_parts?repair_id=gte.0', { method: 'DELETE' }); } catch (e) { console.error('[repairs] parts wipe failed:', (e.message || '').slice(0, 120)); }
+  const badP = await writeChunked('rf_repair_parts', partRows, 'return=minimal', 'repair-parts');
+  console.log(`[repairs] full-fleet: ${repairRows.length - badR}/${repairRows.length} repairs written${total != null ? ' (' + total + ' reported by RaceFacer)' : ''}, ${partRows.length - badP}/${partRows.length} part lines, ${byKart.size} karts.`);
   return byKart;
 }
 
