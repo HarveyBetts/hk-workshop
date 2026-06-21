@@ -371,7 +371,75 @@ const toUtc = (naive) => { if (!naive) return null; const d = new Date(naive + R
 // Anything else ("George", "Late 2", "Archived 3", test entries) is not real fleet.
 const KEEP_NAME = /^\d{1,3}$/;
 
-async function syncKart(id, meta) {
+// ---- FULL-FLEET repairs ----------------------------------------------------------------------
+// Pull RaceFacer's entire damage / repairs list (/ajax/garage/repairs_list) — every kart, active
+// or retired — instead of hitting each current kart's page. The list is keyed by RaceFacer's own
+// repair id (it counts up over time, so newest = highest), and we store id = that id. Two wins:
+//   * ordering is exact — the app sorts by id, so same-day repairs no longer shuffle; and
+//   * re-syncs upsert on that id, so edits update in place and nothing gets reshuffled or lost.
+// Returns a Map rf_kart_id -> [repair objects] so syncKart can still hand the day's repairs to the
+// reconcile step, exactly as the old per-kart path did.
+const dashToIso = (d) => { const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec((d || '').trim()); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+const dashToDot = (d) => { const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec((d || '').trim()); return m ? `${m[1]}.${m[2]}.${m[3]}` : ''; };
+const REPAIRS_PER_PAGE = parseInt(process.env.RF_REPAIRS_PER_PAGE, 10) || 500;
+
+async function syncAllRepairs() {
+  const byKart = new Map();              // rf_kart_id -> [{ dateDiscovered, dateRepaired, user, parts }]
+  const byId = new Map();                // repair id -> { row, parts } — de-dupes across page boundaries
+  let page = 1, lastPage = 1, total = null, guard = 0;
+  do {
+    if (++guard > 5000) break;           // hard stop, just in case the list never terminates
+    const j = await rfJson(`/ajax/garage/repairs_list/?page=${page}&results=${REPAIRS_PER_PAGE}&search=`);
+    if (j && typeof j.last_page === 'number') lastPage = j.last_page;
+    if (j && typeof j.total === 'number') total = j.total;
+    for (const it of ((j && j.items) || [])) {
+      if (it.id == null || byId.has(it.id)) continue;     // skip dupes (a repair can straddle two pages)
+      const kid = it.kart_id;
+      const tc = it.kart_type_color ? ('#' + String(it.kart_type_color).replace(/^#/, '')) : null;
+      const parts = (((it.used_parts || {}).data) || []).map((p) => ({
+        name: p.warehouse_stock_name || 'Part', qty: Number(p.quantity) || 0, price: (p.price != null ? p.price : ''),
+      }));
+      byId.set(it.id, { row: {
+        id: it.id, rf_kart_id: kid,
+        description: it.annotation || '', notes: '',
+        date_discovered: dashToIso(it.damage_discovery_date),
+        date_repaired: dashToIso(it.repair_date),
+        mileage: (it.repair_km != null ? Number(it.repair_km) : null),
+        cost: (it.cost != null ? Number(it.cost) : null),
+        mechanic: it.user_name || null,
+        kart_name: (it.kart_name != null ? String(it.kart_name) : null),
+        kart_type: it.kart_type_name || null,
+        kart_garage_id: it.kart_garage_id || null,
+        type_color: tc,
+        fingerprint: `rf|${it.id}`,
+      }, parts });
+      if (!byKart.has(kid)) byKart.set(kid, []);
+      byKart.get(kid).push({ dateDiscovered: dashToDot(it.damage_discovery_date), dateRepaired: dashToDot(it.repair_date), user: it.user_name, parts });
+    }
+    page += 1;
+    await sleep(120);
+  } while (page <= lastPage);
+
+  const repairRows = [], partRows = [];
+  for (const { row, parts } of byId.values()) {
+    repairRows.push(row);
+    for (const p of parts) partRows.push({ repair_id: row.id, part_name: p.name, qty: p.qty, price: p.price });
+  }
+
+  // repairs first (parts FK references them); upsert on the RaceFacer id so edits update in place
+  for (let i = 0; i < repairRows.length; i += 500) {
+    await sb('rf_repairs?on_conflict=id', { method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal', body: repairRows.slice(i, i + 500) });
+  }
+  // parts: wipe + rebuild (small table — guarantees no duplicates without per-line bookkeeping)
+  await sb('rf_repair_parts?repair_id=gte.0', { method: 'DELETE' });
+  for (let i = 0; i < partRows.length; i += 500) {
+    await sb('rf_repair_parts', { method: 'POST', prefer: 'return=minimal', body: partRows.slice(i, i + 500) });
+  }
+  console.log(`[repairs] full-fleet: ${repairRows.length} repairs${total != null ? ' / ' + total + ' reported' : ''}, ${partRows.length} part lines across ${byKart.size} karts.`);
+  return byKart;
+}
+
+async function syncKart(id, meta, repairsByKart) {
   meta = meta || {};
   const dj = await rfJson(`/ajax/garage/kart-details?id=${id}`);
   if (!dj || dj.success === false || !dj.kart) return null;
@@ -393,18 +461,9 @@ async function syncKart(id, meta) {
     fetched_at: new Date().toISOString(),
   }] });
 
-  const { repairs } = parseRepairs(await rfJson(`/ajax/garage/kart-repairs?id=${id}`));
-  await sb(`rf_repairs?rf_kart_id=eq.${id}`, { method: 'DELETE' });
-  if (repairs.length) {
-    const inserted = await sb('rf_repairs', { method: 'POST', prefer: 'return=representation', body: repairs.map((r, i) => ({
-      rf_kart_id: id, description: r.description, date_discovered: dmy(r.dateDiscovered),
-      date_repaired: dmy(r.dateRepaired), mileage: r.mileage, cost: r.cost, mechanic: r.user,
-      notes: r.notes.join('\n'), fingerprint: `${id}|${i}|${r.dateRepaired}|${r.description}`.slice(0, 250),
-    })) });
-    const partRows = [];
-    (inserted || []).forEach((row, i) => (repairs[i].parts || []).forEach((p) => partRows.push({ repair_id: row.id, part_name: p.name, qty: p.qty, price: p.price })));
-    if (partRows.length) await sb('rf_repair_parts', { method: 'POST', body: partRows });
-  }
+  // Repairs are pulled once for the whole fleet (see syncAllRepairs) and handed in here, so each
+  // kart still reports its repairs to the alias/reconcile steps without a per-kart fetch or write.
+  const repairs = (repairsByKart && repairsByKart.get(id)) || [];
 
   const parts = parseParts(await rfJson(`/ajax/garage/kart-parts?id=${id}`));
   await sb(`rf_parts_history?rf_kart_id=eq.${id}`, { method: 'DELETE' });
@@ -483,7 +542,8 @@ async function pruneStale(activeIds) {
   if (!stale.length) return 0;
   const list = stale.join(',');
   await sb(`rf_parts_history?rf_kart_id=in.(${list})`, { method: 'DELETE' });
-  await sb(`rf_repairs?rf_kart_id=in.(${list})`, { method: 'DELETE' }); // rf_repair_parts cascades
+  // rf_repairs is intentionally NOT pruned here — the full-fleet damage list keeps every kart's
+  // repair history, including retired / removed karts, which is the whole point of pulling it.
   await sb(`rf_karts?rf_id=in.(${list})`, { method: 'DELETE' });
   return stale.length;
 }
@@ -557,10 +617,13 @@ async function main() {
   const idMap = await enumerateKarts();           // Map: rf_id -> { site, type }
   console.log(`Syncing ${idMap.size} karts...`);
   try { await statusFast(); } catch (e) {}        // refresh OK/Damaged up-front so a status flip isn't stuck behind the whole pass
+  let repairsByKart = new Map();
+  try { repairsByKart = await syncAllRepairs(); } // whole-fleet damage list -> rf_repairs / rf_repair_parts (+ map for reconcile)
+  catch (e) { console.error('[repairs] full-fleet sync failed:', e.message); }
   const perKart = [], skipIds = new Set();
   let done = 0;
   for (const [id, meta] of idMap) {
-    try { const k = await syncKart(id, meta); if (k && k.skipped) skipIds.add(id); else if (k) perKart.push(k); }
+    try { const k = await syncKart(id, meta, repairsByKart); if (k && k.skipped) skipIds.add(id); else if (k) perKart.push(k); }
     catch (e) { console.error(`kart ${id}: ${e.message}`); }
     await sleep(150);
     if (++done % 25 === 0) { try { await statusFast(); } catch (e) {} }   // keep status fresh through the long pass (~every 25 karts)
