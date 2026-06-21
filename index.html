@@ -556,6 +556,12 @@
     .rp-search:focus{border-color:var(--b2)}
     .rp-sel{background:var(--card);border:1px solid var(--b1);border-radius:10px;padding:10px 12px;color:var(--t1);font-size:13px;outline:none;cursor:pointer;max-width:48%}
     .rp-count{font-size:11px;color:var(--t2);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+    .rp-pager{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin-top:18px}
+    .rp-page{min-width:34px;height:34px;padding:0 11px;border-radius:9px;border:1px solid var(--b1);background:var(--card);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;line-height:1}
+    .rp-page:hover:not(:disabled):not(.active){border-color:var(--b2);background:rgba(255,255,255,.05)}
+    .rp-page.active{background:var(--acc);border-color:var(--acc);color:#04121a;cursor:default}
+    .rp-page:disabled{opacity:.38;cursor:default}
+    .rp-ellip{color:var(--t2);padding:0 3px;font-size:13px}
     .rep-table.rp-table{min-width:840px}
     .rp-typecell{color:var(--t1);font-weight:600;white-space:nowrap;font-size:12.5px}
     .rp-badge{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 7px;border-radius:7px;font-size:12.5px;font-weight:800;color:#0b0f17;line-height:1}
@@ -4934,7 +4940,7 @@ function renderKartNotesFeed(){
 // ── Fleet-wide repairs table (mirrors RaceFacer Garage → Repairs) ───────────
 // Flattens every kart's synced repairs into one filterable/searchable table.
 // Read-only: repairs are created in RaceFacer and pulled in by the sync.
-var RP_ALL=[], RP_VIEW=[], RP_CAP=500;
+var RP_ALL=[], RP_VIEW=[], RP_PER=25, RP_PAGE=1;
 function rpFlatten(){
   // Walk EVERY synced repair (RF_REPAIRS_BY_ID holds them all), not just the karts
   // still in the fleet. Repairs whose kart is no longer in rf_karts (retired/scrapped)
@@ -5013,19 +5019,54 @@ function rpApply(){
     if(q){ var hay=(r.num+' '+r.kartId+' '+r.type+' '+r.issue+' '+r.repairNotes+' '+r.user).toLowerCase(); if(hay.indexOf(q)<0) return false; }
     return true;
   });
-  var host=document.getElementById('rp-tablehost'); if(host) host.innerHTML=rpTableHTML(RP_VIEW);
+  RP_PAGE=1;            // any filter/search change resets to the first page
+  rpRenderPage();
+}
+// Render the current page of RP_VIEW (25 rows) + the pager + the "showing X–Y of Z" line.
+function rpRenderPage(){
+  var total=RP_VIEW.length;
+  var pages=Math.max(1, Math.ceil(total/RP_PER));
+  if(RP_PAGE>pages) RP_PAGE=pages;
+  if(RP_PAGE<1) RP_PAGE=1;
+  var start=(RP_PAGE-1)*RP_PER;
+  var slice=RP_VIEW.slice(start, start+RP_PER);
+  var host=document.getElementById('rp-tablehost'); if(host) host.innerHTML=rpTableHTML(slice)+rpPagerHTML(RP_PAGE,pages);
   var cnt=document.getElementById('rp-count');
   if(cnt){
     var openN=RP_VIEW.filter(function(r){return r.status==='open';}).length;
+    var scEl=document.getElementById('rp-scope'); var scope=(scEl&&scEl.value)||'fleet';
     var retiredTotal=RP_ALL.filter(function(r){return r.retired;}).length;
-    var txt=RP_VIEW.length.toLocaleString()+' repair'+(RP_VIEW.length===1?'':'s')+(openN?(' \u00b7 '+openN+' open'):'')+(RP_VIEW.length>RP_CAP?(' \u00b7 showing first '+RP_CAP):'');
+    var txt;
+    if(total){ var a=start+1, b=Math.min(start+RP_PER,total); txt='Showing '+a.toLocaleString()+'\u2013'+b.toLocaleString()+' of '+total.toLocaleString()+' repair'+(total===1?'':'s')+(openN?(' \u00b7 '+openN+' open'):''); }
+    else { txt='No repairs match these filters'; }
     if(scope!=='all' && retiredTotal){ txt+=' \u00b7 +'+retiredTotal.toLocaleString()+' on retired karts'; }
     cnt.innerHTML=txt;
   }
 }
+function rpGoPage(n){
+  RP_PAGE=n; rpRenderPage();
+  var c=document.getElementById('rp-count'); if(c&&c.scrollIntoView){ try{ c.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){ c.scrollIntoView(); } }
+}
+// Windowed pager: Prev · 1 … [page-2..page+2] … last · Next (mirrors RaceFacer's style).
+function rpPagerHTML(page,pages){
+  if(pages<=1) return '';
+  var btn=function(n,lbl,extra){
+    var off=!!extra && extra.indexOf('disabled')>=0;
+    return '<button class="rp-page'+(extra?(' '+extra):'')+'"'+(off?' disabled':' onclick="rpGoPage('+n+')"')+'>'+lbl+'</button>';
+  };
+  var nums=[], push=function(n){ if(n>=1&&n<=pages&&nums.indexOf(n)<0) nums.push(n); };
+  push(1);
+  for(var p=page-2;p<=page+2;p++) push(p);
+  push(pages);
+  nums.sort(function(a,b){return a-b;});
+  var out='<div class="rp-pager">'+btn(page-1,'Prev',page<=1?'disabled':''), prev=0;
+  nums.forEach(function(n){ if(prev&&n-prev>1) out+='<span class="rp-ellip">\u2026</span>'; out+=btn(n,String(n),n===page?'active':''); prev=n; });
+  out+=btn(page+1,'Next',page>=pages?'disabled':'')+'</div>';
+  return out;
+}
 function rpTableHTML(view){
   if(!view.length) return '<div class="rep-empty">No repairs match these filters.</div>';
-  var rows=view.slice(0,RP_CAP).map(function(r,i){
+  var rows=view.map(function(r,i){
     var costTxt=r.cost?'<span class="rep-cost">$'+r.cost.toFixed(2)+'</span>':'<span class="rep-mono">\u2014</span>';
     var badge='<span class="rp-badge" style="background:'+r.color+'">'+kEsc(String(r.num))+'</span>';
     var openTag=(r.status==='open')?'<span class="rp-open">Open</span>':'';
