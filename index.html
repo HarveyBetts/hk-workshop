@@ -2776,7 +2776,9 @@ function _cfgTabsFor(user){
 }
 function effectiveTabs(user){
   if(!user) return [];
-  var keys=_isMgrRole(user.role) ? ALL_TAB_KEYS.slice() : (_cfgTabsFor(user)||DEFAULT_NONMGR_TABS.slice());
+  var keys;
+  if(user.name===MASTER_OWNER){ keys=ALL_TAB_KEYS.slice(); }   // the owner always sees every tab — can't self-lock-out
+  else { keys=_cfgTabsFor(user) || (_isMgrRole(user.role)?ALL_TAB_KEYS.slice():DEFAULT_NONMGR_TABS.slice()); }
   // Master Access is never granted by role/override — only by the owner-controlled master_admins list.
   keys=keys.filter(function(k){return k!=='masteraccess';});
   if((MASTER_ADMINS||[]).indexOf(user.name)>=0) keys.push('masteraccess');
@@ -5889,7 +5891,9 @@ function msSave(){
 /* ===== Access (Master Access -> Access): roles + per-account tab access ==============
    Roles each carry a default set of home tabs; any individual can override theirs.
    The blob lives in app_access (anon-readable for the home grid; written here via the
-   master-staff access-save op). Managers always see every tab. */
+   master-staff access-save op). Manager/Assistant Manager are core roles (can't be renamed or
+   deleted) but their tabs are editable; the owner always sees every tab. Master Access is NOT a
+   tab toggle here — it's granted only via Owner controls (master_admins, email-code gated). */
 var mAccessDraft={roles:[],overrides:{}}, mAccessStaff=[], mAccessLoaded=false;
 function acEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function msRoleOpts(cur){
@@ -5920,7 +5924,8 @@ function acLoad(){
   });
 }
 function acChips(sel, fnName, idx){
-  return '<div class="ac-chips">'+TAB_DEFS.map(function(t){
+  // Master Access is never a role/override toggle — it's granted only in Owner controls (email code).
+  return '<div class="ac-chips">'+TAB_DEFS.filter(function(t){return t.key!=='masteraccess';}).map(function(t){
     var on=(sel||[]).indexOf(t.key)>=0;
     return '<button type="button" class="ac-chip'+(on?' on':'')+'" onclick="'+fnName+'('+idx+',\''+t.key+'\')">'+acEsc(t.label)+'</button>';
   }).join('')+'</div>';
@@ -5932,16 +5937,15 @@ function acRender(){
   h+=mAccessDraft.roles.map(function(r,i){
     var sys=_isMgrRole(r.name);
     var top = sys
-      ? '<span class="ac-role-name">'+acEsc(r.name)+'</span><span class="ac-lock">all tabs \u00b7 locked</span>'
+      ? '<span class="ac-role-name">'+acEsc(r.name)+'</span><span class="ac-lock">core role</span>'
       : '<input class="ac-role-input" value="'+acEsc(r.name)+'" oninput="acRoleName('+i+',this.value)" placeholder="Role name"><button class="ac-del" onclick="acDelRole('+i+')" title="Delete role">\u00d7</button>';
-    var body = sys ? '<div class="ac-allnote">Managers always see every tab.</div>' : acChips(r.tabs||[], 'acRoleTab', i);
+    var body = acChips(r.tabs||[], 'acRoleTab', i);   // every role's tabs are editable now (core roles can't be renamed/deleted)
     return '<div class="ac-role-card"><div class="ac-role-top">'+top+'</div>'+body+'</div>';
   }).join('');
   h+='<div class="ac-sec-h" style="margin-top:18px">Per-account access</div>';
   if(!mAccessStaff.length){ h+='<div class="m-empty" style="margin:0 18px">No staff loaded.</div>'; }
   h+=mAccessStaff.map(function(s,idx){
     var meta='<div class="ac-ov-meta"><span class="ac-ov-name">'+acEsc(s.name)+'</span><span class="ac-ov-role">'+acEsc(s.role)+'</span></div>';
-    if(_isMgrRole(s.role)){ return '<div class="ac-ov-row">'+meta+'<span class="ac-ov-note">all tabs</span></div>'; }
     var hasOv=mAccessDraft.overrides&&mAccessDraft.overrides.hasOwnProperty(s.name)&&Array.isArray(mAccessDraft.overrides[s.name]);
     if(hasOv){
       return '<div class="ac-ov-row col"><div class="ac-ov-head">'+meta+'<button class="ac-ov-reset" onclick="acResetOv('+idx+')">Use role default</button></div>'+acChips(mAccessDraft.overrides[s.name],'acOvTab',idx)+'</div>';
