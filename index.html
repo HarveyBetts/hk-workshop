@@ -4200,7 +4200,6 @@ function loadRfKarts(cb){
     rrows.forEach(function(r){
       var iso=r.date_discovered||r.date_repaired||'';   // ISO yyyy-mm-dd, sortable
       (RF_REPAIRS_BY_ID[r.rf_kart_id]=RF_REPAIRS_BY_ID[r.rf_kart_id]||[]).push({
-        id:(Number(r.id)||0),                             // RaceFacer record id = entry order, used to break same-day ties
         iso:iso,
         date:iso?iso.split('-').reverse().join('.'):'',   // display dd.mm.yyyy
         status:r.date_repaired?'fixed':'open',
@@ -4214,7 +4213,7 @@ function loadRfKarts(cb){
       });
     });
     // Newest first — sort by the real ISO date, not the dd.mm string.
-    Object.keys(RF_REPAIRS_BY_ID).forEach(function(id){ RF_REPAIRS_BY_ID[id].sort(function(a,b){ return (b.iso||'').localeCompare(a.iso||'') || ((b.id||0)-(a.id||0)); }); });
+    Object.keys(RF_REPAIRS_BY_ID).forEach(function(id){ RF_REPAIRS_BY_ID[id].sort(function(a,b){return (b.iso||'').localeCompare(a.iso||'');}); });
     // Kart notes (the open issues + the full archive) grouped per kart
     RF_NOTES_BY_ID={};
     nrows.forEach(function(n){
@@ -4947,7 +4946,6 @@ function rpFlatten(){
     var k=kByRf[rfId];
     (RF_REPAIRS_BY_ID[rfId]||[]).forEach(function(r){
       var base={
-        id:r.id||0,
         iso:r.iso||'', date:r.date||'', dateRepaired:r.dateRepaired||'',
         status:r.status, cost:r.cost||0, mileage:r.mileage||0,
         issue:r.issue||'', repairNotes:r.repairNotes||'', parts:r.parts||[], user:r.user||'\u2014'
@@ -4962,7 +4960,7 @@ function rpFlatten(){
       out.push(base);
     });
   });
-  out.sort(function(a,b){ return (b.iso||'').localeCompare(a.iso||'') || ((b.id||0)-(a.id||0)); });   // newest first; same-day ties by RaceFacer entry order
+  out.sort(function(a,b){ return (b.iso||'').localeCompare(a.iso||''); });   // newest first
   return out;
 }
 function renderRepairsSection(){
