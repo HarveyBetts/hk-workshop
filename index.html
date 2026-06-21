@@ -535,6 +535,8 @@
     .rep-table th.rp-r,.rep-table td.rp-r{text-align:right;white-space:nowrap}
     .rep-row{cursor:pointer;transition:background .12s}
     .rep-row:hover{background:rgba(255,255,255,.035)}
+    .rep-row.rep-nodetail{cursor:default}
+    .rep-row.rep-nodetail:hover{background:transparent}
     .rep-row .rep-desc{font-weight:600;max-width:340px;line-height:1.4}
     .rep-row .rep-mono{font-family:Monaco,Consolas,monospace;color:var(--t2);white-space:nowrap;font-size:12px}
     .rep-cost{color:#F59E0B;font-weight:700;white-space:nowrap}
@@ -4851,27 +4853,27 @@ function repTableHTML(){
   if(!reps.length) return '<div class="rep-empty">No repairs recorded for this kart in the selected period.</div>';
   var rows=reps.map(function(r,i){
     var costTxt=r.cost?'<span class="rep-cost">$'+r.cost.toFixed(2)+'</span>':'<span class="rep-mono">\u2014</span>';
-    var head='<tr class="rep-row" id="reprow-'+i+'" onclick="toggleRep('+i+')">'
+    var noteLines=(r.repairNotes||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    var parts=(r.parts||[]).filter(function(p){return p&&p.name;});
+    var hasDetail=noteLines.length>0||parts.length>0;
+    var head='<tr class="rep-row'+(hasDetail?'':' rep-nodetail')+'" id="reprow-'+i+'"'+(hasDetail?(' onclick="toggleRep('+i+')"'):'')+'>'
       +'<td class="rep-desc">'+kEsc(r.issue)+'</td>'
       +'<td class="rep-mono">'+(r.date||'\u2014')+'</td>'
       +'<td class="rep-mono">'+(r.dateRepaired||'\u2014')+'</td>'
       +'<td class="rep-mono">'+(r.mileage?r.mileage.toLocaleString():'\u2014')+'</td>'
       +'<td>'+costTxt+'</td>'
       +'<td class="rep-mono">'+kEsc(r.user)+'</td>'
-      +'<td class="rep-expcell"><button class="rep-expbtn" id="repbtn-'+i+'" aria-label="Show repair details">+</button></td>'
+      +'<td class="rep-expcell">'+(hasDetail?('<button class="rep-expbtn" id="repbtn-'+i+'" aria-label="Show repair details">+</button>'):'')+'</td>'
       +'</tr>';
-    var noteLines=(r.repairNotes||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
-    var noteHTML='<div class="rep-note-h">Note</div><div class="rep-note-b">'+(noteLines.length?kEsc(noteLines.join('\n')):'No note recorded.')+'</div>';
-    var parts=(r.parts||[]).filter(function(p){return p&&p.name;});
-    var partsHTML='<div class="rep-pu-h">Parts used</div>';
+    if(!hasDetail) return head;
+    var inner='';
+    if(noteLines.length) inner+='<div class="rep-note-h">Note</div><div class="rep-note-b">'+kEsc(noteLines.join('\n'))+'</div>';
     if(parts.length){
-      partsHTML+='<table class="rep-pu"><thead><tr><th>Part</th><th class="rp-r">Quantity</th><th class="rp-r">Price</th></tr></thead><tbody>'
+      inner+='<div class="rep-pu-h">Parts used</div><table class="rep-pu"><thead><tr><th>Part</th><th class="rp-r">Quantity</th><th class="rp-r">Price</th></tr></thead><tbody>'
         +parts.map(function(p){return '<tr><td>'+kEsc(p.name)+'</td><td class="rp-r">'+(p.qty||1)+'</td><td class="rp-r">'+kEsc(_money(p.price))+'</td></tr>';}).join('')
         +'</tbody></table>';
-    } else {
-      partsHTML+='<div class="rep-note-b" style="background:rgba(255,255,255,.03);border-color:var(--b1);border-left-color:var(--b2);color:var(--t2)">No parts logged for this repair.</div>';
     }
-    var detail='<tr class="rep-detail" id="repdet-'+i+'" style="display:none"><td colspan="7"><div class="rep-detbox">'+noteHTML+partsHTML+'</div></td></tr>';
+    var detail='<tr class="rep-detail" id="repdet-'+i+'" style="display:none"><td colspan="7"><div class="rep-detbox">'+inner+'</div></td></tr>';
     return head+detail;
   }).join('');
   return '<div class="rep-tablewrap"><table class="rep-table"><thead><tr>'
@@ -5079,7 +5081,10 @@ function rpTableHTML(view){
     var costTxt=r.cost?'<span class="rep-cost">$'+r.cost.toFixed(2)+'</span>':'<span class="rep-mono">\u2014</span>';
     var badge='<span class="rp-badge" style="background:'+r.color+'">'+kEsc(String(r.num))+'</span>';
     var openTag=(r.status==='open')?'<span class="rp-open">Open</span>':'';
-    var head='<tr class="rep-row'+(r.retired?' rp-retired':'')+'" id="rprow-'+i+'" onclick="rpToggle('+i+')">'
+    var noteLines=(r.repairNotes||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+    var parts=(r.parts||[]).filter(function(p){return p&&p.name;});
+    var hasDetail=noteLines.length>0||parts.length>0;
+    var head='<tr class="rep-row'+(r.retired?' rp-retired':'')+(hasDetail?'':' rep-nodetail')+'" id="rprow-'+i+'"'+(hasDetail?(' onclick="rpToggle('+i+')"'):'')+'>'
       +'<td class="rp-typecell">'+kEsc(r.type)+'</td>'
       +'<td>'+badge+'</td>'
       +'<td class="rep-mono">'+kEsc(r.kartId)+'</td>'
@@ -5089,20 +5094,17 @@ function rpTableHTML(view){
       +'<td>'+costTxt+'</td>'
       +'<td class="rep-desc">'+kEsc(r.issue)+openTag+'</td>'
       +'<td class="rep-mono">'+kEsc(r.user)+'</td>'
-      +'<td class="rep-expcell"><button class="rep-expbtn" id="rpbtn-'+i+'" aria-label="Show repair details">+</button></td>'
+      +'<td class="rep-expcell">'+(hasDetail?('<button class="rep-expbtn" id="rpbtn-'+i+'" aria-label="Show repair details">+</button>'):'')+'</td>'
       +'</tr>';
-    var noteLines=(r.repairNotes||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
-    var noteHTML='<div class="rep-note-h">Note</div><div class="rep-note-b">'+(noteLines.length?kEsc(noteLines.join('\n')):'No note recorded.')+'</div>';
-    var parts=(r.parts||[]).filter(function(p){return p&&p.name;});
-    var partsHTML='<div class="rep-pu-h">Parts used</div>';
+    if(!hasDetail) return head;
+    var inner='';
+    if(noteLines.length) inner+='<div class="rep-note-h">Note</div><div class="rep-note-b">'+kEsc(noteLines.join('\n'))+'</div>';
     if(parts.length){
-      partsHTML+='<table class="rep-pu"><thead><tr><th>Part</th><th class="rp-r">Quantity</th><th class="rp-r">Price</th></tr></thead><tbody>'
+      inner+='<div class="rep-pu-h">Parts used</div><table class="rep-pu"><thead><tr><th>Part</th><th class="rp-r">Quantity</th><th class="rp-r">Price</th></tr></thead><tbody>'
         +parts.map(function(p){return '<tr><td>'+kEsc(p.name)+'</td><td class="rp-r">'+(p.qty||1)+'</td><td class="rp-r">'+kEsc(_money(p.price))+'</td></tr>';}).join('')
         +'</tbody></table>';
-    } else {
-      partsHTML+='<div class="rep-note-b" style="background:rgba(255,255,255,.03);border-color:var(--b1);border-left-color:var(--b2);color:var(--t2)">No parts logged for this repair.</div>';
     }
-    var detail='<tr class="rep-detail" id="rpdet-'+i+'" style="display:none"><td colspan="10"><div class="rep-detbox">'+noteHTML+partsHTML+'</div></td></tr>';
+    var detail='<tr class="rep-detail" id="rpdet-'+i+'" style="display:none"><td colspan="10"><div class="rep-detbox">'+inner+'</div></td></tr>';
     return head+detail;
   }).join('');
   return '<div class="rep-tablewrap"><table class="rep-table rp-table"><thead><tr>'
