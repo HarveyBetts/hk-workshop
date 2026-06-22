@@ -211,6 +211,21 @@
     .ti{font-size:clamp(20px,5.2vw,46px);line-height:1;margin:0;position:relative;z-index:1;flex-shrink:0}
     .tl{font-size:clamp(12px,3.1vw,24px);font-weight:800;color:#fff;letter-spacing:-0.3px;line-height:1.07;position:relative;z-index:1}
     .ts{font-size:clamp(10px,2.4vw,15px);color:rgba(255,255,255,0.65);line-height:1.2;position:relative;z-index:1}
+    /* Large screens (TV / desktop): on a 16:9 TV the rows are short, so trim the
+       vertical padding + icon size so the subtitle isn't clipped out of the box. */
+    @media (min-width:900px){
+      .tile{padding:clamp(8px,1.4vw,16px) clamp(12px,1.8vw,22px);gap:2px}
+      .ti{font-size:clamp(26px,2.9vw,38px)}
+      .tl{font-size:clamp(15px,1.7vw,21px);line-height:1.05}
+      .ts{font-size:clamp(10px,1vw,13px);line-height:1.1}
+    }
+    /* Short, wide viewports (most TVs in landscape have a limited CSS height):
+       drop the subtitle hint entirely so titles + icons stay big and uncramped.
+       Tall desktop windows keep the subtitles. */
+    @media (min-width:900px) and (max-height:840px){
+      .tile .ts{display:none}
+      .tile{gap:clamp(4px,1vh,10px)}
+    }
 
     /* Colour palette — one per tab (blues / teals / indigos kept distinct) */
     .tile.tc      {background:linear-gradient(145deg,#C026D3,#701A75);border:1px solid rgba(240,171,252,0.42)}
@@ -1322,6 +1337,18 @@
     .tv-standby .badge{width:16vmin;height:16vmin;border-radius:50%;display:flex;align-items:center;justify-content:center;
       font-weight:900;font-size:6vmin;color:#06121a;background:conic-gradient(from 210deg,#00CFFF,#7B5Cff,#E040FB,#00CFFF);
       box-shadow:0 0 50px rgba(0,207,255,.35);opacity:.5}
+    /* Branded HK pulse — a simple CSS badge (no SVG/base64) the board shows on
+       boot and once a minute. Self-contained so it renders on any TV browser. */
+    .tv-pulse{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vmin;
+      background:radial-gradient(circle at 50% 45%,#0b1a23,#04070a 70%);opacity:0;pointer-events:none;transition:opacity .55s ease}
+    #tvroot.pulsing .tv-pulse{opacity:1;transition:opacity .3s ease}
+    .tv-pulse .badge{width:22vmin;height:22vmin;min-width:120px;min-height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-weight:900;font-size:8vmin;letter-spacing:-.04em;color:#06121a;
+      background:conic-gradient(from 210deg,#00CFFF,#7B5Cff,#E040FB,#00CFFF);box-shadow:0 0 60px rgba(0,207,255,.45),inset 0 0 0 1.4vmin #06090d}
+    #tvroot.pulsing .tv-pulse .badge{animation:tvpulse 1.5s cubic-bezier(.4,0,.2,1)}
+    @keyframes tvpulse{0%{transform:scale(.6);opacity:0}38%{transform:scale(1.06);opacity:1}72%{transform:scale(1)}100%{transform:scale(1)}}
+    .tv-pulse .wm{font-size:2.2vmin;font-weight:800;letter-spacing:.42em;text-transform:uppercase;
+      background:linear-gradient(90deg,#00CFFF,#E040FB);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 
     /* ===================== TV DISPLAY control tab ===================== */
     .tvc-wrap{display:flex;flex-direction:column;gap:14px;padding-bottom:24px}
@@ -1374,6 +1401,7 @@
   <div class="tv-stage" id="tv-stage"></div>
   <div class="tv-ticker" id="tv-ticker" style="display:none"><div class="tk" id="tv-tk"></div></div>
   <div class="tv-dots" id="tv-dots"></div>
+  <div class="tv-pulse"><div class="badge">HK</div><div class="wm">HYPER KARTING</div></div>
   <div class="tv-standby"><div class="badge">HK</div><div class="b">Display paused</div></div>
 </div>
 <div id="lbar"><div id="lbp"></div></div>
@@ -6289,7 +6317,13 @@ function tvSubscribe(){
     SBC.channel('tv-karts').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ tvLoadData(); }).subscribe();
   }catch(e){}
 }
-function tvHkPulse(){ try{ playSplash(true); }catch(e){} }
+/* HK pulse — show the board's own lightweight badge overlay, then fade it. */
+function tvHkPulse(){
+  var root=document.getElementById('tvroot'); if(!root) return;
+  root.classList.add('pulsing');
+  if(root._pulseT) clearTimeout(root._pulseT);
+  root._pulseT=setTimeout(function(){ root.classList.remove('pulsing'); },1700);
+}
 /* Best-effort: ask the browser to keep the screen awake (re-acquired when the
    tab becomes visible again, since wake locks auto-release while hidden).
    TV-level sleep/screensaver still needs disabling in the TV's own settings. */
@@ -6303,19 +6337,31 @@ function tvKeepAwake(){
   }catch(e){}
 }
 function bootTvDisplay(){
-  try{ document.title='HK Workshop · TV'; }catch(e){}
-  var root=document.getElementById('tvroot'); if(root) root.classList.add('on');
-  tvKeepAwake();
-  tvClock(); tvClockTimer=setInterval(tvClock,1000);
-  loadSites(function(){ var sl=document.getElementById('tv-site'); if(sl) sl.textContent=(siteLabel(currentSite)||'').toUpperCase(); var rt=document.getElementById('tvroot'); if(rt) rt.style.setProperty('--tvac',siteAccent(currentSite)); });
-  if(typeof SBC!=='undefined'&&SBC){
-    SBC.from('tv_state').select('*').eq('id',1).maybeSingle().then(function(r){ tvApplyState((r&&r.data)||null); },function(){ tvApplyState(null); });
-  } else { tvApplyState(null); }
-  tvLoadData();
-  tvSubscribe();
-  tvRenderCurrent();
-  tvPulseTimer=setInterval(function(){ tvHkPulse(); tvLoadData(); },60000);
-  try{ playSplash(true); }catch(e){}   // branded intro, then the board appears
+  try{
+    try{ document.title='HK Workshop · TV'; }catch(e){}
+    // The board uses its OWN pulse overlay, not the cold-open splash — hide the
+    // splash so it can never end up covering the board on a TV browser.
+    try{ var sp=document.getElementById('splash'); if(sp){ sp.classList.add('gone'); sp.style.display='none'; } }catch(e){}
+    var root=document.getElementById('tvroot'); if(root) root.classList.add('on');
+    // Paint immediately from defaults so the board is visible without waiting on the network.
+    tvState=tvMergeState(null);
+    var sl=document.getElementById('tv-site'); if(sl) sl.textContent=(siteLabel(currentSite)||'').toUpperCase();
+    if(root) root.style.setProperty('--tvac',siteAccent(currentSite));
+    try{ tvRenderCurrent(); }catch(e){}
+    tvStartRotation();
+    tvHkPulse();                 // branded intro (reliable CSS badge)
+    try{ tvKeepAwake(); }catch(e){}
+    tvClock(); tvClockTimer=setInterval(tvClock,1000);
+    try{ loadSites(function(){ var s2=document.getElementById('tv-site'); if(s2) s2.textContent=(siteLabel(currentSite)||'').toUpperCase(); var r2=document.getElementById('tvroot'); if(r2) r2.style.setProperty('--tvac',siteAccent(currentSite)); }); }catch(e){}
+    tvLoadData();
+    tvSubscribe();
+    if(typeof SBC!=='undefined'&&SBC){
+      try{ SBC.from('tv_state').select('*').eq('id',1).then(function(r){ var row=(r&&r.data&&r.data[0])||null; tvApplyState(row); },function(){}); }catch(e){}
+    }
+    tvPulseTimer=setInterval(function(){ tvHkPulse(); tvLoadData(); },60000);
+  }catch(e){
+    try{ var s3=document.getElementById('splash'); if(s3){ s3.classList.add('gone'); s3.style.display='none'; } var r3=document.getElementById('tvroot'); if(r3) r3.classList.add('on'); }catch(_){}
+  }
 }
 
 /* ===================== TV DISPLAY control tab ===================== */
@@ -6324,7 +6370,7 @@ function tvCastUrl(){ return location.origin+location.pathname+'#tv'; }
 function loadTvCast(){
   var wrap=document.getElementById('tvc-wrap'); if(wrap) wrap.innerHTML='<div class="tvc-card"><div class="hint">Loading&hellip;</div></div>';
   if(typeof SBC==='undefined'||!SBC){ tvCastState=tvMergeState(null); tvcRender(); return; }
-  SBC.from('tv_state').select('*').eq('id',1).maybeSingle().then(function(r){ tvCastState=tvMergeState((r&&r.data)||null); tvcRender(); },function(){ tvCastState=tvMergeState(null); tvcRender(); });
+  SBC.from('tv_state').select('*').eq('id',1).then(function(r){ var row=(r&&r.data&&r.data[0])||null; tvCastState=tvMergeState(row); tvcRender(); },function(){ tvCastState=tvMergeState(null); tvcRender(); });
 }
 function tvcSceneRow(key,label,desc){
   var on=tvCastState.scenes[key]!==false;
@@ -6746,3 +6792,4 @@ function hideMasterPin(){
 </script>
 </body>
 </html>
+  
