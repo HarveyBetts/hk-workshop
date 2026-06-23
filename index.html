@@ -6438,9 +6438,9 @@ function tvMorningActive(){
   if(!tvState||tvState.morning===false) return false;
   var d=new Date(); return (d.getHours()*60+d.getMinutes()) < tvParseTime(tvState.morning_until||'10:30');
 }
-var TV_SCENES=[ {key:'morning',render:tvSceneMorning}, {key:'fleet',render:tvSceneFleet}, {key:'tasks',render:tvSceneTasks}, {key:'lowstock',render:tvSceneLowStock}, {key:'items',render:tvSceneItems} ];
+function tvScenes(){ return [ {key:'morning',render:tvSceneMorning}, {key:'fleet',render:tvSceneFleet}, {key:'tasks',render:tvSceneTasks}, {key:'lowstock',render:tvSceneLowStock}, {key:'items',render:tvSceneItems} ]; }
 function tvEnabledScenes(){
-  return TV_SCENES.filter(function(s){
+  return tvScenes().filter(function(s){
     if(s.key==='morning') return tvMorningActive();
     if(tvState&&tvState.scenes&&tvState.scenes[s.key]===false) return false;
     if(s.key==='items') return tvLiveItems().length>0;
@@ -6480,7 +6480,7 @@ function tvRenderCurrent(advancing){
   if(tvOverlayActive()) return;
   var list=tvEnabledScenes();
   if(!list.length){ tvSetScene(tvSceneIdle(),advancing); tvRenderDots(0,0); return; }
-  if(tvIdx>=list.length) tvIdx=0;
+  if(typeof tvIdx!=='number'||isNaN(tvIdx)||tvIdx<0||tvIdx>=list.length) tvIdx=0;
   tvSetScene(list[tvIdx].render(),advancing);
   tvRenderDots(list.length,tvIdx);
 }
@@ -6489,7 +6489,7 @@ function tvRerender(){ clearTimeout(_tvRr); _tvRr=setTimeout(tvRefresh,160); }
 /* ---------- rotation: one self-scheduling timer, never stacks ---------- */
 function tvAdvance(){
   var list=tvEnabledScenes();
-  if(list.length) tvIdx=(tvIdx+1)%list.length;
+  if(list.length){ var ci=(typeof tvIdx==='number'&&tvIdx>=0)?tvIdx:0; tvIdx=(ci+1)%list.length; }
   tvRenderCurrent(true);
   tvScheduleNext();
 }
@@ -6586,17 +6586,16 @@ function bootTvDisplay(){
     tvState=tvMergeState(null);
     var sl=document.getElementById('tv-site'); if(sl) sl.textContent=(siteLabel(currentSite)||'').toUpperCase();
     if(root) root.style.setProperty('--tvac',siteAccent(currentSite));
-    try{ tvRenderCurrent(true); }catch(e){}
-    tvStartRotation();
-    tvSyncView();
-    tvHkPulse();                 // branded intro (reliable CSS badge)
+    tvClock(); tvClockTimer=setInterval(tvClock,1000);   // clock first, so the time is always on screen
+    try{ tvStartRotation(); }catch(e){}
+    try{ tvSyncView(); }catch(e){}
+    try{ tvHkPulse(); }catch(e){}     // branded intro (reliable CSS badge)
     try{ tvKeepAwake(); }catch(e){}
-    tvClock(); tvClockTimer=setInterval(tvClock,1000);
     try{ loadSites(function(){ var s2=document.getElementById('tv-site'); if(s2) s2.textContent=(siteLabel(currentSite)||'').toUpperCase(); var r2=document.getElementById('tvroot'); if(r2) r2.style.setProperty('--tvac',siteAccent(currentSite)); }); }catch(e){}
-    tvLoadData();
-    tvSubscribe();
+    try{ tvLoadData(); }catch(e){}
+    try{ tvSubscribe(); }catch(e){}
     if(typeof SBC!=='undefined'&&SBC){
-      try{ SBC.from('tv_state').select('*').eq('id',1).then(function(r){ var row=(r&&r.data&&r.data[0])||null; tvApplyState(row); },function(){}); }catch(e){}
+      try{ SBC.from('tv_state').select('*').eq('id',1).then(function(r){ var row=(r&&r.data&&r.data[0])||null; try{ tvApplyState(row); }catch(e){} },function(){}); }catch(e){}
     }
     tvSyncTimer=setInterval(tvSyncView,15000);     // catch scheduled messages + the morning cut-off
     tvPulseTimer=setInterval(tvHkPulse,60000);     // HK animation once a minute
