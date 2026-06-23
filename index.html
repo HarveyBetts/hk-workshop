@@ -1317,6 +1317,10 @@
       background:rgba(255,84,112,.14);border:1px solid rgba(255,84,112,.42);color:#FF8FA3}
     .tv-kn.maint{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.42);color:#FCD34D}
     /* per-type fleet extras */
+    .tv-ready .den{font-size:.5em;color:var(--mut);font-weight:800;letter-spacing:-.02em}
+    .tv-ready .rl{display:flex;flex-direction:column;gap:.5vmin}
+    .tv-ready .rl .of{margin:0}
+    .tv-ready .of2{font-size:1.5vmin;font-weight:600;color:var(--dim);letter-spacing:.02em}
     .tv-ready .pct{display:flex;flex-direction:column;align-items:flex-end;line-height:.95}
     .tv-ready .pct .pl{font-size:1.3vmin;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);margin-top:.5vmin}
     .tv-dmglist{margin-top:auto;display:flex;flex-direction:column;gap:.8vmin}
@@ -1325,14 +1329,19 @@
     .tv-dmg .di{flex:1;min-width:0;font-size:1.95vmin;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .tv-dmg .dd{font-size:1.6vmin;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums;flex:0 0 auto}
     .tv-allok{margin-top:auto;padding:1.8vmin;border-radius:1.3vmin;background:rgba(61,214,140,.08);border:1px solid rgba(61,214,140,.3);color:#7BE8B5;font-size:2.1vmin;font-weight:700;text-align:center}
-    /* repair leaderboard */
+    /* repair leaderboard (today / week / month) */
     .tv-lb{display:flex;flex-direction:column;gap:1vmin;flex:1;min-height:0;justify-content:center}
+    .tv-lbhdr{display:flex;align-items:center;gap:1.8vmin;padding:0 2.2vmin .4vmin}
+    .tv-lbhdr .rk{min-width:3.6vmin}
+    .tv-lbhdr .nm{flex:1}
     .tv-lbrow{display:flex;align-items:center;gap:1.8vmin;padding:1.5vmin 2.2vmin;border-radius:1.4vmin;background:var(--panel);border:1px solid var(--line)}
     .tv-lbrow .rk{font-size:3vmin;font-weight:800;font-variant-numeric:tabular-nums;min-width:3.6vmin;text-align:center}
-    .tv-lbrow .nm{flex:0 0 24%;min-width:0;font-size:2.2vmin;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .tv-lbrow .bar{flex:1;height:1.5vmin;border-radius:.75vmin;background:rgba(255,255,255,.06);overflow:hidden}
-    .tv-lbrow .bar i{display:block;height:100%;border-radius:.75vmin}
-    .tv-lbrow .ct{font-size:2.6vmin;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink);min-width:4.4vmin;text-align:right}
+    .tv-lbrow .nm{flex:1;min-width:0;font-size:2.3vmin;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tv-ct3{flex:0 0 auto;display:flex;gap:1.2vmin}
+    .tv-ct3>span,.tv-ct3>b{display:block;width:6.6vmin;text-align:center;font-variant-numeric:tabular-nums}
+    .tv-lbhdr .tv-ct3>span{font-size:1.3vmin;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+    .tv-lbrow .tv-ct3>b{font-size:2.7vmin;font-weight:800;color:var(--dim)}
+    .tv-lbrow .tv-ct3>b.hi{color:var(--tvac)}
     /* low stock */
     .tv-list{display:flex;flex-direction:column;gap:1.2vmin;flex:1;min-height:0}
     .tv-row{display:flex;align-items:center;gap:2vmin;padding:1.7vmin 2.4vmin;border-radius:1.3vmin;background:var(--panel);border:1px solid var(--line)}
@@ -4580,6 +4589,7 @@ function loadRfKarts(cb){
         iso:iso,
         date:iso?iso.split('-').reverse().join('.'):'',   // display dd.mm.yyyy
         status:r.date_repaired?'fixed':'open',
+        isoRepaired:r.date_repaired||'',                   // ISO yyyy-mm-dd completed (for day/week/month leaderboards)
         cost:(parseFloat(String(r.cost||'').replace(/[^0-9.]/g,''))||0),
         issue:r.description||'Repair',                    // the original / issue note
         repairNotes:r.notes||'',                          // follow-up repair note(s), newline-joined
@@ -6377,49 +6387,76 @@ function tvTypeStats(type){
     dmg:act.filter(function(k){return k.status==='damaged';})};
 }
 function tvKartLatestRepair(k){ var rs=(k&&k.rfId!=null&&RF_REPAIRS_BY_ID[k.rfId])||[]; return rs.length?rs[0]:null; }
+/* Damage note: WHY a kart is currently damaged (a kart note, NOT a repair record).
+   Reads rf_kart_notes via RF_NOTES_BY_ID — prefers the most recent OPEN note. */
+function tvKartDamageNote(k){
+  var ns=(k&&k.rfId!=null&&RF_NOTES_BY_ID&&RF_NOTES_BY_ID[k.rfId])||[];
+  if(!ns.length) return null;
+  for(var i=0;i<ns.length;i++){ if(ns[i]&&ns[i].open&&ns[i].note) return ns[i]; }
+  return ns[0];
+}
+function tvNoteDay(iso){ if(!iso) return ''; var s=String(iso).slice(0,10).split('-'); return s.length===3?(s[2]+'.'+s[1]+'.'+s[0]):''; }
 function tvSceneType(type){
-  var s=tvTypeStats(type), n=s.act.length, ac=KART_TYPE_COLOR[type]||'var(--tvac)';
+  var s=tvTypeStats(type), tot=s.act.length, ac=KART_TYPE_COLOR[type]||'var(--tvac)';
   if(!s.ks.length) return tvEyebrow(type+' karts','')+'<div class="tv-empty">No '+tvEsc(type)+' karts in the fleet.</div>';
-  var pOk=n?Math.round(s.ok.length/n*100):0, pFm=n?Math.round(s.maint.length/n*100):0, pDmg=n?Math.round(s.dmg.length/n*100):0;
-  var dn=n||1, wOk=s.ok.length/dn*100, wWarn=s.maint.length/dn*100, wBad=s.dmg.length/dn*100;
-  var attn=s.dmg.concat(s.maint).map(function(k){ var r=tvKartLatestRepair(k); return {k:k,r:r,sort:(r?(r.id||0):0)}; });
-  attn.sort(function(a,b){ return b.sort-a.sort; });
-  var dmgRows=attn.slice(0,6).map(function(o){
-    var bad=o.k.status==='damaged', issue=(o.r&&o.r.issue)||(bad?'Damaged':'In maintenance'), date=(o.r&&o.r.date)||'';
-    return '<div class="tv-dmg"><span class="tv-kn'+(bad?'':' maint')+'">'+tvEsc(o.k.num)+'</span><span class="di">'+tvEsc(issue)+'</span>'+(date?'<span class="dd">'+tvEsc(date)+'</span>':'')+'</div>';
+  // READY = OK + For-maintenance (everything in service that isn't damaged).
+  var ready=s.ok.length+s.maint.length, pReady=tot?Math.round(ready/tot*100):0;
+  var pOk=tot?Math.round(s.ok.length/tot*100):0, pFm=tot?Math.round(s.maint.length/tot*100):0, pDmg=tot?Math.round(s.dmg.length/tot*100):0;
+  var dn=tot||1, wOk=s.ok.length/dn*100, wWarn=s.maint.length/dn*100, wBad=s.dmg.length/dn*100;
+  // DAMAGED karts only, newest damage-note first, showing the note that explains the damage.
+  var dmg=s.dmg.map(function(k){ var nt=tvKartDamageNote(k); return {k:k,nt:nt,iso:(nt&&nt.createdIso)||''}; });
+  dmg.sort(function(a,b){ return String(b.iso).localeCompare(String(a.iso)); });
+  var dmgRows=dmg.slice(0,6).map(function(o){
+    var note=(o.nt&&o.nt.note)||'No note recorded', date=tvNoteDay(o.iso);
+    return '<div class="tv-dmg"><span class="tv-kn">'+tvEsc(o.k.num)+'</span><span class="di">'+tvEsc(note)+'</span>'+(date?'<span class="dd">'+tvEsc(date)+'</span>':'')+'</div>';
   }).join('');
-  return tvEyebrow(type+' karts', tvEsc(siteLabel(currentSite))+' \u00b7 '+n+' in service')+
+  return tvEyebrow(type+' karts', tvEsc(siteLabel(currentSite))+' \u00b7 '+tot+' in service')+
     '<div class="tv-fleet">'+
-      '<div class="tv-ready"><div class="big" style="color:'+ac+'">'+n+'</div><div><div class="of">in service</div>'+(s.lt.length?'<div class="of">'+s.lt.length+' long-term parked</div>':'')+'</div><div class="pct">'+pOk+'%<span class="pl">race-ready</span></div></div>'+
+      '<div class="tv-ready"><div class="big" style="color:'+ac+'">'+ready+'<span class="den">/'+tot+'</span></div><div class="rl"><div class="of">KARTS READY</div>'+(s.dmg.length?'<div class="of2">'+s.dmg.length+' damaged \u00b7 out of service</div>':'<div class="of2">none out of service</div>')+(s.lt.length?'<div class="of2">'+s.lt.length+' long-term parked</div>':'')+'</div><div class="pct">'+pReady+'%</div></div>'+
       '<div class="tv-gauge">'+(wOk?'<i class="g-ok" style="width:'+wOk+'%"></i>':'')+(wWarn?'<i class="g-warn" style="width:'+wWarn+'%"></i>':'')+(wBad?'<i class="g-bad" style="width:'+wBad+'%"></i>':'')+'</div>'+
       '<div class="tv-stats3">'+
         '<div class="tv-stat" style="--c:#3DD68C"><div class="n">'+s.ok.length+'</div><div class="l">OK \u00b7 '+pOk+'%</div></div>'+
         '<div class="tv-stat" style="--c:#FBBF24"><div class="n">'+s.maint.length+'</div><div class="l">For maint \u00b7 '+pFm+'%</div></div>'+
         '<div class="tv-stat" style="--c:#FF5470"><div class="n">'+s.dmg.length+'</div><div class="l">Damaged \u00b7 '+pDmg+'%</div></div>'+
       '</div>'+
-      (dmgRows?'<div class="tv-dmglist"><div class="tv-dmghdr">Recently flagged \u00b7 newest first</div>'+dmgRows+'</div>':'<div class="tv-allok">All '+tvEsc(type)+' karts are race-ready \ud83c\udfc1</div>')+
+      (s.dmg.length?'<div class="tv-dmglist"><div class="tv-dmghdr">Damaged \u00b7 newest first</div>'+dmgRows+'</div>':'<div class="tv-allok">No '+tvEsc(type)+' karts damaged \ud83c\udfc1</div>')+
     '</div>';
 }
-function tvLeaderboard(){
-  var by={};
+/* ---- repair leaderboard: per day / calendar week (resets Monday) / calendar month ---- */
+function tvLocalYMD(d){ var p=function(n){return(n<10?'0':'')+n;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function tvDayWindows(){
+  var now=new Date(), today=tvLocalYMD(now);
+  var off=(now.getDay()+6)%7;                       // days since Monday (Mon=0 … Sun=6)
+  var mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-off);
+  return {today:today, weekStart:tvLocalYMD(mon), month:today.slice(0,7)};
+}
+function tvRepairTallies(){
+  var w=tvDayWindows(), by={};
   Object.keys(RF_REPAIRS_BY_ID||{}).forEach(function(id){
     (RF_REPAIRS_BY_ID[id]||[]).forEach(function(r){
       if(!r||r.status!=='fixed') return;
       var u=(r.user||'').trim(); if(!u||u==='\u2014'||u==='-') return;
-      by[u]=(by[u]||0)+1;
+      var iso=(r.isoRepaired||'').slice(0,10); if(!iso) return;
+      var rec=by[u]||(by[u]={user:u,day:0,week:0,month:0});
+      if(iso===w.today) rec.day++;
+      if(iso>=w.weekStart&&iso<=w.today) rec.week++;
+      if(iso.slice(0,7)===w.month) rec.month++;
     });
   });
-  return Object.keys(by).map(function(u){return {user:u,count:by[u]};}).sort(function(a,b){return b.count-a.count;});
+  return Object.keys(by).map(function(u){return by[u];});
 }
+function tvLeaderboard(){ return tvRepairTallies().filter(function(o){return o.month>0;}); }
 function tvSceneLeaderboard(){
   var lb=tvLeaderboard();
-  if(!lb.length) return tvEyebrow('Repair Leaderboard','')+'<div class="tv-empty">No completed repairs recorded yet.</div>';
-  var top=lb[0].count||1, total=lb.reduce(function(a,b){return a+b.count;},0), medal=['#FFD45E','#CBD5E1','#E8995A'];
-  var rows=lb.slice(0,8).map(function(o,i){
-    var w=Math.max(6,Math.round(o.count/top*100)), rc=i<3?medal[i]:'var(--tvac)';
-    return '<div class="tv-lbrow"><span class="rk" style="color:'+rc+'">'+(i+1)+'</span><span class="nm">'+tvEsc(o.user)+'</span><div class="bar"><i style="width:'+w+'%;background:'+rc+'"></i></div><span class="ct">'+o.count+'</span></div>';
+  if(!lb.length) return tvEyebrow('Repair Leaderboard','')+'<div class="tv-empty">No completed repairs this month yet.</div>';
+  lb.sort(function(a,b){ return (b.day-a.day)||(b.week-a.week)||(b.month-a.month); });
+  var medal=['#FFD45E','#CBD5E1','#E8995A'];
+  var rows=lb.slice(0,7).map(function(o,i){
+    var rc=i<3?medal[i]:'var(--tvac)';
+    return '<div class="tv-lbrow"><span class="rk" style="color:'+rc+'">'+(i+1)+'</span><span class="nm">'+tvEsc(o.user)+'</span><span class="tv-ct3"><b class="hi">'+o.day+'</b><b>'+o.week+'</b><b>'+o.month+'</b></span></div>';
   }).join('');
-  return tvEyebrow('Repair Leaderboard', total+' repairs completed')+'<div class="tv-lb">'+rows+'</div>';
+  return tvEyebrow('Repair Leaderboard','Completed repairs')+
+    '<div class="tv-lb"><div class="tv-lbhdr"><span class="rk"></span><span class="nm"></span><span class="tv-ct3"><span>Today</span><span>Week</span><span>Month</span></span></div>'+rows+'</div>';
 }
 function tvLiveItems(){ return ((tvState&&tvState.items)||[]).filter(tvItemLive); }
 function tvSceneItems(){
@@ -6489,7 +6526,11 @@ function tvSceneMorning(){
       roster+pill+
     '</div>';
 }
-function tvSceneIdle(){ return tvEyebrow('Standing by','')+'<div class="tv-empty">No panels selected &mdash; turn some on from the TV Display tab.</div>'; }
+function tvSceneIdle(){
+  var loading=!(typeof KART_LIST!=='undefined'&&KART_LIST&&KART_LIST.length);
+  return tvEyebrow(loading?'Starting up':'Standing by','')+
+    '<div class="tv-empty">'+(loading?'Loading the workshop\u2026':'No panels selected &mdash; turn some on from the TV Display tab.')+'</div>';
+}
 function tvMorningActive(){
   if(!tvState||tvState.morning===false) return false;
   var d=new Date(); return (d.getHours()*60+d.getMinutes()) < tvParseTime(tvState.morning_until||'10:30');
@@ -6513,7 +6554,7 @@ function tvEnabledScenes(){
   });
 }
 /* ---------- render / rotate ---------- */
-var tvState=null,tvIdx=0,_tvRotT=null,tvPulseTimer=null,tvClockTimer=null,tvSyncTimer=null,tvDataTimer=null,_tvRr=null,_tvDataT=null,_tvOverlay=false;
+var tvState=null,tvIdx=0,_tvRotT=null,tvPulseTimer=null,tvClockTimer=null,tvSyncTimer=null,tvDataTimer=null,_tvRr=null,_tvDataT=null,_tvOverlay=false,_tvBootAt=0,_tvHealTimer=null,_tvHealReloaded=false;
 /* ---------- scheduling / overlay helpers ---------- */
 function tvParseTs(s){ if(!s) return NaN; var t=Date.parse(s); return isNaN(t)?NaN:t; }
 function tvNowInWindow(start,end){
@@ -6542,10 +6583,11 @@ function tvSetScene(html,advancing){
 function tvRenderDots(n,idx){ var el=document.getElementById('tv-dots'); if(!el) return; var s=''; for(var i=0;i<n;i++) s+='<i class="'+(i===idx?'on':'')+'"></i>'; el.innerHTML=s; }
 function tvRenderCurrent(advancing){
   if(tvOverlayActive()) return;
-  var list=tvEnabledScenes();
-  if(!list.length){ tvSetScene(tvSceneIdle(),advancing); tvRenderDots(0,0); return; }
+  var list; try{ list=tvEnabledScenes(); }catch(e){ list=[]; }
+  if(!list.length){ try{ tvSetScene(tvSceneIdle(),advancing); }catch(e){} tvRenderDots(0,0); return; }
   if(typeof tvIdx!=='number'||isNaN(tvIdx)||tvIdx<0||tvIdx>=list.length) tvIdx=0;
-  tvSetScene(list[tvIdx].render(),advancing);
+  var html; try{ html=list[tvIdx].render(); }catch(e){ html=tvSceneIdle(); }
+  tvSetScene(html,advancing);
   tvRenderDots(list.length,tvIdx);
 }
 function tvRefresh(){ tvRenderCurrent(false); }
@@ -6564,7 +6606,7 @@ function tvScheduleNext(){
   var secs=Math.max(5,Number(tvState&&tvState.rotate_seconds)||18);
   _tvRotT=setTimeout(tvAdvance,secs*1000);
 }
-function tvStartRotation(){ tvRenderCurrent(true); tvScheduleNext(); }
+function tvStartRotation(){ try{ tvRenderCurrent(true); }catch(e){} try{ tvScheduleNext(); }catch(e){} }
 /* ---------- overlays: emergency / full-screen message / standby ---------- */
 function tvSetText(id,txt){ var el=document.getElementById(id); if(el) el.textContent=txt||''; }
 function tvFillAlert(a){ tvSetText('tv-al-title',(a&&a.title)||'Emergency'); tvSetText('tv-al-note',(a&&a.note)||''); }
@@ -6617,6 +6659,22 @@ function tvSubscribe(){
   }catch(e){}
 }
 
+/* Watchdog — the board must never sit blank. If the stage somehow has no scene
+   (and no overlay is meant to be covering it), re-render. If it's STILL blank a
+   while after boot, reload once (guarded so it can never loop). */
+function tvHeal(){
+  try{
+    var stage=document.getElementById('tv-stage'); if(!stage) return;
+    if(tvOverlayActive()) return;                 // an overlay is covering the stage on purpose
+    if(stage.querySelector('.tv-scene')) return;  // something is on screen — all good
+    try{ tvRenderCurrent(true); }catch(e){}
+    if(!stage.querySelector('.tv-scene') && !_tvHealReloaded && _tvBootAt && (Date.now()-_tvBootAt)>20000){
+      _tvHealReloaded=true;
+      var did='0'; try{ did=sessionStorage.getItem('tvHealReload')||'0'; }catch(e){}
+      if(did!=='1'){ try{ sessionStorage.setItem('tvHealReload','1'); }catch(e){} try{ location.reload(); }catch(e){} }
+    }
+  }catch(e){}
+}
 /* HK pulse — show the board's own lightweight badge overlay, then fade it. */
 function tvHkPulse(){
   var root=document.getElementById('tvroot'); if(!root) return;
@@ -6641,9 +6699,11 @@ function bootTvDisplay(){
   try{
     currentSite=(window.__tvSite||currentSite||'sydney');   // which site this TV shows (from the URL)
     try{ document.title='HK Workshop · TV'; }catch(e){}
-    // The board uses its OWN pulse overlay, not the cold-open splash — hide the
-    // splash so it can never end up covering the board on a TV browser.
-    try{ var sp=document.getElementById('splash'); if(sp){ sp.classList.add('gone'); sp.style.display='none'; } }catch(e){}
+    // The board uses its OWN pulse overlay, not the cold-open splash. The splash
+    // (heavy SVG mask + perspective animation, z-index above the board) has been
+    // unreliable on the TV browser, so in TV mode we REMOVE it from the DOM entirely
+    // — display:none alone has not always held on HiBrowser.
+    try{ var sp=document.getElementById('splash'); if(sp){ sp.classList.add('gone'); sp.style.display='none'; if(sp.parentNode) sp.parentNode.removeChild(sp); } }catch(e){}
     var root=document.getElementById('tvroot'); if(root) root.classList.add('on');
     // Paint immediately from defaults so the board is visible without waiting on the network.
     tvState=tvMergeState(null);
@@ -6659,12 +6719,31 @@ function bootTvDisplay(){
     try{ tvSubscribe(); }catch(e){}
     if(typeof SBC!=='undefined'&&SBC){
       try{ SBC.from('tv_state').select('*').eq('site',currentSite).then(function(r){ var row=(r&&r.data&&r.data[0])||null; try{ tvApplyState(row); }catch(e){} },function(){}); }catch(e){}
+    } else {
+      // Supabase client wasn't ready at boot — poll briefly so data + realtime come
+      // up within a second or two instead of waiting for the 5-min backstop.
+      var _tvConnT=setInterval(function(){
+        if(typeof SBC!=='undefined'&&SBC){
+          clearInterval(_tvConnT);
+          try{ tvLoadData(); }catch(e){}
+          try{ tvSubscribe(); }catch(e){}
+          try{ SBC.from('tv_state').select('*').eq('site',currentSite).then(function(r){ var row=(r&&r.data&&r.data[0])||null; try{ tvApplyState(row); }catch(e){} },function(){}); }catch(e){}
+        }
+      },500);
+      setTimeout(function(){ try{ clearInterval(_tvConnT); }catch(e){} },20000);
     }
+    _tvBootAt=Date.now();
     tvSyncTimer=setInterval(tvSyncView,15000);     // catch scheduled messages + the morning cut-off
     tvPulseTimer=setInterval(tvHkPulse,60000);     // HK animation once a minute
     tvDataTimer=setInterval(tvLoadData,300000);    // refresh fleet/stock every 5 min as a backstop
+    _tvHealTimer=setInterval(tvHeal,8000);         // watchdog: never leave the board blank
   }catch(e){
-    try{ var s3=document.getElementById('splash'); if(s3){ s3.classList.add('gone'); s3.style.display='none'; } var r3=document.getElementById('tvroot'); if(r3) r3.classList.add('on'); }catch(_){}
+    // Last-resort recovery: never leave the TV blank. Drop the splash, show the
+    // board, and paint at least one scene directly.
+    try{ var s3=document.getElementById('splash'); if(s3){ s3.classList.add('gone'); s3.style.display='none'; if(s3.parentNode) s3.parentNode.removeChild(s3); } }catch(_){}
+    try{ var r3=document.getElementById('tvroot'); if(r3) r3.classList.add('on'); }catch(_){}
+    try{ if(!tvState) tvState=tvMergeState(null); var st=document.getElementById('tv-stage'); if(st&&!st.querySelector('.tv-scene.show')){ var d=document.createElement('div'); d.className='tv-scene show'; d.innerHTML=tvSceneMorning(); st.appendChild(d); } }catch(_){}
+    try{ if(!tvClockTimer){ tvClock(); tvClockTimer=setInterval(tvClock,1000); } }catch(_){}
   }
 }
 
