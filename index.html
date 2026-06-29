@@ -228,7 +228,7 @@
     }
 
     /* Colour palette — one per tab (blues / teals / indigos kept distinct) */
-    .tile.tc      {background:linear-gradient(145deg,#C026D3,#701A75);border:1px solid rgba(240,171,252,0.42)}
+    .tile.tc      {background:linear-gradient(145deg,#E11D48,#831843);border:1px solid rgba(251,113,133,0.5)}
     .tile.tse     {background:linear-gradient(145deg,#2563EB,#1E3A8A);border:1px solid rgba(96,165,250,0.42)}
     .tile.tlo     {background:linear-gradient(145deg,#EAB308,#A16207);border:1px solid rgba(250,204,21,0.6)}
     .tile.tor     {background:linear-gradient(145deg,#059669,#064E3B);border:1px solid rgba(52,211,153,0.38)}
@@ -401,6 +401,9 @@
     /* ===== Kart Info overhaul (3-level: types -> grid -> detail) ===== */
     :root{ --kacc:#2DD4BF; }   /* Kart Info teal accent (matches the home tile) */
     .ki-sub{font-size:13px;color:var(--t2);margin:-6px 0 16px}
+    .kart-loading{padding:48px 0;text-align:center;color:var(--t2);font-weight:600;font-size:15px;letter-spacing:.2px;animation:nfIn .3s ease}
+    @keyframes sbIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+    .sb.sb-in{animation:sbIn .4s cubic-bezier(0.22,1,0.36,1)}
     #ki-karts-sub{margin-top:8px}
     .ki-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--kacc);font-size:14px;font-weight:700;cursor:pointer;padding:6px 0 12px;font-family:inherit}
     .ki-back:active{opacity:.6}
@@ -1675,8 +1678,8 @@
           <span id="ondisp">—</span>
           <span style="margin-left:auto;font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:1.5px">Locked</span>
         </div>
-        <div class="flbl">Part</div>
-        <input class="sin" type="text" id="os" placeholder="Search parts..." oninput="fodp()" autocomplete="off" style="margin-bottom:8px">
+        <div class="flbl">Part or item</div>
+        <input class="sin" type="text" id="os" placeholder="Search parts, or type any item (gloves, hand scrub…)" oninput="fodp()" autocomplete="off" style="margin-bottom:8px">
         <div class="ddlist" id="oddl"></div>
         <div class="selbox" id="osb"><div class="sblbl">Selected part</div><div class="sbname" id="osd"></div><div class="sbmeta" id="osm"></div><button class="clr" onclick="clrp()">✕ Clear</button></div>
         <div class="flbl" style="margin-top:2px">Notes (optional)</div>
@@ -2032,7 +2035,7 @@
     <button class="m-tab active" id="mtab-parts" onclick="mTab('parts')">🔧 Parts</button>
     <button class="m-tab" id="mtab-staff" onclick="mTab('staff')">👥 Staff</button>
     <button class="m-tab" id="mtab-sites" onclick="mTab('sites')">📍 Sites</button>
-    <button class="m-tab" id="mtab-tools" onclick="mTab('tools')">⚙️ Tools</button>
+    <button class="m-tab" id="mtab-tools" onclick="mTab('tools')">🏷️ QR Editor</button>
     <button class="m-tab" id="mtab-tracks" onclick="mTab('tracks')">🏁 Tracks</button>
     <button class="m-tab" id="mtab-karts" onclick="mTab('karts')">🏎️ Karts</button>
     <button class="m-tab" id="mtab-access" onclick="mTab('access')">🔐 Access</button>
@@ -2113,8 +2116,6 @@
           </div>
         </div>
       </div>
-      <div class="mc"><div class="mct">Inventory summary</div><div id="m-tool-stats"></div></div>
-      <div class="mc"><div class="mct">Inventory summary</div><div id="m-tool-stats"></div></div>
     </div>
   </div>
   <div class="m-pane" id="m-pane-tracks">
@@ -2683,12 +2684,59 @@ function startRealtime(){
   var _rtParts = _debounce(_reload, 200, 1200);
   var _rtNotif = _debounce(function(){ if(_curScr()==='manager'){ if(typeof refreshNotifBadge==='function'){try{refreshNotifBadge();}catch(e){}} if(MD_TAB==='notif'&&typeof renderNotifications==='function'){try{renderNotifications();}catch(e){}} } }, 220, 1400);
   var _rtCheck = _debounce(function(){ if(_curScr()==='manager'&&typeof loadCheckAlerts==='function'){try{loadCheckAlerts();}catch(e){}} }, 450, 2500);
+  // Live merge of a single changed repair from the realtime payload (p.new carries the full
+  // row on INSERT/UPDATE) so a repair punched into RaceFacer shows instantly — WITHOUT
+  // re-pulling the whole ~18k-row history. Keeps the in-memory cache current between heavy loads.
+  function _rtRepairMerge(p){
+    try{
+      var r=(p&&p.new)||null; if(!r||r.id==null||r.rf_kart_id==null) return;
+      if(typeof RF_REPAIRS_BY_ID==='undefined'||!RF_REPAIRS_BY_ID) return;
+      var iso=r.date_discovered||r.date_repaired||'';
+      var rec={ id:Number(r.id)||0, iso:iso, date:iso?iso.split('-').reverse().join('.'):'',
+        status:r.date_repaired?'fixed':'open', isoRepaired:r.date_repaired||'',
+        cost:(parseFloat(String(r.cost||'').replace(/[^0-9.]/g,''))||0),
+        issue:r.description||'Repair', repairNotes:r.notes||'', parts:[], mileage:Number(r.mileage)||0,
+        user:r.mechanic||'\u2014', dateRepaired:r.date_repaired?r.date_repaired.split('-').reverse().join('.'):'',
+        kartName:(r.kart_name!=null?String(r.kart_name):''), kartType:r.kart_type||'', kartGarageId:r.kart_garage_id||'', typeColor:r.type_color||'' };
+      var arr=RF_REPAIRS_BY_ID[r.rf_kart_id]=RF_REPAIRS_BY_ID[r.rf_kart_id]||[];
+      var found=false; for(var i=0;i<arr.length;i++){ if(arr[i].id===rec.id){ rec.parts=arr[i].parts||[]; arr[i]=rec; found=true; break; } }
+      if(!found) arr.push(rec);
+      arr.sort(function(a,b){return ((b.id||0)-(a.id||0))||(b.iso||'').localeCompare(a.iso||'');});
+    }catch(e){}
+  }
+  function _rtNoteMerge(p){
+    try{
+      var n=(p&&p.new)||null; if(!n||n.rf_kart_id==null) return;
+      if(typeof RF_NOTES_BY_ID==='undefined'||!RF_NOTES_BY_ID) return;
+      var rec={ note:n.note||'', createdIso:n.created_at||'', createdBy:n.created_by||'',
+        archivedIso:n.archived_at||'', archivedBy:n.archived_by||'', open:!n.archived_at, active:!!n.active };
+      var arr=RF_NOTES_BY_ID[n.rf_kart_id]=RF_NOTES_BY_ID[n.rf_kart_id]||[];
+      var found=false; for(var i=0;i<arr.length;i++){ if(arr[i].createdIso===rec.createdIso && arr[i].note===rec.note){ arr[i]=rec; found=true; break; } }
+      if(!found) arr.push(rec);
+      arr.sort(function(a,b){return String(b.createdIso).localeCompare(String(a.createdIso));});
+    }catch(e){}
+  }
+  function kartRerenderNow(){
+    try{
+      var scr=(typeof stk!=='undefined'&&stk.length)?stk[stk.length-1]:null;
+      if(scr==='kartdetail'&&typeof SELECTED_KART!=='undefined'&&SELECTED_KART){
+        var live=(typeof KART_LIST!=='undefined'&&KART_LIST.find)?KART_LIST.find(function(x){return x.rfId===SELECTED_KART.rfId;}):null;
+        if(live) SELECTED_KART=live;
+        if(typeof renderKartDetail==='function') renderKartDetail(SELECTED_KART);
+      } else if(scr==='kartlist'){
+        KSB_LAST='';
+        if(typeof renderTypeTabs==='function') renderTypeTabs();
+        if(typeof renderKartChips==='function') renderKartChips();
+      }
+    }catch(e){}
+  }
   try{
     SBC.channel('parts-rt').on('postgres_changes',{event:'*',schema:'public',table:'parts'},function(){ _rtParts(); _rtNotif(); }).subscribe();
     SBC.channel('stock-rt').on('postgres_changes',{event:'*',schema:'public',table:'stock'},function(){ if((currentSite||'sydney')!=='sydney') _rtParts(); _rtNotif(); }).subscribe();
     // RaceFacer tables -> refresh whatever RF view is open, live (debounced so a sync burst = one refresh).
     SBC.channel('rfk-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ _rtKarts(); }).subscribe();
-    SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ _rtKarts(); _rtMech(); _rtCheck(); }).subscribe();
+    SBC.channel('rfr-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(p){ _rtRepairMerge(p); _rtKarts(); _rtMech(); _rtCheck(); kartRerenderNow(); }).subscribe();
+    SBC.channel('rfn-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_kart_notes'},function(p){ _rtNoteMerge(p); kartRerenderNow(); }).subscribe();
     SBC.channel('rfd-rt').on('postgres_changes',{event:'*',schema:'public',table:'rf_discrepancies'},function(){ _rtMgr(); _rtBadge(); }).subscribe();
   }catch(e){}
 }
@@ -2802,7 +2850,7 @@ function go(id){
   stk.push(id);
   // Reset scroll position to top whenever entering a screen
   var sb=nxt.querySelector('.sb');
-  if(sb) sb.scrollTop=0;
+  if(sb){ sb.scrollTop=0; sb.classList.remove('sb-in'); void sb.offsetWidth; sb.classList.add('sb-in'); }   // consistent load-in animation on every tab
   var ease='cubic-bezier(0.32,0.72,0,1)';
   // Set starting positions WITHOUT transition
   nxt.style.transition='none';
@@ -2891,6 +2939,9 @@ var navW=0;
 
 nav.addEventListener('touchstart',function(e){
   if(!e.touches||!e.touches[0])return;
+  // Safety net: if an earlier gesture was interrupted and left the body scroll-locked
+  // with no swipe in progress, release it now so the screen can never stay stuck.
+  if(!swiping && !swipeStarted && document.body.style.overflow==='hidden'){ document.body.style.overflow=''; document.body.style.touchAction=''; }
   sx=e.touches[0].clientX;sy=e.touches[0].clientY;
   swiping=false;
   swipeStarted=false;  // not yet committed to a swipe gesture
@@ -2987,6 +3038,16 @@ nav.addEventListener('touchend',function(e){
   } else {
     cancelSwipe();
   }
+},{passive:true});
+
+nav.addEventListener('touchcancel',function(){
+  // iOS aborts a gesture mid-swipe for things outside our control — a notification,
+  // an incoming call, the home indicator, the control centre. Without catching that,
+  // the screen stays frozen at a partial transform and the body stays scroll-locked
+  // (the "app gets stuck" state). Release the lock and snap the screen back cleanly.
+  document.body.style.overflow='';
+  document.body.style.touchAction='';
+  if(swiping||swipeStarted||swipeCur||swipePrev){ swiping=false; swipeStarted=false; cancelSwipe(); }
 },{passive:true});
 
 function cancelSwipe(){
@@ -3099,6 +3160,7 @@ function kiAllowedSections(user){
   user=user||cu;
   var eff=(user&&typeof effectiveTabs==='function')?effectiveTabs(user):null;
   if(!eff) return KI_SECTION_KEYS.slice();                                   // no config loaded -> show all
+  if(eff.indexOf('ki:none')>=0) return [];                                   // explicitly Karts only -> no sections
   var present=KI_SECTION_KEYS.filter(function(k){return eff.indexOf(k)>=0;});
   return present.length?present:KI_SECTION_KEYS.slice();                     // none set (= default) -> show all
 }
@@ -3211,6 +3273,7 @@ function onLoginOk(m,entered){
   var _pd=document.getElementById('pd');if(_pd)_pd.classList.remove('checking');
   m.pin=entered; // user's own PIN, kept in their session only, to authorise their stock moves
   cu=m;if(!TRAINING){try{sessionStorage.setItem('hk_u',JSON.stringify(m));sessionStorage.setItem('hk_ud',new Date().toDateString());}catch(e){}}applyRoleVisibility();
+  try{ resetIdleTimer(); }catch(e){}
   if(!TRAINING){try{SBC.from('logins').insert({name:m.name,role:m.role}).then(function(){},function(){});}catch(e){}}
   document.getElementById('we').innerText=m.emoji;
   document.getElementById('wn').innerText='Hey, '+m.name.split(' ')[0]+'!';
@@ -3312,7 +3375,19 @@ function goHome(){
   },500);
 }
 
-function logout(){TRAINING=false;stopKartAutoRefresh();showTrainingBanner(false);resetPinUI();cu=null;pin3='';homeAnimated=false;sessionStorage.removeItem('hk_u');sessionStorage.removeItem('hk_ud');udots();document.getElementById('pe').innerHTML='&nbsp;';stk=['pin'];showRoot('pin');setTopAccent('flow');}
+function logout(){TRAINING=false;stopKartAutoRefresh();showTrainingBanner(false);resetPinUI();cu=null;pin3='';homeAnimated=false;sessionStorage.removeItem('hk_u');sessionStorage.removeItem('hk_ud');udots();document.getElementById('pe').innerHTML='&nbsp;';stk=['pin'];showRoot('pin');setTopAccent('flow');try{resetIdleTimer();}catch(e){}}
+/* Auto sign-out after inactivity (security). Default 30 min; AUTO_LOGOUT_MIN can be
+   driven from an owner setting later. Only runs for a signed-in user — never the
+   TV board, never the PIN screen. Any tap/key/scroll resets the countdown. */
+var AUTO_LOGOUT_MIN=30,_idleTimer=null;
+function resetIdleTimer(){
+  if(_idleTimer){ clearTimeout(_idleTimer); _idleTimer=null; }
+  if(typeof window!=='undefined'&&window.__tvSite) return;   // never on the wall display
+  if(typeof cu==='undefined'||!cu) return;                    // only when someone is signed in
+  var ms=Math.max(1,Number(AUTO_LOGOUT_MIN)||30)*60000;
+  _idleTimer=setTimeout(function(){ if(typeof cu!=='undefined'&&cu){ try{ logout(); }catch(e){} } },ms);
+}
+['touchstart','mousedown','keydown','click','scroll'].forEach(function(ev){ try{ document.addEventListener(ev,resetIdleTimer,{passive:true,capture:true}); }catch(e){} });
 
 // ── JSONP ──
 function jsonp(url,cb){
@@ -3865,9 +3940,9 @@ function submitTake(action){
 function iord(){if(parts.length===0)lp('order');else refreshParts('order',true);if(cu){var sel=document.getElementById('on');if(sel)sel.value=cu.name;}}
 function fodp(){
   var q=document.getElementById('os').value.toLowerCase().trim(),dl=document.getElementById('oddl');
-  if(!q||!parts.length){dl.style.display='none';return;}
-  var f=parts.filter(function(p){return p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q);}).slice(0,12);
-  if(!f.length){dl.style.display='none';return;}
+  if(!q){dl.style.display='none';return;}
+  var raw=document.getElementById('os').value.trim();
+  var f=(parts||[]).filter(function(p){return p.desc.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q);}).slice(0,12);
   var h='';
   f.forEach(function(p){
     var stCol=p.qty===0?'#FF3B30':p.qty<=p.reorder?'#FFD600':'#00C853';
@@ -3882,7 +3957,18 @@ function fodp(){
       +(p.price?'<span style="color:#888">$'+parseFloat(p.price).toFixed(2)+'</span>':'')
       +'</div></div>';
   });
+  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+  h+='<div class="ddi" onclick="selCustom()"><div class="ddn">Request &ldquo;'+esc(raw)+'&rdquo;</div><div class="ddm" style="margin-top:3px"><span style="color:#FBBF24;font-weight:700;background:rgba(251,191,36,0.10);padding:2px 7px;border-radius:5px;border:1px solid rgba(251,191,36,0.25)">\u270e Custom item &mdash; not in the parts list</span></div></div>';
   dl.innerHTML=h;dl.style.display='block';
+}
+function selCustom(){
+  var raw=(document.getElementById('os').value||'').trim(); if(!raw) return;
+  sp={custom:true,desc:raw,sku:'',loc:'',qty:'',reorder:'',price:''};
+  document.getElementById('os').value='';
+  document.getElementById('oddl').style.display='none';
+  document.getElementById('osb').style.display='block';
+  document.getElementById('osd').innerText=raw;
+  document.getElementById('osm').innerHTML='<div style="margin-top:4px"><span style="color:#FBBF24;font-weight:700;background:rgba(251,191,36,0.10);padding:2px 8px;border-radius:5px;border:1px solid rgba(251,191,36,0.25);font-size:11px">\u270e Custom item &mdash; not in the parts list</span></div>';
 }
 function selp(sku){
   var p=parts.find(function(x){return x.sku===sku;});
@@ -3907,9 +3993,10 @@ function subord(){
   if(oSent)return;
   var btn=document.querySelector('.btnsub'),name=cu?cu.name:'',notes=document.getElementById('ono').value,msg=document.getElementById('msg');
   if(!name){msg.className='er';msg.innerText='Please select your name';return;}
-  if(!sp){msg.className='er';msg.innerText='Please search and select a part';return;}
+  if(!sp){ var typed=(document.getElementById('os').value||'').trim(); if(typed) selCustom(); }   // typed something but didn't pick — treat as a custom item
+  if(!sp){msg.className='er';msg.innerText='Search and select a part, or type any item to request it';return;}
   oSent=true;btn.disabled=true;btn.innerText='Sending...';msg.className='ld';msg.innerText='Sending request...';
-  var url=APP+'?action=requestorder&name='+encodeURIComponent(name)+'&sku='+encodeURIComponent(sp.sku)+'&part='+encodeURIComponent(sp.desc)+'&loc='+encodeURIComponent(sp.loc||'')+'&qty='+encodeURIComponent(sp.qty)+'&reorder='+encodeURIComponent(sp.reorder)+'&notes='+encodeURIComponent(notes);
+  var url=APP+'?action=requestorder&name='+encodeURIComponent(name)+'&sku='+encodeURIComponent(sp.sku||'')+'&part='+encodeURIComponent(sp.desc)+'&loc='+encodeURIComponent(sp.loc||'')+'&qty='+encodeURIComponent(sp.qty||'')+'&reorder='+encodeURIComponent(sp.reorder||'')+'&custom='+(sp.custom?'1':'')+'&notes='+encodeURIComponent(notes);
   setTimeout(function(){msg.className='ok';msg.innerText='Noted. (Order routing moves to the Generate Order tab in a later update.)';clrp();document.getElementById('ono').value='';btn.innerText='Noted';setTimeout(function(){oSent=false;btn.disabled=false;btn.innerText='Send Order Request';},6000);},250);
 }
 
@@ -4557,7 +4644,8 @@ function readableColor(hex){
 // after it (instead of firing a fresh 4-table fetch per caller). With the realtime debounce above
 // this is belt-and-suspenders, but it's what guarantees the app can't thrash itself into a reload.
 var _rfBusy=false, _rfQueued=false, _rfQueuedCb=null;
-function loadRfKarts(cb){
+var RF_HEAVY_AT=0,RF_HEAVY_SITE='',KARTS_AT=0,KARTS_SITE='';   // repairs+notes kept in memory; re-pulled sparingly to cut egress
+function loadRfKarts(cb,force){
   if(_rfBusy){ _rfQueued=true; if(cb) _rfQueuedCb=cb; return; }
   _rfBusy=true;
   var site=currentSite||'sydney';
@@ -4566,18 +4654,27 @@ function loadRfKarts(cb){
     if(thisCb){ try{thisCb();}catch(e){} }
     if(_rfQueued){ _rfQueued=false; var c=_rfQueuedCb; _rfQueuedCb=null; loadRfKarts(c); }
   }
+  // Karts (status) refresh every time — small. Repairs + repair-parts + notes are large
+  // and barely change once written, so keep them in memory and only re-pull on a manual
+  // Refresh, a site change, or after 30 min — instead of dragging the whole ~18k-row
+  // repair history down on every refresh. This is the big egress saving.
+  var heavyFresh = !force && RF_LOADED && RF_HEAVY_SITE===site && (Date.now()-RF_HEAVY_AT)<1800000;
+  var REP_COLS='rf_kart_id,id,date_discovered,date_repaired,cost,description,notes,mileage,mechanic,kart_name,kart_type,kart_garage_id,type_color';
   Promise.all([
     sbFetchAll('rf_karts','*','site',site,'rf_id'),
-    sbFetchAll('rf_repairs','*',null,null,'id'),
-    sbFetchAll('rf_repair_parts','repair_id,part_name,qty,price',null,null,'repair_id'),
-    sbFetchAll('rf_kart_notes','*',null,null,'id').catch(function(){ return {data:[]}; })
+    heavyFresh ? Promise.resolve(null) : sbFetchAll('rf_repairs',REP_COLS,null,null,'id'),
+    heavyFresh ? Promise.resolve(null) : sbFetchAll('rf_repair_parts','repair_id,part_name,qty,price',null,null,'repair_id'),
+    heavyFresh ? Promise.resolve(null) : sbFetchAll('rf_kart_notes','*',null,null,'id').catch(function(){ return {data:[]}; })
   ]).then(function(rs){
-    var krows=(rs[0]&&rs[0].data)||[], rrows=(rs[1]&&rs[1].data)||[], prows=(rs[2]&&rs[2].data)||[], nrows=(rs[3]&&rs[3].data)||[];
+    var krows=(rs[0]&&rs[0].data)||[];
     if(krows.length){
       KART_LIST=krows.map(mapRfKart).sort(function(a,b){return a.num-b.num;});
       // Tint each type with RaceFacer's own colour when we have it (falls back to the defaults).
       KART_LIST.forEach(function(k){ if(k.typeColor && /^#[0-9a-fA-F]{3,8}$/.test(k.typeColor)) KART_TYPE_COLOR[k.type]=readableColor(k.typeColor); });
+      KARTS_AT=Date.now(); KARTS_SITE=site;
     }
+    if(!heavyFresh){
+    var rrows=(rs[1]&&rs[1].data)||[], prows=(rs[2]&&rs[2].data)||[], nrows=(rs[3]&&rs[3].data)||[];
     // Parts grouped by their parent repair id
     var partsByRepair={};
     prows.forEach(function(p){ (partsByRepair[p.repair_id]=partsByRepair[p.repair_id]||[]).push({ name:p.part_name||'Part', qty:Number(p.qty)||0, price:p.price||'' }); });
@@ -4611,6 +4708,8 @@ function loadRfKarts(cb){
       });
     });
     Object.keys(RF_NOTES_BY_ID).forEach(function(id){ RF_NOTES_BY_ID[id].sort(function(a,b){return String(b.createdIso).localeCompare(String(a.createdIso));}); });
+    RF_HEAVY_AT=Date.now(); RF_HEAVY_SITE=site;
+    }
     RF_LOADED=true;
     _fin(cb);
   }).catch(function(){ _fin(cb); });
@@ -4654,15 +4753,31 @@ function kiSubText(){ return (typeof siteLabel==='function'?siteLabel(currentSit
 // Open the Karts screen (colour-coded type tabs + number tiles)
 function kiOpenKarts(){
   SELECTED_KART=null;
+  go('kartlist');
+  // Never flash a half-finished earlier sync (wrong counts, default-blue Adult). If the
+  // fleet was just loaded for this site, render straight away; otherwise show a clean
+  // loading state, pull fresh karts (small + repairs are cached, so it's quick), then render.
+  var site=currentSite||'sydney';
+  var fresh = RF_LOADED && KART_LIST.length && KARTS_SITE===site && (Date.now()-KARTS_AT)<8000;
+  if(fresh){ kiRenderKarts(); }
+  else { kartListLoading(true); loadRfKarts(function(){ kartListLoading(false); kiRenderKarts(); }); }
+}
+function kiRenderKarts(){
   var present={}; KART_LIST.forEach(function(k){ if(!k.longTerm) present[k.type]=true; });
   var hasLT=KART_LIST.some(function(k){return k.longTerm;});
   var firstReal=function(){ return KART_TYPE_ORDER.filter(function(t){return present[t];})[0]||Object.keys(present)[0]||''; };
   if(SELECTED_KART_TYPE===LT_TYPE){ if(!hasLT){ var fr=firstReal(); if(fr) SELECTED_KART_TYPE=fr; } }
   else if(!present[SELECTED_KART_TYPE]){ var first=firstReal(); if(first) SELECTED_KART_TYPE=first; else if(hasLT) SELECTED_KART_TYPE=LT_TYPE; }
   var ksub=document.getElementById('ki-karts-sub'); if(ksub) ksub.innerText=kiSubText();
-  renderTypeTabs();
-  renderKartChips();
-  go('kartlist');
+  KSB_LAST=''; renderTypeTabs(); renderKartChips();
+}
+function kartListLoading(on){
+  var sub=document.getElementById('ki-karts-sub'),tabs=document.getElementById('ki-type-tabs'),bar=document.getElementById('kart-statusbar'),chips=document.getElementById('kart-chips');
+  if(on){
+    if(sub) sub.innerText=(typeof siteLabel==='function'?siteLabel(currentSite):'')+' fleet · loading…';
+    if(tabs) tabs.innerHTML=''; if(bar) bar.innerHTML='';
+    if(chips) chips.innerHTML='<div class="kart-loading">Loading the fleet…</div>';
+  }
 }
 
 // Open a fleet-wide reference section (wiring / cpu / beacons / help)
@@ -5039,7 +5154,7 @@ function loadKartInfo(){
     if(scr==='kartdetail'&&SELECTED_KART){ var live=KART_LIST.find(function(x){return x.rfId===SELECTED_KART.rfId;}); if(live){SELECTED_KART=live; renderKartDetail(live);} else { back(); } }
     else if(scr==='kartlist'){ renderTypeTabs(); renderKartChips(); }
     btns.forEach(function(o){ o.btn.classList.remove('spinning'); if(o.lbl){ o.lbl.innerText='Updated · just now'; setTimeout(function(){ if(o.lbl) o.lbl.innerText='Refresh'; },3000); } });
-  });
+  }, true);
 }
 
 // Fleet status bar for the selected type: green/amber/red proportional segments with counts,
@@ -6261,9 +6376,10 @@ function acChips(sel, fnName, idx){
   // Kart Info sub-sections (separate amber group). Default = all visible (no ki:* keys stored); once any
   // is configured it becomes an allow-list. Toggling routes to the ki-specific handler for that owner type.
   var kiFn=(fnName==='acRoleTab')?'acRoleKi':'acOvKi';
+  var kiNone=(sel.indexOf('ki:none')>=0);
   var kiCur=KI_SECTION_KEYS.filter(function(k){return sel.indexOf(k)>=0;});
-  var allOn=(kiCur.length===0);
-  var ki='<div class="ac-ki-h">Kart Info sections'+(allOn?' \u00b7 all visible':'')+'</div><div class="ac-chips">'+KI_SECTION_DEFS.map(function(d){
+  var allOn=(!kiNone && kiCur.length===0);
+  var ki='<div class="ac-ki-h">Kart Info sections'+(allOn?' \u00b7 all visible':(kiNone?' \u00b7 Karts only':''))+'</div><div class="ac-chips">'+KI_SECTION_DEFS.map(function(d){
     var on=allOn||kiCur.indexOf(d.key)>=0;
     return '<button type="button" class="ac-chip ki'+(on?' on':'')+'" onclick="'+kiFn+'('+idx+',\''+d.key+'\')">'+acEsc(d.label)+'</button>';
   }).join('')+'</div>';
@@ -6304,13 +6420,14 @@ function acOvTab(idx,key){ var s=mAccessStaff[idx]; if(!s) return; var arr=mAcce
 // is represented by storing none. Turning a section off from the all-on state writes every OTHER
 // ki key (flips to an explicit allow-list); turning the last-missing one back on collapses to none.
 function _acKiToggle(arr,key){
+  var ni=arr.indexOf('ki:none'); var hadNone=(ni>=0); if(ni>=0) arr.splice(ni,1);
   var cur=KI_SECTION_KEYS.filter(function(k){return arr.indexOf(k)>=0;});
-  if(cur.length===0){ KI_SECTION_KEYS.forEach(function(k){ if(k!==key) arr.push(k); }); }   // was all-on -> hide this one
-  else {
-    var i=arr.indexOf(key); if(i>=0) arr.splice(i,1); else arr.push(key);
-    var nowOn=KI_SECTION_KEYS.filter(function(k){return arr.indexOf(k)>=0;});
-    if(nowOn.length===KI_SECTION_KEYS.length){ KI_SECTION_KEYS.forEach(function(k){ var j=arr.indexOf(k); if(j>=0) arr.splice(j,1); }); }   // all back on -> store none
-  }
+  if(hadNone){ arr.push(key); }                                              // was Karts-only -> show just this one
+  else if(cur.length===0){ KI_SECTION_KEYS.forEach(function(k){ if(k!==key) arr.push(k); }); }   // was all-on -> hide this one
+  else { var i=arr.indexOf(key); if(i>=0) arr.splice(i,1); else arr.push(key); }
+  var nowOn=KI_SECTION_KEYS.filter(function(k){return arr.indexOf(k)>=0;});
+  if(nowOn.length===KI_SECTION_KEYS.length){ KI_SECTION_KEYS.forEach(function(k){ var j=arr.indexOf(k); if(j>=0) arr.splice(j,1); }); }   // all back on -> store none (= all visible)
+  else if(nowOn.length===0){ if(arr.indexOf('ki:none')<0) arr.push('ki:none'); }                  // zero visible -> Karts only
   return arr;
 }
 function acRoleKi(i,key){ var r=mAccessDraft.roles[i]; if(!r) return; r.tabs=r.tabs||[]; _acKiToggle(r.tabs,key); acRender(); }
@@ -6668,9 +6785,12 @@ function tvLoadFleet(){
       }catch(e){}
     },function(){});
   }catch(e){}
-  // 3) OPEN kart notes for this site (the reason a kart is damaged), lean columns
+  // 3) OPEN kart notes (the reason a kart is damaged). Scoped by kart, NOT the notes' own
+  //    `site` column — the sync can leave that null on newer rows, which was dropping the
+  //    latest note and showing a stale one. The board only displays notes for this site's
+  //    karts (from KART_LIST), so loading all open notes is naturally site-correct.
   try{
-    SBC.from('rf_kart_notes').select('rf_kart_id,note,created_at').is('archived_at',null).eq('site',site).then(function(rn){
+    SBC.from('rf_kart_notes').select('rf_kart_id,note,created_at').is('archived_at',null).order('created_at',{ascending:false}).limit(600).then(function(rn){
       var rows=(rn&&rn.data)||[]; RF_NOTES_BY_ID={};
       rows.forEach(function(n){ (RF_NOTES_BY_ID[n.rf_kart_id]=RF_NOTES_BY_ID[n.rf_kart_id]||[]).push({ note:n.note||'', createdIso:n.created_at||'', open:true }); });
       Object.keys(RF_NOTES_BY_ID).forEach(function(id){ RF_NOTES_BY_ID[id].sort(function(a,b){return String(b.createdIso).localeCompare(String(a.createdIso));}); });
@@ -6699,7 +6819,8 @@ function tvSubscribe(){
     SBC.channel('tv-rt').on('postgres_changes',{event:'*',schema:'public',table:'tv_state'},function(p){ var nw=(p&&p.new)||null; if(nw&&nw.site&&nw.site!==currentSite) return; tvApplyState(nw); }).subscribe();
     SBC.channel('tv-karts').on('postgres_changes',{event:'*',schema:'public',table:'rf_karts'},function(){ tvDataSoon(); }).subscribe();
     SBC.channel('tv-tasks').on('postgres_changes',{event:'*',schema:'public',table:'tasks'},function(){ tvDataSoon(); }).subscribe();
-    SBC.channel('tv-tasks').on('postgres_changes',{event:'*',schema:'public',table:'tasks'},function(){ tvDataSoon(); }).subscribe();
+    SBC.channel('tv-notes').on('postgres_changes',{event:'*',schema:'public',table:'rf_kart_notes'},function(){ tvDataSoon(); }).subscribe();
+    SBC.channel('tv-reps').on('postgres_changes',{event:'*',schema:'public',table:'rf_repairs'},function(){ tvDataSoon(); }).subscribe();
   }catch(e){}
 }
 
