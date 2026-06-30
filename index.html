@@ -404,6 +404,11 @@
     .kart-loading{padding:48px 0;text-align:center;color:var(--t2);font-weight:600;font-size:15px;letter-spacing:.2px;animation:nfIn .3s ease}
     @keyframes sbIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
     .sb.sb-in{animation:sbIn .4s cubic-bezier(0.22,1,0.36,1)}
+    .mk-filters{display:flex;gap:7px;flex-wrap:wrap;padding:0 18px 10px}
+    .mk-chip{font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.14);background:transparent;color:var(--t2);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s,border-color .12s}
+    .mk-chip.on{color:#0b0e13;background:var(--ac,#00CFFF);border-color:var(--ac,#00CFFF)}
+    .mk-chip .mk-n{opacity:.6;font-weight:600;margin-left:4px}
+    .mk-chip.on .mk-n{opacity:.8}
     #ki-karts-sub{margin-top:8px}
     .ki-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--kacc);font-size:14px;font-weight:700;cursor:pointer;padding:6px 0 12px;font-family:inherit}
     .ki-back:active{opacity:.6}
@@ -2091,6 +2096,7 @@
             <label class="qre-chk"><input id="qe-desc" type="checkbox" checked onchange="qeToggle('desc',this.checked)"> Description</label>
             <label class="qre-chk"><input id="qe-sku" type="checkbox" checked onchange="qeToggle('sku',this.checked)"> SKU</label>
             <div class="qre-f"><label>Image</label><select id="qe-img" onchange="qeImg(this.value)"><option value="none">None</option><option value="logo">HK logo</option><option value="product">Product image (by SKU)</option></select></div>
+            <div class="qre-img-hint" id="qe-img-hint" style="display:none;grid-column:1/-1;font-size:11.5px;line-height:1.5;padding:6px 9px;border-radius:8px;margin-top:2px"></div>
             <div class="qre-sec">Style</div>
             <div class="qre-two">
               <div class="qre-f"><label>QR colour</label><input id="qe-fg" type="color" oninput="qeSet('fg',this.value)"></div>
@@ -2136,6 +2142,8 @@
   </div>
   <div class="m-pane" id="m-pane-karts">
     <div class="m-tools"><input class="m-search-in" id="mk-search" placeholder="Find a kart number or type…" oninput="mkSearch()" autocomplete="off"></div>
+    <div class="mk-filters" id="mk-sites" style="display:none"></div>
+    <div class="mk-filters" id="mk-types"></div>
     <div class="m-form-msg" id="mk-msg" style="margin:0 18px 8px"></div>
     <div class="m-list" id="m-karts-list"><div class="m-empty">Loading karts…</div></div>
   </div>
@@ -3138,6 +3146,17 @@ function effectiveTabs(user){
   keys=keys.filter(function(k){return k!=='masteraccess';});
   if((MASTER_ADMINS||[]).indexOf(user.name)>=0) keys.push('masteraccess');
   return keys;
+}
+// Capability: who may create / assign Tasks. Stored as a "cap:settask" key in the SAME app_access
+// roles[].tabs / overrides arrays as the home tabs and ki:* keys — no schema or edge-function change.
+// The owner and any manager role can always set tasks; the Access editor grants it to chosen
+// non-managers too. (The Tasks screen that will consume this is still being built.)
+function canSetTasks(user){
+  user=user||(typeof cu!=='undefined'?cu:null); if(!user) return false;
+  if(user.name===MASTER_OWNER) return true;
+  if(_isMgrRole(user.role)) return true;
+  var arr=_cfgTabsFor(user);
+  return !!(arr && arr.indexOf('cap:settask')>=0);
 }
 // ── Kart Info sub-section access ────────────────────────────────────────────
 // Per-account / per-role control over WHICH Kart Info reference sections show (e.g. some
@@ -5968,18 +5987,58 @@ function mTab(name){
    server). The kart keeps its real type but moves to the Long Term pile in Kart Info and
    drops out of the usable counts — a true reflection of how many karts we can fix. */
 function mkMsg(t,col){ var m=document.getElementById('mk-msg'); if(m){ m.textContent=t||''; m.style.color=col||'#FF5A52'; } }
+var MK_SITE=null, MK_TYPE='', MK_KARTS=null;   // master karts list: active site, active type filter, other-site snapshot
 function mkOpen(){
+  MK_SITE=MK_SITE||currentSite||'sydney';
   mkRender();
-  loadRfKarts(function(){ mkRender(); });   // refresh the list in the background (realtime keeps it live too)
+  if(MK_SITE===(currentSite||'sydney')) loadRfKarts(function(){ if(MK_SITE===(currentSite||'sydney')) mkRender(); });
+  else mkLoadSite(MK_SITE);
+}
+function mkSiteLabel(id){ var s=(typeof allSites!=='undefined'&&allSites)?allSites.find(function(x){return x.id===id;}):null; return s?s.label:id; }
+function mkActiveList(){ return (MK_SITE && MK_SITE!==(currentSite||'sydney')) ? (MK_KARTS||[]) : (KART_LIST||[]); }
+function mkSetSite(site){ if(MK_SITE===site) return; MK_SITE=site; MK_TYPE=''; MK_KARTS=null;
+  if(site===(currentSite||'sydney')){ mkRender(); loadRfKarts(function(){ if(MK_SITE===site) mkRender(); }); }
+  else { mkRender(); mkLoadSite(site); }
+}
+function mkSetType(t){ MK_TYPE=(MK_TYPE===t)?'':t; mkRender(); }
+function mkLoadSite(site){
+  if(typeof sbFetchAll!=='function') return;
+  sbFetchAll('rf_karts','*','site',site,'rf_id').then(function(res){
+    if(MK_SITE!==site) return;
+    MK_KARTS=((res&&res.data)||[]).map(mapRfKart).sort(function(a,b){return a.num-b.num;});
+    mkRender();
+  },function(){ if(MK_SITE===site){ MK_KARTS=[]; mkRender(); } });
+}
+function mkRenderFilters(all){
+  var se=document.getElementById('mk-sites');
+  if(se){
+    var sites=(typeof allSites!=='undefined'&&allSites&&allSites.length)?allSites:[{id:(currentSite||'sydney'),label:'Sydney',accent:'#00CFFF'}];
+    if(sites.length>1){ se.style.display=''; se.innerHTML=sites.map(function(s){ return '<button class="mk-chip'+(MK_SITE===s.id?' on':'')+'" style="--ac:'+(s.accent||'#00CFFF')+'" onclick="mkSetSite(\''+s.id+'\')">'+acEsc(s.label)+'</button>'; }).join(''); }
+    else { se.style.display='none'; se.innerHTML=''; }
+  }
+  var te=document.getElementById('mk-types');
+  if(te){
+    var counts={}; (all||[]).forEach(function(k){ counts[k.type]=(counts[k.type]||0)+1; });
+    var types=KART_TYPE_ORDER.filter(function(t){return counts[t];}); Object.keys(counts).forEach(function(t){ if(types.indexOf(t)<0) types.push(t); });
+    var chips='<button class="mk-chip'+(MK_TYPE===''?' on':'')+'" style="--ac:#00CFFF" onclick="mkSetType(\'\')">All <span class="mk-n">'+((all&&all.length)||0)+'</span></button>';
+    chips+=types.map(function(t){ var col=KART_TYPE_COLOR[t]||'#2DD4BF'; return '<button class="mk-chip'+(MK_TYPE===t?' on':'')+'" style="--ac:'+col+'" onclick="mkSetType(\''+t+'\')">'+acEsc(t)+' <span class="mk-n">'+counts[t]+'</span></button>'; }).join('');
+    te.innerHTML=chips;
+  }
 }
 function mkTogLabel(on){ return on?'\u2713 Long Term':'Long Term'; }
 function mkRender(){
   var el=document.getElementById('m-karts-list'); if(!el) return;
   var q=(document.getElementById('mk-search')?document.getElementById('mk-search').value:'').trim().toLowerCase();
-  var all=KART_LIST||[];
-  var list=all.filter(function(k){ return !q || String(k.num).indexOf(q)>=0 || String(k.type||'').toLowerCase().indexOf(q)>=0 || (q==='long term' && k.longTerm); });
-  if(!all.length){ el.innerHTML='<div class="m-empty">No karts synced yet — run a sync first.</div>'; return; }
-  if(!list.length){ el.innerHTML='<div class="m-empty">No karts match that.</div>'; return; }
+  var loadingOther = MK_SITE && MK_SITE!==(currentSite||'sydney') && MK_KARTS===null;
+  var all=mkActiveList();
+  mkRenderFilters(loadingOther?[]:all);
+  if(loadingOther){ el.innerHTML='<div class="m-empty">Loading '+mkSiteLabel(MK_SITE)+' karts\u2026</div>'; return; }
+  var list=all.filter(function(k){
+    if(MK_TYPE && k.type!==MK_TYPE) return false;
+    return !q || String(k.num).indexOf(q)>=0 || String(k.type||'').toLowerCase().indexOf(q)>=0 || (q==='long term' && k.longTerm);
+  });
+  if(!all.length){ el.innerHTML='<div class="m-empty">No karts synced for this site yet.</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="m-empty">No karts match that filter.</div>'; return; }
   var ltN=all.filter(function(k){return k.longTerm;}).length;
   var statusPill=function(s){ var m=({ok:['OK','#22C55E'],maint:['Maintenance','#FFD600'],damaged:['Damaged','#FF3B30']})[s]||['—','#7C8597'];
     return '<span style="font-size:10px;font-weight:700;color:'+m[1]+';background:'+m[1]+'1f;border:1px solid '+m[1]+'40;padding:2px 7px;border-radius:6px">'+m[0]+'</span>'; };
@@ -6004,7 +6063,7 @@ function mkRender(){
 }
 function mkSearch(){ mkRender(); }
 function mkToggle(rfId){
-  var k=(KART_LIST||[]).find(function(x){return x.rfId===rfId;}); if(!k) return;
+  var k=mkActiveList().find(function(x){return x.rfId===rfId;}); if(!k) return;
   if(!masterPin){ mkMsg('Re-enter Master Access first'); return; }
   var next=!k.longTerm;
   var btn=document.getElementById('mk-tog-'+rfId);
@@ -6220,14 +6279,30 @@ function bdSave(){
     } else { bdStatus((res&&res.message)?('Save failed: '+res.message):'Save failed'); bdSyncBar(); }
   }).catch(function(){ bdStatus('Connection error — check the master-tracks function is deployed'); bdSyncBar(); });
 }
-/* ----- Staff editor (server-backed, gated by the master code) ----- */
-function msLoad(){
-  var el=document.getElementById('m-staff-list'); el.innerHTML='<div class="m-empty">Loading staff…</div>';
+/* ----- Shared master-staff snapshot. Staff + sites + per-site access all come back from ONE
+   `list` call, but the Staff, Sites and Access tabs each used to re-fetch it — so opening them
+   in turn meant three identical, slow edge-function round-trips. Fetch once, cache for 60s, and
+   coalesce concurrent callers into a single request. Any save invalidates it. ----- */
+var _mSnap=null,_mSnapAt=0,_mSnapBusy=false,_mSnapWaiters=[];
+function mInvalidateSnap(){ _mSnap=null; _mSnapAt=0; }
+function mLoadSnap(cb,force){
+  if(!force && _mSnap && (Date.now()-_mSnapAt)<60000){ if(cb)cb(_mSnap); return; }
+  if(cb) _mSnapWaiters.push(cb);
+  if(_mSnapBusy) return;
+  _mSnapBusy=true;
   fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'list'})})
     .then(function(r){return r.json();}).then(function(res){
+      _mSnapBusy=false; if(res&&res.success){ _mSnap=res; _mSnapAt=Date.now(); }
+      var ws=_mSnapWaiters.slice(); _mSnapWaiters=[]; ws.forEach(function(w){ try{w(res);}catch(e){} });
+    }).catch(function(){ _mSnapBusy=false; var ws=_mSnapWaiters.slice(); _mSnapWaiters=[]; ws.forEach(function(w){ try{w(null);}catch(e){} }); });
+}
+/* ----- Staff editor (server-backed, authorised by your PIN) ----- */
+function msLoad(){
+  var el=document.getElementById('m-staff-list'); el.innerHTML='<div class="m-empty">Loading staff…</div>';
+  mLoadSnap(function(res){
       if(res&&res.success){ var acc=res.access||[]; mMasterSites=(res.sites||[]).map(function(s){return {id:s.id,label:s.label,accent:s.accent};}); mStaffDraft=(res.staff||[]).map(function(x){ var mine=acc.filter(function(a){return a.staff_name===x.name;}).map(function(a){return a.site;}); return {name:x.name||'',role:x.role||'Mechanic',pin:x.pin||'',emoji:x.emoji||'🔧',sites:mine}; }); mStaffLoaded=true; msRender(); }
-      else { el.innerHTML='<div class="m-empty">'+((res&&res.message)||'Could not load staff')+' — exit and re-enter with a fresh code.</div>'; }
-    }).catch(function(){ el.innerHTML='<div class="m-empty">Connection error</div>'; });
+      else if(el){ el.innerHTML='<div class="m-empty">'+((res&&res.message)||'Could not load staff — make sure you have Master Access.')+'</div>'; }
+  });
 }
 function msRender(){
   var el=document.getElementById('m-staff-list');
@@ -6254,11 +6329,10 @@ function msToggleSite(i,sid){ var st=mStaffDraft[i]; if(!st||_isMgr(st.role)) re
 /* ----- Sites editor ----- */
 function siLoad(){
   var el=document.getElementById('m-sites-list'); el.innerHTML='<div class="m-empty">Loading sites\u2026</div>';
-  fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'list'})})
-    .then(function(r){return r.json();}).then(function(res){
+  mLoadSnap(function(res){
       if(res&&res.success){ mSitesDraft=(res.sites||[]).map(function(s){return {id:s.id,label:s.label,accent:s.accent,position:s.position,active:s.active!==false,_existing:true};}); mSitesLoaded=true; siRender(); }
-      else { el.innerHTML='<div class="m-empty">'+((res&&res.message)||'Could not load sites')+'</div>'; }
-    }).catch(function(){ el.innerHTML='<div class="m-empty">Connection error</div>'; });
+      else if(el){ el.innerHTML='<div class="m-empty">'+((res&&res.message)||'Could not load sites')+'</div>'; }
+  });
 }
 function siRender(){
   var el=document.getElementById('m-sites-list');
@@ -6281,6 +6355,7 @@ function siDelete(i){
   if(!s._existing){ mSitesDraft.splice(i,1); siRender(); return; }
   if(!confirm('Delete venue "'+(s.label||s.id)+'"? Staff access to it will be removed. Stock data for this venue stays in the database.')) return;
   var msg=document.getElementById('m-sites-msg'); if(msg){msg.style.color='';msg.textContent='Deleting\u2026';}
+  mInvalidateSnap();
   fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'site-delete',sites:[{id:s.id}]})})
     .then(function(r){return r.json();}).then(function(res){
       if(res&&res.success){
@@ -6297,6 +6372,7 @@ function siSave(){
   var msg=document.getElementById('m-sites-msg'), btn=document.getElementById('m-sites-save'); msg.style.color='';
   for(var i=0;i<mSitesDraft.length;i++){ if(!(mSitesDraft[i].label||'').trim()){ msg.style.color='var(--red)'; msg.textContent='Every site needs a name.'; return; } if(!/^#[0-9a-fA-F]{6}$/.test(mSitesDraft[i].accent||'')){ msg.style.color='var(--red)'; msg.textContent=(mSitesDraft[i].label||'A site')+' needs a hex colour.'; return; } }
   msg.textContent=''; btn.textContent='Saving\u2026'; btn.disabled=true;
+  mInvalidateSnap();
   fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'sites-save',sites:mSitesDraft})})
     .then(function(r){return r.json();}).then(function(res){
       btn.textContent='Save sites'; btn.disabled=false;
@@ -6317,6 +6393,7 @@ function msSave(){
   }
   if(!mgr){ msg.style.color='var(--red)'; msg.textContent='Keep at least one Manager.'; return; }
   msg.textContent=''; btn.textContent='Saving…'; btn.disabled=true;
+  mInvalidateSnap();
   fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'save',staff:mStaffDraft})})
     .then(function(r){return r.json();}).then(function(res){
       btn.textContent='Save staff changes'; btn.disabled=false;
@@ -6341,11 +6418,11 @@ function acOpen(){ if(!mAccessLoaded){ acLoad(); } else { acRender(); } }
 function acLoad(){
   var el=document.getElementById('m-access-list'); if(el) el.innerHTML='<div class="m-empty">Loading\u2026</div>';
   Promise.all([
-    fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'list'})}).then(function(r){return r.json();}).catch(function(){return null;}),
+    new Promise(function(rz){ mLoadSnap(function(r){ rz(r); }); }),
     (typeof SBC!=='undefined'&&SBC)?SBC.from('app_access').select('roles,overrides').eq('id',1).maybeSingle().then(function(r){return r;},function(){return null;}):Promise.resolve(null)
   ]).then(function(rs){
     var sres=rs[0], ares=rs[1];
-    if(!sres||!sres.success){ if(el) el.innerHTML='<div class="m-empty">'+((sres&&sres.message)||'Could not load staff')+' \u2014 exit and re-enter with a fresh code.</div>'; return; }
+    if(!sres||!sres.success){ if(el) el.innerHTML='<div class="m-empty">'+((sres&&sres.message)||'Could not load staff')+' \u2014 make sure you have Master Access.</div>'; return; }
     mAccessStaff=(sres.staff||[]).map(function(x){return {name:x.name||'',role:x.role||'Mechanic'};});
     var roles=(ares&&ares.data&&Array.isArray(ares.data.roles))?ares.data.roles:[];
     var overrides=(ares&&ares.data&&ares.data.overrides&&typeof ares.data.overrides==='object')?ares.data.overrides:{};
@@ -6376,7 +6453,12 @@ function acChips(sel, fnName, idx){
     var on=allOn||kiCur.indexOf(d.key)>=0;
     return '<button type="button" class="ac-chip ki'+(on?' on':'')+'" onclick="'+kiFn+'('+idx+',\''+d.key+'\')">'+acEsc(d.label)+'</button>';
   }).join('')+'</div>';
-  return home+ki;
+  // Capabilities (separate group). Reuses the same per-role / per-account key toggler — a "cap:*"
+  // key just lives alongside the tab + ki:* keys. "Can set tasks" lets a chosen non-manager create
+  // jobs once the Tasks screen ships (managers + owner always can).
+  var capOn=sel.indexOf('cap:settask')>=0;
+  var cap='<div class="ac-ki-h">Permissions</div><div class="ac-chips"><button type="button" class="ac-chip cap'+(capOn?' on':'')+'" onclick="'+fnName+'('+idx+',\'cap:settask\')">\u2705 Can set tasks</button></div>';
+  return home+ki+cap;
 }
 function acRender(){
   var el=document.getElementById('m-access-list'); if(!el) return;
@@ -7083,6 +7165,7 @@ function acSave(){
   if(!names['manager']||!names['assistant manager']){ if(msg){msg.style.color='var(--red)';msg.textContent='Keep the Manager and Assistant Manager roles.';} return; }
   var ov={}; Object.keys(mAccessDraft.overrides||{}).forEach(function(n){ if(Array.isArray(mAccessDraft.overrides[n])) ov[n]=mAccessDraft.overrides[n]; });
   if(msg) msg.textContent=''; if(btn){ btn.textContent='Saving\u2026'; btn.disabled=true; }
+  mInvalidateSnap();
   fetch(SB_FN+'master-staff',{method:'POST',headers:HDRS,body:JSON.stringify({masterPin:masterPin,op:'access-save',access:{roles:mAccessDraft.roles,overrides:ov}})})
     .then(function(r){return r.json();}).then(function(res){
       if(btn){ btn.textContent='Save access'; btn.disabled=false; }
@@ -7285,7 +7368,17 @@ function qeUp(){ if(QE_DRAG){ QE_DRAG=null; QE_GUIDES=null; saveQrLay(); qeRende
 function qeSyncFields(){ var w=document.getElementById('qe-w'),h=document.getElementById('qe-h'); if(w)w.value=QR_LAY.wmm; if(h)h.value=QR_LAY.hmm; }
 function qeSet(k,v){ if(k==='grid'){ QR_LAY.grid=!!v; } else if(k==='ec'||k==='fg'||k==='bg'){ QR_LAY[k]=v; } else { var n=parseFloat(v); if(!isNaN(n)){ if(k==='quiet') QR_LAY.quiet=Math.max(0,Math.min(8,Math.round(n))); else if(k==='wmm'||k==='hmm') QR_LAY[k]=Math.max(10,Math.min(120,n)); } } saveQrLay(); qeRender(); }
 function qeToggle(el,on){ if(QR_LAY.el[el]){ QR_LAY.el[el].on=!!on; if(on) QE_SEL=el; } saveQrLay(); qeRender(); }
-function qeImg(v){ QR_LAY.img=v; QR_LAY.el.img.on=(v!=='none'); if(v!=='none') QE_SEL='img'; if(v==='product'){ _prodImg(_partImgUrl(qrSampleSku().sku), qeRender); } saveQrLay(); qeRender(); }
+function qeImg(v){ QR_LAY.img=v; QR_LAY.el.img.on=(v!=='none'); if(v!=='none') QE_SEL='img';
+  if(v==='product'){ var sk=qrSampleSku().sku; _qeImgHint('loading',sk); _prodImg(_partImgUrl(sk), function(im){ _qeImgHint(im?'ok':'missing', sk); qeRender(); }); }
+  else { _qeImgHint('',''); }
+  saveQrLay(); qeRender();
+}
+function _qeImgHint(state,sku){ var h=document.getElementById('qe-img-hint'); if(!h) return;
+  if(QR_LAY.img!=='product' || state==='' || state==='ok'){ h.style.display='none'; h.textContent=''; return; }
+  if(state==='loading'){ h.style.display=''; h.style.background='rgba(124,133,151,0.12)'; h.style.color='var(--t2)'; h.style.border='1px solid rgba(124,133,151,0.25)'; h.innerHTML='<span class="qre-spin"></span> Looking up the RIMO photo\u2026'; return; }
+  h.style.display=''; h.style.background='rgba(245,158,11,0.10)'; h.style.color='#F59E0B'; h.style.border='1px solid rgba(245,158,11,0.30)';
+  h.textContent='\u26A0 No RIMO photo for SKU '+(sku||'')+' \u2014 this label falls back to the placeholder. (Works only where the SKU is the RIMO product number.)';
+}
 function qeReset(){ QR_LAY=_clone(QR_LAY_DEFAULTS); QE_SEL=null; saveQrLay(); qrDesignerInit(); }
 function qeFlashSaved(text){ var t=document.getElementById('qe-saved'); if(!t) return; clearTimeout(t._t1); clearTimeout(t._t2); t.innerHTML='<span class="qre-spin"></span> Saving\u2026'; t.className='qre-saved show'; t._t1=setTimeout(function(){ t.innerHTML='\u2713 '+(text||'Design saved'); t.className='qre-saved show ok'; },420); t._t2=setTimeout(function(){ t.className='qre-saved'; },2200); }
 function qeSave(){ saveQrLay(); if(typeof mQRCount==='function') mQRCount(); qeFlashSaved('Design saved'); }
@@ -7320,7 +7413,7 @@ function qrDesignerInit(){ if(!document.getElementById('qre-cv')) return;
   var cv=document.getElementById('qre-cv'); if(cv && !cv._qeBound){ cv._qeBound=true;
     cv.addEventListener('mousedown',qeDown); window.addEventListener('mousemove',qeMove); window.addEventListener('mouseup',qeUp);
     cv.addEventListener('touchstart',qeDown,{passive:false}); cv.addEventListener('touchmove',qeMove,{passive:false}); cv.addEventListener('touchend',qeUp); }
-  _ensureHkLogo(qeRender); if(QR_LAY.img==='product'){ _prodImg(_partImgUrl(qrSampleSku().sku), qeRender); } qeRender();
+  _ensureHkLogo(qeRender); if(QR_LAY.img==='product'){ var sk=qrSampleSku().sku; _qeImgHint('loading',sk); _prodImg(_partImgUrl(sk), function(im){ _qeImgHint(im?'ok':'missing',sk); qeRender(); }); } else { _qeImgHint('',''); } qeRender();
 }
 
 /* QR — identical payload + 30x30mm print layout as the old sheet */
